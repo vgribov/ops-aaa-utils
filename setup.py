@@ -18,5 +18,5 @@ from setuptools import setup
 setup(
     name='aaa-utils-pamcfg.py',
     version='1.0',
-    py_modules=['aaa-utils-pamcfg.py'],
+    py_modules=['aaa-utils-pamcfg'],
 )
