@@ -16,7 +16,10 @@
 
 from setuptools import setup
 setup(
-    name='aaa-utils-pamcfg.py',
+    name='aaautilspamcfg',
     version='1.0',
-    py_modules=['aaa-utils-pamcfg'],
+    py_modules=['aaautilspamcfg',],
+    entry_points={
+        'console_scripts': ['aaautilspamcfg = aaautilspamcfg:main',]
+    }
 )
