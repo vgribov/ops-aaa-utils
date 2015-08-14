@@ -31,11 +31,12 @@ import ovs.vlog
 
 # Assign my_auth to default local config
 my_auth = "passwd"
-local_seqno_value = 0
 
-# This should be upated when new function is introduced
-# in between of dispatcher list
-BACK_TO_FILES_UPDATION = 2
+# Local variables to check if system is configured
+system_initialized = 0
+
+# Local varibale to check if default rows are updated
+default_row_initialized = 0
 
 # Ovs definition
 idl = None
@@ -48,13 +49,19 @@ ovs_schema = '/usr/share/openvswitch/vswitch.ovsschema'
 
 # Program control
 exiting = False
+seqno = 0
+
 PAM_ETC_CONFIG_DIR                = "/etc/pam.d/"
 RADIUS_CLIENT                     = "/etc/raddb/server"
+SSHD_CONFIG                       = "/etc/ssh/sshd_config"
+
 dispatch_list = []
 OPEN_VSWITCH_TABLE                = "Open_vSwitch"
 OPEN_VSWITCH_AAA_COLUMN           = "aaa"
 OPEN_VSWITCH_RADIUS_SERVER_COLUMN = "radius_servers"
 RADIUS_SERVER_TABLE               = "Radius_Server"
+
+OPEN_VSWITCH_AUTO_PROVISIONING_STATUS_COLUMN = "auto_provisioning_status"
 
 AAA_RADIUS                        = "radius"
 AAA_FALLBACK                      = "fallback"
@@ -66,6 +73,13 @@ RADIUS_SERVER_PORT                = "udp_port"
 RADIUS_SERVER_PASSKEY             = "passkey"
 RADIUS_SERVER_TIMEOUT             = "timeout"
 RADIUS_SERVER_RETRIES             = "retries"
+
+SSH_PASSKEY_AUTHENTICATION        = "ssh_passkeyauthentication"
+SSH_PUBLICKEY_AUTHENTICATION      = "ssh_publickeyauthentication"
+AUTH_KEY_ENABLE                   = "enable"
+
+PERFORMED                         = "performed"
+URL                               = "url"
 
 #---------------- unixctl_exit --------------------------
 def unixctl_exit(conn, unused_argv, unused_aux):
@@ -98,6 +112,7 @@ def system_is_configured():
     '''
 
     global idl
+    global system_initialized
 
     # Check the OVS-DB/File status to see if initialization has completed.
     if not db_get_system_status(idl.tables):
@@ -105,7 +120,23 @@ def system_is_configured():
         sleep(1)
         return False
 
+    system_initialized = 1
     return True
+# ----------------- default_sshd_config -------------------
+def default_sshd_config():
+    '''Default modifications in sshd_config file
+    to support auto provisioning'''
+    with open(SSHD_CONFIG,'r+') as fd:
+        newdata = fd.read()
+
+    newdata = newdata.replace("#PubkeyAuthentication yes", "PubkeyAuthentication yes")
+    newdata = newdata.replace("#PasswordAuthentication yes","PasswordAuthentication yes")
+    newdata = newdata.replace("#PubkeyAuthentication no", "PubkeyAuthentication no")
+    newdata = newdata.replace("#PasswordAuthentication no","PasswordAuthentication no")
+
+    with open(SSHD_CONFIG,'w') as fd:
+        fd.write(newdata)
+
 
 # ----------------- add_default_row -----------------------
 def add_default_row():
@@ -114,20 +145,34 @@ def add_default_row():
     by default radius is false and fallback is true
     '''
     global idl
+    global default_row_initialized
 
     data = {}
+    auto_provisioning_data = {}
 
+    # Default values for aaa column
     data[AAA_FALLBACK] = HALON_TRUE
     data[AAA_RADIUS] = HALON_FALSE
+    data[SSH_PASSKEY_AUTHENTICATION] = AUTH_KEY_ENABLE
+    data[SSH_PUBLICKEY_AUTHENTICATION] = AUTH_KEY_ENABLE
+
+    # Default values for auto provisioning status column
+    auto_provisioning_data[PERFORMED] = "False"
+    auto_provisioning_data[URL] = ""
+
     # create the transaction
     txn = ovs.db.idl.Transaction(idl)
     for ovs_rec in idl.tables[OPEN_VSWITCH_TABLE].rows.itervalues():
         break
 
     setattr(ovs_rec, OPEN_VSWITCH_AAA_COLUMN, data)
+    setattr(ovs_rec, OPEN_VSWITCH_AUTO_PROVISIONING_STATUS_COLUMN, auto_provisioning_data)
 
     txn.commit_block()
 
+    default_sshd_config()
+
+    default_row_initialized = 1
     return True
 
 
@@ -138,32 +183,11 @@ def check_for_row_initialization():
     if initialization is not done, go and add  default row
     '''
     global idl
-    global local_seqno_value
 
-    local_seqno_value = idl.change_seqno + 1
     # Check the OVS-DB/File status to see if initialization has completed.
     for ovs_rec in idl.tables[OPEN_VSWITCH_TABLE].rows.itervalues():
         if not ovs_rec.aaa:
             add_default_row()
-    return True
-
-#------------- update_radius_client_and_pam_config_file -------------
-def update_radius_client_and_pam_config_file():
-    '''
-    This calls functions for radius server files and pam configuration files
-    updation.
-    '''
-    global local_seqno_value
-    global idl
-
-    if local_seqno_value == idl.change_seqno:
-        return False
-
-    update_server_file()
-    update_access_files()
-
-    local_seqno_value = idl.change_seqno
-
     return True
 
 # ---------------- update_server_file -----------------
@@ -224,6 +248,43 @@ def update_server_file():
         f.write(contents)
 
     return
+
+#---------------------- update_ssh_config_file ---------------------
+def update_ssh_config_file():
+    '''
+    modify sshd_config file, based on the ssh authentication method
+    configured in aaa column
+    '''
+    passkey = "no"
+    publickey = "no"
+
+    for ovs_rec in idl.tables[OPEN_VSWITCH_TABLE].rows.itervalues():
+        if ovs_rec.aaa:
+            for key, value in ovs_rec.aaa.items():
+                if key == SSH_PASSKEY_AUTHENTICATION:
+                    if value == AUTH_KEY_ENABLE:
+                        passkey = "yes"
+                elif key == SSH_PUBLICKEY_AUTHENTICATION:
+                    if value == AUTH_KEY_ENABLE:
+                        publickey = "yes"
+
+    # Add default values if not present, later change to values present in DB
+    default_sshd_config()
+
+    with open(SSHD_CONFIG, "r") as f:
+        contents = f.readlines()
+
+    for index, line in enumerate(contents):
+        if "PubkeyAuthentication yes" in line or "PubkeyAuthentication no" in line:
+            del contents[index]
+            contents.insert(index,"PubkeyAuthentication " + publickey + "\n")
+        elif "PasswordAuthentication yes"in line or "PasswordAuthentication no" in line:
+            del contents[index]
+            contents.insert(index,"PasswordAuthentication " + passkey + "\n")
+
+    with open(SSHD_CONFIG, "w") as f:
+        contents = "".join(contents)
+        f.write(contents)
 
 # ----------------------- modify_common_auth_file -------------------
 def modify_common_auth_session_file(fallback_value,radius_value):
@@ -345,50 +406,55 @@ def update_access_files():
             f.write(newdata)
         count += 1
 
-# ----------------- init_dispatcher --------------------
-def init_dispatcher():
+#---------------- aaa_reconfigure() ----------------
+def aaa_util_reconfigure():
     '''
-    Creates a list of functions to call in sequence
-    Initializes loop_seq_no to zero.
-    '''
-
-    global dispatch_list
-    global loop_seq_no
-
-    dispatch_list = []
-
-    # Each of these functions must return:
-    #   True if the function has completed its job, or
-    #   False if it needs to run again
-    dispatch_list.append(system_is_configured)
-    dispatch_list.append(check_for_row_initialization)
-    dispatch_list.append(update_radius_client_and_pam_config_file)
-    loop_seq_no = 0
-
-# ---------------- dispatcher --------------------------
-def dispatcher():
-    '''
-    Call next functions in the list
-    If it returns true, increment the loop counter
-    If run out of functions, terminate
+    Check system initialization, add default rows and update files accordingly
+    based on the values in DB
     '''
 
-    global dispatch_list
-    global loop_seq_no
+    global system_initialized
+    global default_row_initialized
 
-    if loop_seq_no < len(dispatch_list):
-        rc = dispatch_list[loop_seq_no]()
-        if rc:
-            loop_seq_no += 1
-    elif loop_seq_no == len(dispatch_list):
-        loop_seq_no = BACK_TO_FILES_UPDATION
+    if system_initialized == 0:
+       rc = system_is_configured()
+       if rc == False:
+           return
+
+    if default_row_initialized == 0:
+       ret = check_for_row_initialization()
+       if ret == False:
+           return
+
+    update_server_file()
+    update_access_files()
+    update_ssh_config_file()
+
+    return
+
+#----------------- aaa_run() -----------------------
+def aaa_util_run():
+    '''
+    Run idl, and call reconfigure function when there is a change in DB sequence number.
+    '''
+
+    global idl
+    global seqno
+
+    idl.run()
+
+    if seqno != idl.change_seqno:
+        aaa_util_reconfigure()
+        seqno = idl.change_seqno
+
+    return
 
 #----------------- main() -------------------
 def main():
 
     global exiting
     global idl
-    global loop_seq_no
+    global seqno
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--database', metavar="DATABASE",
@@ -408,7 +474,8 @@ def main():
 
     schema_helper = ovs.db.idl.SchemaHelper(location=ovs_schema)
     schema_helper.register_columns(OPEN_VSWITCH_TABLE, ["cur_cfg"])
-    schema_helper.register_columns(OPEN_VSWITCH_TABLE, [OPEN_VSWITCH_AAA_COLUMN])
+    schema_helper.register_columns(OPEN_VSWITCH_TABLE, [OPEN_VSWITCH_AAA_COLUMN, \
+                                                        OPEN_VSWITCH_AUTO_PROVISIONING_STATUS_COLUMN])
     schema_helper.register_columns(OPEN_VSWITCH_TABLE, [OPEN_VSWITCH_RADIUS_SERVER_COLUMN])
     schema_helper.register_columns(RADIUS_SERVER_TABLE, [RADIUS_SERVER_IPADDRESS, RADIUS_SERVER_PORT, \
                                                          RADIUS_SERVER_PASSKEY, RADIUS_SERVER_TIMEOUT, \
@@ -426,24 +493,18 @@ def main():
 
     seqno = idl.change_seqno # Sequence number when we last processed the db
 
-    init_dispatcher()
-
     while not exiting:
         unixctl_server.run()
 
-        idl.run()
-        # Call next method in the sequence
-        dispatcher()
+        aaa_util_run()
 
         if exiting:
             break;
 
-        if seqno == idl.change_seqno:
-            poller = ovs.poller.Poller()
-            unixctl_server.wait(poller)
-            idl.wait(poller)
-            poller.block()
-        seqno = idl.change_seqno
+        poller = ovs.poller.Poller()
+        unixctl_server.wait(poller)
+        idl.wait(poller)
+        poller.block()
 
     #Daemon Exit
     unixctl_server.close()
