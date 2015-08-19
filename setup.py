@@ -18,8 +18,8 @@ from setuptools import setup
 setup(
     name='aaautilspamcfg',
     version='1.0',
-    py_modules=['aaautilspamcfg',],
+    py_modules=['aaautilspamcfg', 'autoprovision'],
     entry_points={
-        'console_scripts': ['aaautilspamcfg = aaautilspamcfg:main',]
+        'console_scripts': ['aaautilspamcfg = aaautilspamcfg:main', 'autoprovision = autoprovision:main']
     }
 )
