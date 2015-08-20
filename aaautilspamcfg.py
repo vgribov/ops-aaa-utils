@@ -285,11 +285,11 @@ def modify_common_auth_session_file(fallback_value,radius_value):
     local_auth[0] = "auth\t[success=1 default=ignore]\tpam_unix.so nullok\n"
     radius_auth[0] = "auth\t[success=1 default=ignore]\tpam_radius_auth.so\tretry="
     fallback_and_radius_auth[0] = "auth\t[success=2 authinfo_unavail=ignore default=1]\tpam_radius_auth.so\tretry="
-    fallback_local_auth[0] = "auth\t[success=1 default=ignore]\tpam_unix.so\tuse_first_pass\n"
+    fallback_local_auth[0] = "auth\t[success=1 default=ignore]\tpam_unix.so\ttry_first_pass\n"
 
     local_auth[1] = "session\trequired\tpam_unix.so\n"
     radius_auth[1] = "session\trequired\tpam_radius_auth.so\n"
-    fallback_and_radius_auth[1] = "session\t[success=done new_authtok_reqd=done authinfo_unavail=ignore default=die]\tpam_radius_auth.so\n"
+    fallback_and_radius_auth[1] = "session\t[success=done new_authtok_reqd=done authinfo_unavail=ignore session_err=ignore default=die]\tpam_radius_auth.so\n"
     fallback_local_auth[1] = "session\trequired\tpam_unix.so\n"
 
     filename[0] = PAM_ETC_CONFIG_DIR + "common-auth-access"
