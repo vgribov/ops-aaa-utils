@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (C) 2014-2015 Hewlett-Packard Development Company, L.P.
+# Copyright (C) 2015 Hewlett-Packard Development Company, L.P.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -73,6 +73,7 @@ RADIUS_SERVER_PORT                = "udp_port"
 RADIUS_SERVER_PASSKEY             = "passkey"
 RADIUS_SERVER_TIMEOUT             = "timeout"
 RADIUS_SERVER_RETRIES             = "retries"
+RADIUS_SEREVR_PRIORITY            = "priority"
 
 SSH_PASSKEY_AUTHENTICATION        = "ssh_passkeyauthentication"
 SSH_PUBLICKEY_AUTHENTICATION      = "ssh_publickeyauthentication"
@@ -193,59 +194,36 @@ def check_for_row_initialization():
 # ---------------- update_server_file -----------------
 def update_server_file():
     '''
-    Based on my_auth variable update server files accordingly
+    Based on ovsdb radius server table entries
+    update radius client file accordingly
     '''
     global idl
 
-    insert_server_info = [0 for x in range(64)]
-    radius_ip = [0 for x in range(64)]
+    insert_server_info = ["" for x in range(64)]
+    radius_ip = 0
+    priority = 0
     radius_port = 0
     radius_passkey = 0
     radius_timeout = 0
-
+    count = 0
     row_count = 0
     for ovs_rec in idl.tables[RADIUS_SERVER_TABLE].rows.itervalues():
         if ovs_rec.ip_address:
-            radius_ip[row_count] = ovs_rec.ip_address
+            radius_ip = ovs_rec.ip_address
         if ovs_rec.udp_port:
             radius_port = ",".join(str(i) for i in ovs_rec.udp_port)
         if ovs_rec.passkey:
             radius_passkey = "".join(ovs_rec.passkey)
         if ovs_rec.timeout:
             radius_timeout = ",".join(str(i) for i in ovs_rec.timeout)
+        if ovs_rec.priority:
+            priority = ovs_rec.priority - 1
 
-        insert_server_info[row_count] = radius_ip[row_count] + ":"+ radius_port + " " +  radius_passkey + " " + radius_timeout + " check "
-
+        insert_server_info[priority] = radius_ip + ":"+ radius_port + " " +  radius_passkey + " " + radius_timeout
         row_count += 1
-    if row_count == 0:
-        with open(RADIUS_CLIENT, 'w'): pass
-        return
 
-    with open(RADIUS_CLIENT, "r") as f:
-        contents = f.readlines()
-    index = 0
-    count = 0
-
-    for count in range(0,row_count):
-        ip_check = 0
-        for index, line in enumerate(contents):
-            if radius_ip[count] in line:
-                del contents[index]
-                contents.insert(index,insert_server_info[count]+"\n")
-                ip_check = 1
-                break
-        if ip_check == 0:
-            index += 1
-            contents.insert(index,insert_server_info[count]+"\n")
-
-    index = 0
-    for index, line in enumerate(contents):
-        if "check" not in line:
-            del contents[index]
-    contents = [word.replace('check ','') for word in contents]
-    with open(RADIUS_CLIENT, "w") as f:
-        contents = "".join(contents)
-        f.write(contents)
+    with open(RADIUS_CLIENT, "w+") as f:
+        f.write("\n".join(insert_server_info[count] for count in range(0,row_count)))
 
     return
 
@@ -479,7 +457,7 @@ def main():
     schema_helper.register_columns(OPEN_VSWITCH_TABLE, [OPEN_VSWITCH_RADIUS_SERVER_COLUMN])
     schema_helper.register_columns(RADIUS_SERVER_TABLE, [RADIUS_SERVER_IPADDRESS, RADIUS_SERVER_PORT, \
                                                          RADIUS_SERVER_PASSKEY, RADIUS_SERVER_TIMEOUT, \
-                                                         RADIUS_SERVER_RETRIES])
+                                                         RADIUS_SERVER_RETRIES, RADIUS_SEREVR_PRIORITY])
 
 
     idl = ovs.db.idl.Idl(remote, schema_helper)
