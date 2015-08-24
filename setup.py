@@ -18,7 +18,7 @@ from setuptools import setup
 setup(
     name='aaautilspamcfg',
     version='1.0',
-    py_modules=['aaautilspamcfg', 'autoprovision'],
+    py_modules=['aaautilspamcfg', 'autoprovision', 'userauth'],
     entry_points={
         'console_scripts': ['aaautilspamcfg = aaautilspamcfg:main', 'autoprovision = autoprovision:main']
     }
