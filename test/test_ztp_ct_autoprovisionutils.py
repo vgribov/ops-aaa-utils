@@ -50,7 +50,7 @@ class autoprovisionFeatureTest(HalonTest):
         out = s1.cmd ("touch " + HTTP_SERVER_ROOT_PATH + SCRIPT_NAME)
 
         s1.cmd ("echo \'#!/bin/sh\' >>" + HTTP_SERVER_ROOT_PATH + SCRIPT_NAME)
-        s1.cmd ("echo \'#HALON-AUTOPROVISIONING\'>>" + HTTP_SERVER_ROOT_PATH + SCRIPT_NAME)
+        s1.cmd ("echo \'#OPS-PROVISIONING\'>>" + HTTP_SERVER_ROOT_PATH + SCRIPT_NAME)
         s1.cmd ("echo echo "+TEST_ECHO_STRING+" >>" + HTTP_SERVER_ROOT_PATH + SCRIPT_NAME)
 
         return True
