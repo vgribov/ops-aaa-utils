@@ -13,7 +13,7 @@ HTTP_SERVER = "http://127.0.0.1/autoprovision"
 HTTP_SERVER_ROOT_PATH = "/var/www/servers/www.example.org/pages/"
 SCRIPT_NAME = "autoprovision"
 TEST_ECHO_STRING = "Hello from Autoprovision script"
-LIGHTTPD_CONFIG = "./src/ops-aaa-utils/test/lighttpd.conf"
+LIGHTTPD_CONFIG = "./src/ops-aaa-utils/tests/lighttpd.conf"
 
 class autoprovisionFeatureTest(HalonTest):
     def setupHttpServer(self):
