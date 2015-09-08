@@ -19,7 +19,6 @@ class autoprovisionFeatureTest(HalonTest):
     def setupHttpServer(self):
         ''' This function is to setup http server in the ubuntu image we are referring to
         '''
-        info('\n############ Setup http server lighttpd ##########\n')
         s1 = self.net.switches [ 0 ]
 
         #Configure lighttpd conf file and root path of server
@@ -35,17 +34,15 @@ class autoprovisionFeatureTest(HalonTest):
         out += s1.cmd("echo ")
 
         if "Syntax OK" in out:
-            info(out)
+            out = s1.cmd("lighttpd -f ~/lighttpd.conf")
         else:
-            assert 0, out
+            assert ("Syntax OK" in out), "Failed to setup lighttpd server"
 
-        out = s1.cmd("lighttpd -D -f ~/lighttpd.conf &")
         return True
 
     def setupAutoprovisionScript(self):
         ''' This function is to setup autoprovision script in http server
         '''
-        info('\n########## Setup autoprovision script in http server ##########\n')
         s1 = self.net.switches [ 0 ]
         out = s1.cmd ("touch " + HTTP_SERVER_ROOT_PATH + SCRIPT_NAME)
 
@@ -64,10 +61,10 @@ class autoprovisionFeatureTest(HalonTest):
                            build=True)
 
         if self.setupHttpServer():
-            info('setupHttpServer success')
+            info('*** setupHttpServer success\n')
 
         if self.setupAutoprovisionScript():
-            info('setupAutoprovisionScript success')
+            info('*** setupAutoprovisionScript success\n')
 
     def executeAutoprovision(self):
         ''' This function download autoprovision script from http server
@@ -77,25 +74,32 @@ class autoprovisionFeatureTest(HalonTest):
         s1 = self.net.switches [ 0 ]
         out = s1.cmd("autoprovision "+HTTP_SERVER)
         out += s1.cmdCLI("end")
-        info(out)
 
         if not TEST_ECHO_STRING in out:
-            assert 0,out
+            assert (TEST_ECHO_STRING in out), \
+                   "Failed in executing autoprovision script"
+        else:
+            info("### Passed:Executing downloaded autoprovision script ###\n")
 
         out = s1.cmdCLI("show autoprovision")
         out += s1.cmdCLI("end")
-        info(out)
 
         if not HTTP_SERVER in out:
-            assert 0,out
+            assert (HTTP_SERVER in out), \
+                   "Failed in updating autoprovision status in DB"
+        else:
+            info("### Passed: Verify autoprovision status updated in DB ###\n")
 
-        info('\n########## Executing Autoprovision again, it should not perform #########\n')
+        info('\n### Executing Autoprovision again, it should not perform ###\n')
         out = s1.cmd("autoprovision "+HTTP_SERVER)
         out += s1.cmdCLI("end")
-        info(out)
 
         if not "Autoprovisioning already completed" in out:
-            assert 0,out
+            assert ("Autoprovisioning already completed" in out),\
+                    "Failed in executing autoprovision script again"
+        else:
+            info("### Passed:Executing autoprovision script again," \
+                               "autoprovision not performed  ###\n")
 
 class Test_autoprovisionfeature:
     def setup(self):
