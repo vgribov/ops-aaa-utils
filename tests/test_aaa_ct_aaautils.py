@@ -164,10 +164,13 @@ class aaaFeatureTest(HalonTest):
         ''' This function is to enable local authentication in DB
         with CLI command'''
         s1 = self.net.switches [ 0 ]
+        out = ""
+        out += s1.cmd("echo ")
         out = s1.cmdCLI("configure terminal")
         assert ('Unknown command' not in out), "Failed to enter configuration" \
                                                " terminal"
 
+        out += s1.cmd("echo ")
         out = s1.cmdCLI("aaa authentication login local")
         assert ('Unknown command' not in out), "Failed to enable local" \
                                                " authentication"
@@ -180,14 +183,18 @@ class aaaFeatureTest(HalonTest):
         with CLI command'''
         s1 = self.net.switches [ 0 ]
 
+        out = ""
+        out += s1.cmd("echo ")
         out = s1.cmdCLI("configure terminal")
         assert ('Unknown command' not in out), "Failed to enter configuration" \
                                                " terminal"
 
+        out += s1.cmd("echo ")
         out = s1.cmdCLI("aaa authentication login radius")
         assert ('Unknown command' not in out), "Failed to enable radius" \
                                                " authentication"
 
+        out += s1.cmd("echo ")
         s1.cmdCLI("exit")
         return True
 
@@ -196,14 +203,18 @@ class aaaFeatureTest(HalonTest):
         with CLI command'''
         s1 = self.net.switches [ 0 ]
 
+        out = ""
+        out += s1.cmd("echo ")
         out = s1.cmdCLI("configure terminal")
         assert ('Unknown command' not in out), "Failed to enter configuration" \
                                                " terminal"
 
+        out += s1.cmd("echo ")
         out = s1.cmdCLI("no aaa authentication login fallback error local")
         assert ('Unknown command' not in out), "Failed to disable fallback to" \
                                                " local authentication"
 
+        out += s1.cmd("echo ")
         s1.cmdCLI("exit")
         return True
 
@@ -212,10 +223,13 @@ class aaaFeatureTest(HalonTest):
         with CLI command'''
         s1 = self.net.switches [ 0 ]
 
+        out = ""
+        out += s1.cmd("echo ")
         out = s1.cmdCLI("configure terminal")
         assert ('Unknown command' not in out), "Failed to enter configuration" \
                                                " terminal"
 
+        out += s1.cmd("echo ")
         out = s1.cmdCLI("aaa authentication login fallback error local")
         assert ('Unknown command' not in out), "Failed to enable fallback to" \
                                                " local authentication"
@@ -232,6 +246,8 @@ class aaaFeatureTest(HalonTest):
         # self.checkAccessFiles()
         ssh_newkey = 'Are you sure you want to continue connecting'
         switchIpAddress = self.getSwitchIP()
+        out = ""
+        out += s1.cmd("echo ")
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
@@ -270,6 +286,8 @@ class aaaFeatureTest(HalonTest):
         # self.checkAccessFiles()
         ssh_newkey = 'Are you sure you want to continue connecting'
         switchIpAddress = self.getSwitchIP()
+        out = ""
+        out += s1.cmd("echo ")
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
@@ -304,6 +322,8 @@ class aaaFeatureTest(HalonTest):
         # self.checkAccessFiles()
         ssh_newkey = 'Are you sure you want to continue connecting'
         switchIpAddress = self.getSwitchIP()
+        out = ""
+        out += s1.cmd("echo ")
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
@@ -351,6 +371,8 @@ class aaaFeatureTest(HalonTest):
 
         ssh_newkey = 'Are you sure you want to continue connecting'
         switchIpAddress = self.getSwitchIP()
+        out = ""
+        out += s1.cmd("echo ")
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
@@ -395,6 +417,8 @@ class aaaFeatureTest(HalonTest):
         # self.checkAccessFiles()
         ssh_newkey = 'Are you sure you want to continue connecting'
         switchIpAddress = self.getSwitchIP()
+        out = ""
+        out += s1.cmd("echo ")
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
@@ -431,6 +455,8 @@ class aaaFeatureTest(HalonTest):
         # self.checkAccessFiles()
         ssh_newkey = 'Are you sure you want to continue connecting'
         switchIpAddress = self.getSwitchIP()
+        out = ""
+        out += s1.cmd("echo ")
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
@@ -479,6 +505,8 @@ class aaaFeatureTest(HalonTest):
         h2.cmd("service freeradius start")
         ssh_newkey = 'Are you sure you want to continue connecting'
         switchIpAddress = self.getSwitchIP()
+        out = ""
+        out += s1.cmd("echo ")
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
