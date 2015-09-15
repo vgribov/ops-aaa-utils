@@ -1,18 +1,18 @@
 #!/usr/bin/env python
-# Copyright (C) 2014-2015 Hewlett-Packard Development Company, L.P.
+# Copyright (C) 2015 Hewlett Packard Enterprise Development LP
 # All Rights Reserved.
 #
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
 #
-#         http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
 
 import os
 import sys
@@ -42,6 +42,7 @@ URL = "url"
 AUTOPROVISION_SCRIPT = '/var/tmp/autoprovision'
 AUTOPROVISION_STATUS_FILE = '/var/local/autoprovision'
 
+
 #------------------ wait_for_config_complete() ----------------
 def wait_for_config_complete(idl):
 
@@ -49,13 +50,14 @@ def wait_for_config_complete(idl):
     while system_is_configured == 0:
         for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
             if ovs_rec.cur_cfg is not None and ovs_rec.cur_cfg != 0:
-               system_is_configured = ovs_rec.cur_cfg
-               break
+                system_is_configured = ovs_rec.cur_cfg
+                break
 
         poller = ovs.poller.Poller()
         idl.run()
         idl.wait(poller)
         poller.block()
+
 
 #------------------ check_for_startup_config() ----------------
 def check_for_startup_config(remote):
@@ -70,7 +72,8 @@ def check_for_startup_config(remote):
 
     idl_cfg = ovs.db.idl.Idl(remote, schema_helper_cfg)
 
-    seqno = idl_cfg.change_seqno  # Sequence number when we last processed the db.
+    # Sequence number when we last processed the db.
+    seqno = idl_cfg.change_seqno
 
     # Wait until the ovsdb sync up.
     while (seqno == idl_cfg.change_seqno):
@@ -97,12 +100,14 @@ def check_for_startup_config(remote):
 
     return tbl_found
 
+
 #------------------ fetch_autoprovision_script() ----------------
 def fetch_autoprovision_script(url):
     ret = False
-    try :
+    try:
         cj = cookielib.CookieJar()
-        header = { 'User-Agent' : 'OPS-AutoProvision/1.0', 'OPS-MANUFACTURER': 'OpenSwitch', 'OPS-VENDOR': 'OpenSwitch' }
+        header = {'User-Agent': 'OPS-AutoProvision/1.0', 'OPS-MANUFACTURER':
+                  'OpenSwitch', 'OPS-VENDOR': 'OpenSwitch'}
         opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
         request = urllib2.Request(url, None, header)
 
@@ -118,7 +123,7 @@ def fetch_autoprovision_script(url):
         print('URLError = ' + str(e.reason))
         return ret
     except httplib.HTTPException, e:
-        print('HTTPException = '+ str(e.reason))
+        print('HTTPException = ' + str(e.reason))
         return ret
     except Exception, e:
         print('generic exception: ' + str(e))
@@ -139,11 +144,13 @@ def fetch_autoprovision_script(url):
         except Exception, e:
             print('generic exception: ' + str(e))
             return ret
-    else :
-        print("Error, downloaded autoprovision script doesn't contain OPS-PROVISIONING string in comment")
+    else:
+        print("Error, downloaded autoprovision script does not contain"
+              "OPS-PROVISIONING string in comment")
         ret = False
 
     return ret
+
 
 #------------------ update_autoprovision_status() ----------------
 def update_autoprovision_status(performed_value, url):
@@ -171,18 +178,19 @@ def main():
     argv = sys.argv
     n_args = 2
 
-    if len(argv) !=  n_args :
+    if len(argv) != n_args:
         print("Requires %d arguments but %d provided \n" % (n_args, len(argv)))
         return
 
     # Locate default config if it exists
     schema_helper = ovs.db.idl.SchemaHelper(location=OVS_SCHEMA)
     schema_helper.register_columns(SYSTEM_TABLE, ["cur_cfg"])
-    schema_helper.register_columns(SYSTEM_TABLE, ["auto_provisioning_status"])
+    schema_helper.register_columns(SYSTEM_TABLE,
+                                   ["auto_provisioning_status"])
 
     idl = ovs.db.idl.Idl(DEF_DB, schema_helper)
 
-    seqno = idl.change_seqno    # Sequence number when we last processed the db
+    seqno = idl.change_seqno    # Sequence number when last processed the db
 
     # Wait until the ovsdb sync up.
     while (seqno == idl.change_seqno):
@@ -199,7 +207,7 @@ def main():
         idl.close()
         return
 
-    if(fetch_autoprovision_script(argv[1]) == False):
+    if(fetch_autoprovision_script(argv[1]) is False):
         print("Downloading autoprovisioning script failed")
         idl.close()
         return
@@ -210,23 +218,27 @@ def main():
     if os.path.exists(AUTOPROVISION_SCRIPT):
         ret = os.system('chmod +x ' + AUTOPROVISION_SCRIPT)
         ret = os.system(AUTOPROVISION_SCRIPT)
-        if (ret == 0 ):
+        if (ret == 0):
             try:
                 FILE = open(AUTOPROVISION_STATUS_FILE, "w")
                 FILE.close()
             except IOError as e:
-                print "Creating autoprovision status file, I/O error({0}): {1}".format(e.errno, e.strerror)
+                print "Creating autoprovision status file, I/O error({0}): \
+                      {1}".format(e.errno, e.strerror)
                 idl.close()
                 return
             except Exception, e:
-                print('Creating autoprovision status file, generic exception: ' + str(e))
+                print('Creating autoprovision status file, generic exception: '
+                      + str(e))
                 idl.close()
                 return
 
             update_autoprovision_status(OPS_TRUE, argv[1])
-            print("Autoprovision status: performed = %s URL =  %s" % (OPS_TRUE, argv[1]))
+            print("Autoprovision status: performed = %s URL =  %s"
+                  % (OPS_TRUE, argv[1]))
         else:
-            print("Error, executing autoprovision script returned error %d" % ret)
+            print("Error, executing autoprovision script returned error %d"
+                  % ret)
 
     idl.close()
 

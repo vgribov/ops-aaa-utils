@@ -1,3 +1,19 @@
+#!/usr/bin/env python
+# Copyright (C) 2015 Hewlett Packard Enterprise Development LP
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
 from smart import Error, _
 from smart.util import pexpect
 
@@ -15,18 +31,20 @@ SCRIPT_NAME = "autoprovision"
 TEST_ECHO_STRING = "Hello from Autoprovision script"
 LIGHTTPD_CONFIG = "./src/ops-aaa-utils/tests/lighttpd.conf"
 
+
 class autoprovisionFeatureTest(HalonTest):
     def setupHttpServer(self):
-        ''' This function is to setup http server in the ubuntu image we are referring to
+        ''' This function is to setup http server in the ubuntu image
+        we are referring to
         '''
-        s1 = self.net.switches [ 0 ]
+        s1 = self.net.switches[0]
 
         #Configure lighttpd conf file and root path of server
-        s1.cmd ("mkdir -p "+ HTTP_SERVER_ROOT_PATH)
+        s1.cmd("mkdir -p " + HTTP_SERVER_ROOT_PATH)
         with open(LIGHTTPD_CONFIG) as f_config:
             config = f_config.read()
 
-	s1.cmd(config)
+        s1.cmd(config)
 
         s1.cmd("killall -9 lighttpd")
         sleep(1)
@@ -43,18 +61,21 @@ class autoprovisionFeatureTest(HalonTest):
     def setupAutoprovisionScript(self):
         ''' This function is to setup autoprovision script in http server
         '''
-        s1 = self.net.switches [ 0 ]
-        out = s1.cmd ("touch " + HTTP_SERVER_ROOT_PATH + SCRIPT_NAME)
+        s1 = self.net.switches[0]
+        out = s1.cmd("touch " + HTTP_SERVER_ROOT_PATH + SCRIPT_NAME)
 
-        s1.cmd ("echo \'#!/bin/sh\' >>" + HTTP_SERVER_ROOT_PATH + SCRIPT_NAME)
-        s1.cmd ("echo \'#OPS-PROVISIONING\'>>" + HTTP_SERVER_ROOT_PATH + SCRIPT_NAME)
-        s1.cmd ("echo echo "+TEST_ECHO_STRING+" >>" + HTTP_SERVER_ROOT_PATH + SCRIPT_NAME)
+        s1.cmd("echo \'#!/bin/sh\' >>" + HTTP_SERVER_ROOT_PATH + SCRIPT_NAME)
+        s1.cmd("echo \'#OPS-PROVISIONING\'>>" + HTTP_SERVER_ROOT_PATH +
+               SCRIPT_NAME)
+        s1.cmd("echo echo "+TEST_ECHO_STRING+" >>" + HTTP_SERVER_ROOT_PATH +
+               SCRIPT_NAME)
 
         return True
 
     def setupNet(self):
         # Create a topology with single Halon switch
-        self.net = Mininet(topo=SingleSwitchTopo(k=1, hopts=self.getHostOpts(), sopts=self.getSwitchOpts()),
+        self.net = Mininet(topo=SingleSwitchTopo(k=1, hopts=self.getHostOpts(),
+                           sopts=self.getSwitchOpts()),
                            switch=HalonSwitch,
                            host=HalonHost,
                            link=HalonLink, controller=None,
@@ -71,13 +92,13 @@ class autoprovisionFeatureTest(HalonTest):
         and execute it
         '''
         info('\n########## Executing Autoprovision ##########\n')
-        s1 = self.net.switches [ 0 ]
+        s1 = self.net.switches[0]
         out = s1.cmd("autoprovision "+HTTP_SERVER)
         out += s1.cmdCLI("end")
 
         if not TEST_ECHO_STRING in out:
             assert (TEST_ECHO_STRING in out), \
-                   "Failed in executing autoprovision script"
+                "Failed in executing autoprovision script"
         else:
             info("### Passed:Executing downloaded autoprovision script ###\n")
 
@@ -86,20 +107,23 @@ class autoprovisionFeatureTest(HalonTest):
 
         if not HTTP_SERVER in out:
             assert (HTTP_SERVER in out), \
-                   "Failed in updating autoprovision status in DB"
+                "Failed in updating autoprovision \
+                                        status in DB"
         else:
             info("### Passed: Verify autoprovision status updated in DB ###\n")
 
-        info('\n### Executing Autoprovision again, it should not perform ###\n')
+        info('\n### Executing Autoprovision again, it should not perform '
+             '###\n')
         out = s1.cmd("autoprovision "+HTTP_SERVER)
         out += s1.cmdCLI("end")
 
         if not "Autoprovisioning already completed" in out:
             assert ("Autoprovisioning already completed" in out),\
-                    "Failed in executing autoprovision script again"
+                "Failed in executing autoprovision script again"
         else:
-            info("### Passed:Executing autoprovision script again," \
-                               "autoprovision not performed  ###\n")
+            info("### Passed:Executing autoprovision script again,"
+                 "autoprovision not performed  ###\n")
+
 
 class Test_autoprovisionfeature:
     def setup(self):
@@ -115,7 +139,7 @@ class Test_autoprovisionfeature:
     def teardown_class(cls):
     # Stop the Docker containers, and
     # mininet topology
-       Test_autoprovisionfeature.test.net.stop()
+        Test_autoprovisionfeature.test.net.stop()
 
     def setup_method(self, method):
         pass

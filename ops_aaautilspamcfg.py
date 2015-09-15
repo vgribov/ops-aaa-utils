@@ -1,18 +1,18 @@
 #!/usr/bin/env python
-# Copyright (C) 2015 Hewlett-Packard Development Company, L.P.
+# Copyright (C) 2015 Hewlett Packard Enterprise Development LP
 # All Rights Reserved.
 #
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
 #
-#         http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
 
 import os
 import sys
@@ -41,7 +41,7 @@ default_row_initialized = 0
 # Ovs definition
 idl = None
 
-vlog = ovs.vlog.Vlog("aaautilspamcfg")
+vlog = ovs.vlog.Vlog("ops_aaautilspamcfg")
 def_db = 'unix:/var/run/openvswitch/db.sock'
 
 # Schema path
@@ -51,36 +51,37 @@ ovs_schema = '/usr/share/openvswitch/vswitch.ovsschema'
 exiting = False
 seqno = 0
 
-PAM_ETC_CONFIG_DIR                = "/etc/pam.d/"
-RADIUS_CLIENT                     = "/etc/raddb/server"
-SSHD_CONFIG                       = "/etc/ssh/sshd_config"
+PAM_ETC_CONFIG_DIR = "/etc/pam.d/"
+RADIUS_CLIENT = "/etc/raddb/server"
+SSHD_CONFIG = "/etc/ssh/sshd_config"
 
 dispatch_list = []
-SYSTEM_TABLE                = "System"
-SYSTEM_AAA_COLUMN           = "aaa"
+SYSTEM_TABLE = "System"
+SYSTEM_AAA_COLUMN = "aaa"
 SYSTEM_RADIUS_SERVER_COLUMN = "radius_servers"
-RADIUS_SERVER_TABLE               = "Radius_Server"
+RADIUS_SERVER_TABLE = "Radius_Server"
 
 SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN = "auto_provisioning_status"
 
-AAA_RADIUS                        = "radius"
-AAA_FALLBACK                      = "fallback"
-HALON_TRUE                        = "true"
-HALON_FALSE                       = "false"
+AAA_RADIUS = "radius"
+AAA_FALLBACK = "fallback"
+OPS_TRUE = "true"
+OPS_FALSE = "false"
 
-RADIUS_SERVER_IPADDRESS           = "ip_address"
-RADIUS_SERVER_PORT                = "udp_port"
-RADIUS_SERVER_PASSKEY             = "passkey"
-RADIUS_SERVER_TIMEOUT             = "timeout"
-RADIUS_SERVER_RETRIES             = "retries"
-RADIUS_SEREVR_PRIORITY            = "priority"
+RADIUS_SERVER_IPADDRESS = "ip_address"
+RADIUS_SERVER_PORT = "udp_port"
+RADIUS_SERVER_PASSKEY = "passkey"
+RADIUS_SERVER_TIMEOUT = "timeout"
+RADIUS_SERVER_RETRIES = "retries"
+RADIUS_SEREVR_PRIORITY = "priority"
 
-SSH_PASSKEY_AUTHENTICATION        = "ssh_passkeyauthentication"
-SSH_PUBLICKEY_AUTHENTICATION      = "ssh_publickeyauthentication"
-AUTH_KEY_ENABLE                   = "enable"
+SSH_PASSKEY_AUTHENTICATION = "ssh_passkeyauthentication"
+SSH_PUBLICKEY_AUTHENTICATION = "ssh_publickeyauthentication"
+AUTH_KEY_ENABLE = "enable"
 
-PERFORMED                         = "performed"
-URL                               = "url"
+PERFORMED = "performed"
+URL = "url"
+
 
 #---------------- unixctl_exit --------------------------
 def unixctl_exit(conn, unused_argv, unused_aux):
@@ -88,6 +89,7 @@ def unixctl_exit(conn, unused_argv, unused_aux):
 
     exiting = True
     conn.reply(None)
+
 
 #------------------ db_get_system_status() ----------------
 def db_get_system_status(data):
@@ -103,6 +105,7 @@ def db_get_system_status(data):
                 return True
 
     return False
+
 
 #------------------ system_is_configured() ----------------
 def system_is_configured():
@@ -123,19 +126,25 @@ def system_is_configured():
 
     system_initialized = 1
     return True
+
+
 # ----------------- default_sshd_config -------------------
 def default_sshd_config():
     '''Default modifications in sshd_config file
     to support auto provisioning'''
-    with open(SSHD_CONFIG,'r+') as fd:
+    with open(SSHD_CONFIG, 'r+') as fd:
         newdata = fd.read()
 
-    newdata = newdata.replace("#PubkeyAuthentication yes", "PubkeyAuthentication yes")
-    newdata = newdata.replace("#PasswordAuthentication yes","PasswordAuthentication yes")
-    newdata = newdata.replace("#PubkeyAuthentication no", "PubkeyAuthentication no")
-    newdata = newdata.replace("#PasswordAuthentication no","PasswordAuthentication no")
+    newdata = newdata.replace("#PubkeyAuthentication yes",
+                              "PubkeyAuthentication yes")
+    newdata = newdata.replace("#PasswordAuthentication yes",
+                              "PasswordAuthentication yes")
+    newdata = newdata.replace("#PubkeyAuthentication no",
+                              "PubkeyAuthentication no")
+    newdata = newdata.replace("#PasswordAuthentication no",
+                              "PasswordAuthentication no")
 
-    with open(SSHD_CONFIG,'w') as fd:
+    with open(SSHD_CONFIG, 'w') as fd:
         fd.write(newdata)
 
 
@@ -152,8 +161,8 @@ def add_default_row():
     auto_provisioning_data = {}
 
     # Default values for aaa column
-    data[AAA_FALLBACK] = HALON_TRUE
-    data[AAA_RADIUS] = HALON_FALSE
+    data[AAA_FALLBACK] = OPS_TRUE
+    data[AAA_RADIUS] = OPS_FALSE
     data[SSH_PASSKEY_AUTHENTICATION] = AUTH_KEY_ENABLE
     data[SSH_PUBLICKEY_AUTHENTICATION] = AUTH_KEY_ENABLE
 
@@ -167,7 +176,8 @@ def add_default_row():
         break
 
     setattr(ovs_rec, SYSTEM_AAA_COLUMN, data)
-    setattr(ovs_rec, SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN, auto_provisioning_data)
+    setattr(ovs_rec, SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN,
+            auto_provisioning_data)
 
     txn.commit_block()
 
@@ -190,6 +200,7 @@ def check_for_row_initialization():
         if not ovs_rec.aaa:
             add_default_row()
     return True
+
 
 # ---------------- update_server_file -----------------
 def update_server_file():
@@ -219,13 +230,16 @@ def update_server_file():
         if ovs_rec.priority:
             priority = ovs_rec.priority - 1
 
-        insert_server_info[priority] = radius_ip + ":"+ radius_port + " " +  radius_passkey + " " + radius_timeout
+        insert_server_info[priority] = radius_ip + ":" + radius_port + " " + \
+            radius_passkey + " " + radius_timeout
         row_count += 1
 
     with open(RADIUS_CLIENT, "w+") as f:
-        f.write("\n".join(insert_server_info[count] for count in range(0,row_count)))
+        f.write("\n".join(insert_server_info[count] for count in range(0,
+                row_count)))
 
     return
+
 
 #---------------------- update_ssh_config_file ---------------------
 def update_ssh_config_file():
@@ -253,19 +267,22 @@ def update_ssh_config_file():
         contents = f.readlines()
 
     for index, line in enumerate(contents):
-        if "PubkeyAuthentication yes" in line or "PubkeyAuthentication no" in line:
+        if "PubkeyAuthentication yes" in line or "PubkeyAuthentication no" \
+           in line:
             del contents[index]
-            contents.insert(index,"PubkeyAuthentication " + publickey + "\n")
-        elif "PasswordAuthentication yes"in line or "PasswordAuthentication no" in line:
+            contents.insert(index, "PubkeyAuthentication " + publickey + "\n")
+        elif "PasswordAuthentication yes" \
+             in line or "PasswordAuthentication no" in line:
             del contents[index]
-            contents.insert(index,"PasswordAuthentication " + passkey + "\n")
+            contents.insert(index, "PasswordAuthentication " + passkey + "\n")
 
     with open(SSHD_CONFIG, "w") as f:
         contents = "".join(contents)
         f.write(contents)
 
+
 # ----------------------- modify_common_auth_file -------------------
-def modify_common_auth_session_file(fallback_value,radius_value):
+def modify_common_auth_session_file(fallback_value, radius_value):
     '''
     modify common-auth-access files, based on radius and fallback
     values set in the DB
@@ -276,30 +293,39 @@ def modify_common_auth_session_file(fallback_value,radius_value):
         if ovs_rec.retries:
             radius_retries = ",".join(str(i) for i in ovs_rec.retries)
 
-    local_auth = [" " ," "]
+    local_auth = [" ", " "]
     radius_auth = [" ", " "]
     fallback_and_radius_auth = [" ", " "]
-    fallback_local_auth = [" "," "]
+    fallback_local_auth = [" ", " "]
     filename = [" ", " "]
 
     local_auth[0] = "auth\t[success=1 default=ignore]\tpam_unix.so nullok\n"
-    radius_auth[0] = "auth\t[success=1 default=ignore]\tpam_radius_auth.so\tretry="
-    fallback_and_radius_auth[0] = "auth\t[success=2 authinfo_unavail=ignore default=1]\tpam_radius_auth.so\tretry="
-    fallback_local_auth[0] = "auth\t[success=1 default=ignore]\tpam_unix.so\ttry_first_pass\n"
+    radius_auth[0] = \
+        "auth\t[success=1 default=ignore]\tpam_radius_auth.so\tretry="
+    fallback_and_radius_auth[0] = \
+        "auth\t[success=2 authinfo_unavail=ignore default=1] \
+    \tpam_radius_auth.so\tretry="
+
+    fallback_local_auth[0] =  \
+        "auth\t[success=1 default=ignore]\tpam_unix.so\ttry_first_pass\n"
 
     local_auth[1] = "session\trequired\tpam_unix.so\n"
     radius_auth[1] = "session\trequired\tpam_radius_auth.so\n"
-    fallback_and_radius_auth[1] = "session\t[success=done new_authtok_reqd=done authinfo_unavail=ignore session_err=ignore default=die]\tpam_radius_auth.so\n"
+
+    fallback_and_radius_auth[1] = \
+        "session\t[success=done new_authtok_reqd=done authinfo_unavail=ignore \
+        session_err=ignore default=die]\tpam_radius_auth.so\n"
+
     fallback_local_auth[1] = "session\trequired\tpam_unix.so\n"
 
     filename[0] = PAM_ETC_CONFIG_DIR + "common-auth-access"
     filename[1] = PAM_ETC_CONFIG_DIR + "common-session-access"
-    for count in range(0,2):
+    for count in range(0, 2):
         with open(filename[count], "r") as f:
             contents = f.readlines()
-        cfgnow = 0;
+        cfgnow = 0
         for index, line in enumerate(contents):
-            if local_auth[count] in  line or radius_auth[count] in line:
+            if local_auth[count] in line or radius_auth[count] in line:
                 del contents[index]
                 break
             elif fallback_and_radius_auth[count] in line:
@@ -307,20 +333,25 @@ def modify_common_auth_session_file(fallback_value,radius_value):
                 del contents[index]
                 break
 
-        if radius_value == HALON_FALSE:
+        if radius_value == OPS_FALSE:
             contents.insert(index, local_auth[count])
 
-        if radius_value == HALON_TRUE and fallback_value == HALON_FALSE and count == 0:
-            contents.insert(index, radius_auth[count]+ radius_retries + "\n")
+        if radius_value == OPS_TRUE and fallback_value == OPS_FALSE  \
+           and count == 0:
+            contents.insert(index, radius_auth[count] + radius_retries + "\n")
 
-        if radius_value == HALON_TRUE and fallback_value == HALON_FALSE and count == 1:
+        if radius_value == OPS_TRUE and fallback_value == OPS_FALSE and  \
+           count == 1:
             contents.insert(index, radius_auth[count])
 
-        if radius_value == HALON_TRUE and fallback_value == HALON_TRUE and count == 0:
+        if radius_value == OPS_TRUE and fallback_value == OPS_TRUE and \
+           count == 0:
             contents.insert(index, fallback_local_auth[count])
-            contents.insert(index,fallback_and_radius_auth[count] + radius_retries + "\n")
+            contents.insert(index, fallback_and_radius_auth[count] +
+                            radius_retries + "\n")
 
-        if radius_value == HALON_TRUE and fallback_value == HALON_TRUE and count == 1:
+        if radius_value == OPS_TRUE and fallback_value == OPS_TRUE \
+           and count == 1:
             contents.insert(index, fallback_local_auth[count])
             contents.insert(index, fallback_and_radius_auth[count])
 
@@ -344,7 +375,7 @@ def update_access_files():
     commonPasswordText = "pam_unix.so obscure sha512"
 
     # Hardcoded file path
-    filename = [PAM_ETC_CONFIG_DIR + "common-password-access", \
+    filename = [PAM_ETC_CONFIG_DIR + "common-password-access",
                 PAM_ETC_CONFIG_DIR + "common-account-access"]
 
     # Count Max value is No. of files present in filename
@@ -357,7 +388,7 @@ def update_access_files():
                     fallback_value = value
                 if key == AAA_RADIUS:
                     radius_value = value
-                    if value == HALON_TRUE:
+                    if value == OPS_TRUE:
                         my_auth = "radius"
                     else:
                         my_auth = "passwd"
@@ -366,8 +397,8 @@ def update_access_files():
     modify_common_auth_session_file(fallback_value, radius_value)
 
     # To modify common accounting and common password files
-    for count in range(0,2):
-        with open(filename[count],'r+') as f:
+    for count in range(0, 2):
+        with open(filename[count], 'r+') as f:
             newdata = f.read()
         if my_auth == "radius":
             if count == 0:
@@ -380,9 +411,10 @@ def update_access_files():
             else:
                 newdata = newdata.replace(radiusText, passwdText)
 
-        with open(filename[count],'w') as f:
+        with open(filename[count], 'w') as f:
             f.write(newdata)
         count += 1
+
 
 #---------------- aaa_reconfigure() ----------------
 def aaa_util_reconfigure():
@@ -395,14 +427,14 @@ def aaa_util_reconfigure():
     global default_row_initialized
 
     if system_initialized == 0:
-       rc = system_is_configured()
-       if rc == False:
-           return
+        rc = system_is_configured()
+        if rc is False:
+            return
 
     if default_row_initialized == 0:
-       ret = check_for_row_initialization()
-       if ret == False:
-           return
+        ret = check_for_row_initialization()
+        if ret is False:
+            return
 
     update_server_file()
     update_access_files()
@@ -410,10 +442,12 @@ def aaa_util_reconfigure():
 
     return
 
+
 #----------------- aaa_run() -----------------------
 def aaa_util_run():
     '''
-    Run idl, and call reconfigure function when there is a change in DB sequence number.
+    Run idl, and call reconfigure function when there is a change in DB \
+   sequence number. \
     '''
 
     global idl
@@ -426,6 +460,7 @@ def aaa_util_run():
         seqno = idl.change_seqno
 
     return
+
 
 #----------------- main() -------------------
 def main():
@@ -452,13 +487,20 @@ def main():
 
     schema_helper = ovs.db.idl.SchemaHelper(location=ovs_schema)
     schema_helper.register_columns(SYSTEM_TABLE, ["cur_cfg"])
-    schema_helper.register_columns(SYSTEM_TABLE, [SYSTEM_AAA_COLUMN, \
-                                                        SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN])
-    schema_helper.register_columns(SYSTEM_TABLE, [SYSTEM_RADIUS_SERVER_COLUMN])
-    schema_helper.register_columns(RADIUS_SERVER_TABLE, [RADIUS_SERVER_IPADDRESS, RADIUS_SERVER_PORT, \
-                                                         RADIUS_SERVER_PASSKEY, RADIUS_SERVER_TIMEOUT, \
-                                                         RADIUS_SERVER_RETRIES, RADIUS_SEREVR_PRIORITY])
+    schema_helper.register_columns(
+        SYSTEM_TABLE,
+        [SYSTEM_AAA_COLUMN,
+         SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN])
 
+    schema_helper.register_columns(SYSTEM_TABLE,
+                                   [SYSTEM_RADIUS_SERVER_COLUMN])
+    schema_helper.register_columns(RADIUS_SERVER_TABLE,
+                                   [RADIUS_SERVER_IPADDRESS,
+                                    RADIUS_SERVER_PORT,
+                                    RADIUS_SERVER_PASSKEY,
+                                    RADIUS_SERVER_TIMEOUT,
+                                    RADIUS_SERVER_RETRIES,
+                                    RADIUS_SEREVR_PRIORITY])
 
     idl = ovs.db.idl.Idl(remote, schema_helper)
 
@@ -469,7 +511,7 @@ def main():
     if error:
         ovs.util.ovs_fatal(error, "could not create unixctl server", vlog)
 
-    seqno = idl.change_seqno # Sequence number when we last processed the db
+    seqno = idl.change_seqno  # Sequence number when last processed the db
 
     while not exiting:
         unixctl_server.run()
@@ -477,7 +519,7 @@ def main():
         aaa_util_run()
 
         if exiting:
-            break;
+            break
 
         poller = ovs.poller.Poller()
         unixctl_server.wait(poller)
