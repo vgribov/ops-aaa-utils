@@ -56,12 +56,12 @@ RADIUS_CLIENT                     = "/etc/raddb/server"
 SSHD_CONFIG                       = "/etc/ssh/sshd_config"
 
 dispatch_list = []
-OPEN_VSWITCH_TABLE                = "Open_vSwitch"
-OPEN_VSWITCH_AAA_COLUMN           = "aaa"
-OPEN_VSWITCH_RADIUS_SERVER_COLUMN = "radius_servers"
+SYSTEM_TABLE                = "System"
+SYSTEM_AAA_COLUMN           = "aaa"
+SYSTEM_RADIUS_SERVER_COLUMN = "radius_servers"
 RADIUS_SERVER_TABLE               = "Radius_Server"
 
-OPEN_VSWITCH_AUTO_PROVISIONING_STATUS_COLUMN = "auto_provisioning_status"
+SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN = "auto_provisioning_status"
 
 AAA_RADIUS                        = "radius"
 AAA_FALLBACK                      = "fallback"
@@ -93,9 +93,9 @@ def unixctl_exit(conn, unused_argv, unused_aux):
 def db_get_system_status(data):
     '''
     Check the configuration initialization completed
-    (Open_vSwitch:cur_cfg == true)
+    (System:cur_cfg == true)
     '''
-    for ovs_rec in data[OPEN_VSWITCH_TABLE].rows.itervalues():
+    for ovs_rec in data[SYSTEM_TABLE].rows.itervalues():
         if ovs_rec.cur_cfg:
             if ovs_rec.cur_cfg == 0:
                 return False
@@ -163,11 +163,11 @@ def add_default_row():
 
     # create the transaction
     txn = ovs.db.idl.Transaction(idl)
-    for ovs_rec in idl.tables[OPEN_VSWITCH_TABLE].rows.itervalues():
+    for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
         break
 
-    setattr(ovs_rec, OPEN_VSWITCH_AAA_COLUMN, data)
-    setattr(ovs_rec, OPEN_VSWITCH_AUTO_PROVISIONING_STATUS_COLUMN, auto_provisioning_data)
+    setattr(ovs_rec, SYSTEM_AAA_COLUMN, data)
+    setattr(ovs_rec, SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN, auto_provisioning_data)
 
     txn.commit_block()
 
@@ -186,7 +186,7 @@ def check_for_row_initialization():
     global idl
 
     # Check the OVS-DB/File status to see if initialization has completed.
-    for ovs_rec in idl.tables[OPEN_VSWITCH_TABLE].rows.itervalues():
+    for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
         if not ovs_rec.aaa:
             add_default_row()
     return True
@@ -236,7 +236,7 @@ def update_ssh_config_file():
     passkey = "no"
     publickey = "no"
 
-    for ovs_rec in idl.tables[OPEN_VSWITCH_TABLE].rows.itervalues():
+    for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
         if ovs_rec.aaa:
             for key, value in ovs_rec.aaa.items():
                 if key == SSH_PASSKEY_AUTHENTICATION:
@@ -350,7 +350,7 @@ def update_access_files():
     # Count Max value is No. of files present in filename
     count = 0
 
-    for ovs_rec in idl.tables[OPEN_VSWITCH_TABLE].rows.itervalues():
+    for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
         if ovs_rec.aaa:
             for key, value in ovs_rec.aaa.items():
                 if key == AAA_FALLBACK:
@@ -451,10 +451,10 @@ def main():
         remote = args.database
 
     schema_helper = ovs.db.idl.SchemaHelper(location=ovs_schema)
-    schema_helper.register_columns(OPEN_VSWITCH_TABLE, ["cur_cfg"])
-    schema_helper.register_columns(OPEN_VSWITCH_TABLE, [OPEN_VSWITCH_AAA_COLUMN, \
-                                                        OPEN_VSWITCH_AUTO_PROVISIONING_STATUS_COLUMN])
-    schema_helper.register_columns(OPEN_VSWITCH_TABLE, [OPEN_VSWITCH_RADIUS_SERVER_COLUMN])
+    schema_helper.register_columns(SYSTEM_TABLE, ["cur_cfg"])
+    schema_helper.register_columns(SYSTEM_TABLE, [SYSTEM_AAA_COLUMN, \
+                                                        SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN])
+    schema_helper.register_columns(SYSTEM_TABLE, [SYSTEM_RADIUS_SERVER_COLUMN])
     schema_helper.register_columns(RADIUS_SERVER_TABLE, [RADIUS_SERVER_IPADDRESS, RADIUS_SERVER_PORT, \
                                                          RADIUS_SERVER_PASSKEY, RADIUS_SERVER_TIMEOUT, \
                                                          RADIUS_SERVER_RETRIES, RADIUS_SEREVR_PRIORITY])

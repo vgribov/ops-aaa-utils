@@ -35,7 +35,7 @@ OVS_SCHEMA = '/usr/share/openvswitch/vswitch.ovsschema'
 
 type_startup_config = "startup"
 
-OPEN_VSWITCH_TABLE = "Open_vSwitch"
+SYSTEM_TABLE = "System"
 OPS_TRUE = "True"
 PERFORMED = "performed"
 URL = "url"
@@ -47,7 +47,7 @@ def wait_for_config_complete(idl):
 
     system_is_configured = 0
     while system_is_configured == 0:
-        for ovs_rec in idl.tables[OPEN_VSWITCH_TABLE].rows.itervalues():
+        for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
             if ovs_rec.cur_cfg is not None and ovs_rec.cur_cfg != 0:
                system_is_configured = ovs_rec.cur_cfg
                break
@@ -155,7 +155,7 @@ def update_autoprovision_status(performed_value, url):
     data[URL] = url
     # create the transaction
     txn = ovs.db.idl.Transaction(idl)
-    for ovs_rec in idl.tables[OPEN_VSWITCH_TABLE].rows.itervalues():
+    for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
         break
 
     setattr(ovs_rec, "auto_provisioning_status", data)
@@ -177,8 +177,8 @@ def main():
 
     # Locate default config if it exists
     schema_helper = ovs.db.idl.SchemaHelper(location=OVS_SCHEMA)
-    schema_helper.register_columns(OPEN_VSWITCH_TABLE, ["cur_cfg"])
-    schema_helper.register_columns(OPEN_VSWITCH_TABLE, ["auto_provisioning_status"])
+    schema_helper.register_columns(SYSTEM_TABLE, ["cur_cfg"])
+    schema_helper.register_columns(SYSTEM_TABLE, ["auto_provisioning_status"])
 
     idl = ovs.db.idl.Idl(DEF_DB, schema_helper)
 
