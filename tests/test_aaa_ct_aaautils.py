@@ -20,8 +20,8 @@ from smart.util import pexpect
 from time import sleep
 import pytest
 
-from halonvsi.docker import *
-from halonvsi.halon import *
+from opsvsi.docker import *
+from opsvsi.opsvsitest import *
 
 SSHCLIENT = "/usr/bin/ssh"
 
@@ -52,9 +52,9 @@ class myTopo(Topo):
         self.addLink('h2', 's1')
 
 
-class aaaFeatureTest(HalonTest):
+class aaaFeatureTest(OpsVsiTest):
     def setupRadiusserver(self):
-        ''' This function is to setup radius server in the halon-host image
+        ''' This function is to setup radius server in the ops-host image
         '''
         h1 = self.net.hosts[0]
         switchIP = self.getSwitchIP()
@@ -102,20 +102,20 @@ class aaaFeatureTest(HalonTest):
         info('Configured radius client on switch\n')
 
     def setupNet(self):
-        # Create a topology with single Halon switch and
+        # Create a topology with single Openswitch and
         # two host.
 
-        # Select halon-host image from docker hub, which has freeradius
+        # Select ops-host image from docker hub, which has freeradius
         # installed.
         self.setHostImageOpts("halon/halon-host")
 
         topo = myTopo(hsts=2, sws=1, hopts=self.getHostOpts(),
-                      sopts=self.getSwitchOpts(), switch=HalonSwitch,
-                      host=HalonHost, link=HalonLink, controller=None,
+                      sopts=self.getSwitchOpts(), switch=VsiOpenSwitch,
+                      host=OpsVsiHost, link=OpsVsiLink, controller=None,
                       build=True)
 
-        self.net = Mininet(topo, switch=HalonSwitch, host=HalonHost,
-                           link=HalonLink, controller=None, build=True)
+        self.net = Mininet(topo, switch=VsiOpenSwitch, host=OpsVsiHost,
+                           link=OpsVsiLink, controller=None, build=True)
         self.setupRadiusserver()
         self.setupRadiusclient()
 

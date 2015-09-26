@@ -22,8 +22,8 @@ import sys
 from time import sleep
 import pytest
 
-from halonvsi.docker import *
-from halonvsi.halon import *
+from opsvsi.docker import *
+from opsvsi.opsvsitest import *
 
 HTTP_SERVER = "http://127.0.0.1/autoprovision"
 HTTP_SERVER_ROOT_PATH = "/var/www/servers/www.example.org/pages/"
@@ -32,7 +32,7 @@ TEST_ECHO_STRING = "Hello from Autoprovision script"
 LIGHTTPD_CONFIG = "./src/ops-aaa-utils/tests/lighttpd.conf"
 
 
-class autoprovisionFeatureTest(HalonTest):
+class autoprovisionFeatureTest(OpsVsiTest):
     def setupHttpServer(self):
         ''' This function is to setup http server in the ubuntu image
         we are referring to
@@ -73,12 +73,12 @@ class autoprovisionFeatureTest(HalonTest):
         return True
 
     def setupNet(self):
-        # Create a topology with single Halon switch
+        # Create a topology with single openswitch
         self.net = Mininet(topo=SingleSwitchTopo(k=1, hopts=self.getHostOpts(),
                            sopts=self.getSwitchOpts()),
-                           switch=HalonSwitch,
-                           host=HalonHost,
-                           link=HalonLink, controller=None,
+                           switch=VsiOpenSwitch,
+                           host=OpsVsiHost,
+                           link=OpsVsiLink, controller=None,
                            build=True)
 
         if self.setupHttpServer():
