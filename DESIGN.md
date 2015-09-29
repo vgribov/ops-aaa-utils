@@ -88,6 +88,32 @@ The `aaa` column and `Radius_Server` table will be updated by the CLI.
 ####REST####
 REST module works similar to CLI.
 
-References
-----------
-For more information on CLI refer to [CLI](/documents/user/AAA_cli)
+# High level design of autoprovisioning
+
+## Feature description
+Autoprovisioning is implemented by adding hooks to the DHCP client. Openswitch uses the dhclient package which allows the users to add entry and exit hooks.
+
+## Responsibilities
+* Process incoming DHCP replies and extract option 239
+* Execute autoprovisioning procedure and update the status in OVSDB
+
+## Design choices
+The design was selected to avoid making any code changes to dhclient and to extend the functionality by mechanisms supported by dhclient.
+
+## Relationships to external OpenSwitch entities
+External OpenSwitch entities interact with the OVSDB and the dhclient package.
+
+## OVSDB-Schema
+Column **auto\_provisioning_status** resides in the System table amd is used to store the status of autoprovision.
+
+## Internal structure
+The internal structure is implemented using python. The file autoprovision.py is called by the dhclient exit hook amd passes the value of option 239 (URL of provisioning script on server) as an argument. The code performs the following actions:
+
+- Connects to OVSDB and builds the idl object
+- Fetches the provisioning script from the specified URL
+- Executes the script
+- Updates the autoprovision status to the OVSDB table System, column auto_provisioning_status.
+
+## References
+For the AAA Command Reference document, refer to [CLI](/documents/user/AAA_cli)
+For the Autoprovision Command Reference document, refer to [Autoprovision Command Reference](/documents/user/autoprovision_CLI)
