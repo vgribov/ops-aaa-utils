@@ -107,7 +107,7 @@ class aaaFeatureTest(OpsVsiTest):
 
         # Select ops-host image from docker hub, which has freeradius
         # installed.
-        self.setHostImageOpts("halon/halon-host")
+        self.setHostImageOpts("host/freeradius-ubuntu")
 
         topo = myTopo(hsts=2, sws=1, hopts=self.getHostOpts(),
                       sopts=self.getSwitchOpts(), switch=VsiOpenSwitch,
@@ -266,6 +266,8 @@ class aaaFeatureTest(OpsVsiTest):
         switchIpAddress = self.getSwitchIP()
         out = ""
         out += s1.cmd("echo ")
+        sshkey = "ssh-keygen -R " + switchIpAddress
+        sshkeygen = pexpect.spawn(sshkey)
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
@@ -306,6 +308,8 @@ class aaaFeatureTest(OpsVsiTest):
         switchIpAddress = self.getSwitchIP()
         out = ""
         out += s1.cmd("echo ")
+        sshkey = "ssh-keygen -R " + switchIpAddress
+        sshkeygen = pexpect.spawn(sshkey)
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
@@ -343,6 +347,8 @@ class aaaFeatureTest(OpsVsiTest):
         switchIpAddress = self.getSwitchIP()
         out = ""
         out += s1.cmd("echo ")
+        sshkey = "ssh-keygen -R " + switchIpAddress
+        sshkeygen = pexpect.spawn(sshkey)
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
@@ -392,6 +398,8 @@ class aaaFeatureTest(OpsVsiTest):
         switchIpAddress = self.getSwitchIP()
         out = ""
         out += s1.cmd("echo ")
+        sshkey = "ssh-keygen -R " + switchIpAddress
+        sshkeygen = pexpect.spawn(sshkey)
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
@@ -438,6 +446,8 @@ class aaaFeatureTest(OpsVsiTest):
         switchIpAddress = self.getSwitchIP()
         out = ""
         out += s1.cmd("echo ")
+        sshkey = "ssh-keygen -R " + switchIpAddress
+        sshkeygen = pexpect.spawn(sshkey)
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
@@ -476,6 +486,8 @@ class aaaFeatureTest(OpsVsiTest):
         switchIpAddress = self.getSwitchIP()
         out = ""
         out += s1.cmd("echo ")
+        sshkey = "ssh-keygen -R " + switchIpAddress
+        sshkeygen = pexpect.spawn(sshkey)
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
@@ -525,6 +537,8 @@ class aaaFeatureTest(OpsVsiTest):
         switchIpAddress = self.getSwitchIP()
         out = ""
         out += s1.cmd("echo ")
+        sshkey = "ssh-keygen -R " + switchIpAddress
+        sshkeygen = pexpect.spawn(sshkey)
         myssh = SSHCLIENT + " admin@" + switchIpAddress
         p = pexpect.spawn(myssh)
 
