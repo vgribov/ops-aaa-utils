@@ -91,5 +91,4 @@ REST module works similar to CLI.
 
 References
 ----------
-For more information on CLI refer to [CLI](http://www.openswitch.net/docs/AAA_cli.md)
-For more information on REST refer to [REST](http://www.openswitch.net/docs/TBD)
+For more information on CLI refer to [CLI](http://www.openswitch.net/docs/AAA_cli)
