@@ -91,4 +91,4 @@ REST module works similar to CLI.
 
 References
 ----------
-For more information on CLI refer to [CLI](http://www.openswitch.net/docs/AAA_cli)
+For more information on CLI refer to [CLI](/documents/user/AAA_cli)
