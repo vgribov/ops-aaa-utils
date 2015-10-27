@@ -56,7 +56,7 @@ The following diagram provides detailed description of relationships and interac
                                                             | RADIUS Client             |
                                                             +---------------------------+
 
-For more information on auto provisioning please refer to [Auto Provisioning](http://www.openswitch.net/docs/autoprovisioing)
+For more information on auto provisioning please refer to [Auto Provisioning](/documents/user/autoprovision_user_guide)
 
 OVSDB-Schema
 ------------
