@@ -3,7 +3,6 @@ High-level design of OPS-AAA-UTILS
 
 The primary goal of the `ops-aaa-utils` module is to facilitate the user authentication to the switch. This modules core component is the `ops-aaautilspamcfg` daemon. This daemon modifies the PAM configuration files, the SSH configuration file and the RADIUS client file accordingly with the values saved in OVSDB.
 
-[toc]
 
 Responsibilities
 ---------------
