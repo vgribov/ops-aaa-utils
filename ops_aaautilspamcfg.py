@@ -58,6 +58,7 @@ SSHD_CONFIG = "/etc/ssh/sshd_config"
 dispatch_list = []
 SYSTEM_TABLE = "System"
 SYSTEM_AAA_COLUMN = "aaa"
+SYSTEM_OTHER_CONFIG = "other_config"
 SYSTEM_RADIUS_SERVER_COLUMN = "radius_servers"
 RADIUS_SERVER_TABLE = "Radius_Server"
 
@@ -78,6 +79,8 @@ RADIUS_SEREVR_PRIORITY = "priority"
 SSH_PASSKEY_AUTHENTICATION = "ssh_passkeyauthentication"
 SSH_PUBLICKEY_AUTHENTICATION = "ssh_publickeyauthentication"
 AUTH_KEY_ENABLE = "enable"
+
+SFTP_SERVER_CONFIG = "sftp_server_enable"
 
 PERFORMED = "performed"
 URL = "url"
@@ -143,6 +146,8 @@ def default_sshd_config():
                               "PubkeyAuthentication no")
     newdata = newdata.replace("#PasswordAuthentication no",
                               "PasswordAuthentication no")
+    newdata = newdata.replace("Subsystem	sftp	/usr/lib/openssh/sftp-server",
+                              "#Subsystem	sftp	/usr/lib/openssh/sftp-server")
 
     with open(SSHD_CONFIG, 'w') as fd:
         fd.write(newdata)
@@ -249,6 +254,7 @@ def update_ssh_config_file():
     '''
     passkey = "no"
     publickey = "no"
+    sftpserver_enable = False
 
     for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
         if ovs_rec.aaa:
@@ -259,6 +265,13 @@ def update_ssh_config_file():
                 elif key == SSH_PUBLICKEY_AUTHENTICATION:
                     if value == AUTH_KEY_ENABLE:
                         publickey = "yes"
+
+    for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
+        if ovs_rec.other_config and ovs_rec.other_config is not None:
+            for key, value in ovs_rec.other_config.iteritems():
+                if key == SFTP_SERVER_CONFIG:
+                    if value == "true":
+                        sftpserver_enable = True
 
     # Add default values if not present, later change to values present in DB
     default_sshd_config()
@@ -275,6 +288,13 @@ def update_ssh_config_file():
              in line or "PasswordAuthentication no" in line:
             del contents[index]
             contents.insert(index, "PasswordAuthentication " + passkey + "\n")
+        elif "Subsystem	sftp	/usr/lib/openssh/sftp-server" in line:
+              if sftpserver_enable == True:
+                 del contents[index]
+                 contents.insert(index, "Subsystem	sftp	/usr/lib/openssh/sftp-server"+ "\n")
+              else:
+                 del contents[index]
+                 contents.insert(index, "#Subsystem	sftp	/usr/lib/openssh/sftp-server"+ "\n")
 
     with open(SSHD_CONFIG, "w") as f:
         contents = "".join(contents)
@@ -489,7 +509,7 @@ def main():
     schema_helper.register_columns(SYSTEM_TABLE, ["cur_cfg"])
     schema_helper.register_columns(
         SYSTEM_TABLE,
-        [SYSTEM_AAA_COLUMN,
+        [SYSTEM_AAA_COLUMN, SYSTEM_OTHER_CONFIG,
          SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN])
 
     schema_helper.register_columns(SYSTEM_TABLE,
