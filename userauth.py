@@ -16,6 +16,7 @@
 
 import tornado.web
 import PAM
+import pwd
 
 val = ''
 
@@ -32,10 +33,21 @@ def is_user_authenticated(request):
     or not based the validation of the cookie contained in the request.
     Returns True if validation succeeds else False.
     '''
-    if not request.get_secure_cookie("user"):
-        return False
-    else:
+    username = get_request_user(request)
+    if username and _user_exists(username):
         return True
+    else:
+        return False
+
+
+def get_request_user(request):
+    '''
+    The request argument is an instance of class tornado.web.RequestHandler.
+    Function determines the authenticated user using the cookie contained
+    in the request.
+    Returns the authenticated user or None is not authenticated
+    '''
+    return request.get_secure_cookie("user")
 
 
 def _pam_conv(auth, query_list, userData):
@@ -46,6 +58,14 @@ def _pam_conv(auth, query_list, userData):
     resp = []
     resp.append((val, 0))
     return resp
+
+
+def _user_exists(username):
+    try:
+        return pwd.getpwnam(username) is not None
+    except KeyError:
+        return False
+
 
 # =============================================
 # Example usage of handle_user_login
