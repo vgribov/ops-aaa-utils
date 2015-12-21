@@ -76,9 +76,9 @@ RADIUS_SERVER_TIMEOUT = "timeout"
 RADIUS_SERVER_RETRIES = "retries"
 RADIUS_SEREVR_PRIORITY = "priority"
 
-SSH_PASSKEY_AUTHENTICATION = "ssh_passkeyauthentication"
-SSH_PUBLICKEY_AUTHENTICATION = "ssh_publickeyauthentication"
-AUTH_KEY_ENABLE = "enable"
+SSH_PASSKEY_AUTHENTICATION_ENABLE = "ssh_passkeyauthentication_enable"
+SSH_PUBLICKEY_AUTHENTICATION_ENABLE = "ssh_publickeyauthentication_enable"
+AUTH_KEY_ENABLE = "true"
 
 SFTP_SERVER_CONFIG = "sftp_server_enable"
 
@@ -168,8 +168,8 @@ def add_default_row():
     # Default values for aaa column
     data[AAA_FALLBACK] = OPS_TRUE
     data[AAA_RADIUS] = OPS_FALSE
-    data[SSH_PASSKEY_AUTHENTICATION] = AUTH_KEY_ENABLE
-    data[SSH_PUBLICKEY_AUTHENTICATION] = AUTH_KEY_ENABLE
+    data[SSH_PASSKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
+    data[SSH_PUBLICKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
 
     # Default values for auto provisioning status column
     auto_provisioning_data[PERFORMED] = "False"
@@ -259,10 +259,10 @@ def update_ssh_config_file():
     for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
         if ovs_rec.aaa:
             for key, value in ovs_rec.aaa.items():
-                if key == SSH_PASSKEY_AUTHENTICATION:
+                if key == SSH_PASSKEY_AUTHENTICATION_ENABLE:
                     if value == AUTH_KEY_ENABLE:
                         passkey = "yes"
-                elif key == SSH_PUBLICKEY_AUTHENTICATION:
+                elif key == SSH_PUBLICKEY_AUTHENTICATION_ENABLE:
                     if value == AUTH_KEY_ENABLE:
                         publickey = "yes"
 
