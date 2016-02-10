@@ -65,6 +65,7 @@ RADIUS_SERVER_TABLE = "Radius_Server"
 SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN = "auto_provisioning_status"
 
 AAA_RADIUS = "radius"
+AAA_RADIUS_AUTH = "radius_auth"
 AAA_FALLBACK = "fallback"
 OPS_TRUE = "true"
 OPS_FALSE = "false"
@@ -85,6 +86,8 @@ SFTP_SERVER_CONFIG = "sftp_server_enable"
 PERFORMED = "performed"
 URL = "url"
 
+RADIUS_PAP  = "pap"
+RADIUS_CHAP = "chap"
 
 #---------------- unixctl_exit --------------------------
 def unixctl_exit(conn, unused_argv, unused_aux):
@@ -168,6 +171,7 @@ def add_default_row():
     # Default values for aaa column
     data[AAA_FALLBACK] = OPS_TRUE
     data[AAA_RADIUS] = OPS_FALSE
+    data[AAA_RADIUS_AUTH] = RADIUS_PAP
     data[SSH_PASSKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
     data[SSH_PUBLICKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
 
