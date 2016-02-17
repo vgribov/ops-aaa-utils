@@ -47,14 +47,17 @@ AUTOPROVISION_STATUS_FILE = '/var/local/autoprovision'
 def wait_for_config_complete(idl):
 
     system_is_configured = 0
-    while system_is_configured == 0:
+    while True:
+        idl.run()
         for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
             if ovs_rec.cur_cfg is not None and ovs_rec.cur_cfg != 0:
                 system_is_configured = ovs_rec.cur_cfg
                 break
 
+        if(system_is_configured != 0):
+            break
+
         poller = ovs.poller.Poller()
-        idl.run()
         idl.wait(poller)
         poller.block()
 
@@ -193,8 +196,11 @@ def main():
     seqno = idl.change_seqno    # Sequence number when last processed the db
 
     # Wait until the ovsdb sync up.
-    while (seqno == idl.change_seqno):
+    while True:
         idl.run()
+        if(seqno != idl.change_seqno):
+            break
+
         poller = ovs.poller.Poller()
         idl.wait(poller)
         poller.block()
