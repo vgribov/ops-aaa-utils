@@ -27,6 +27,7 @@
 #define RBAC_MAX_PERMISSION_NAME_LEN            25
 #define RBAC_MAX_ROLE_NAME_LEN                  20
 
+#define RBAC_ROLE_ROOT                          "root"
 #define RBAC_ROLE_ADMIN                         "ops_admin"
 #define RBAC_ROLE_NETOP                         "ops_netop"
 #define RBAC_ROLE_NONE                          "none"
@@ -44,8 +45,14 @@ typedef struct {
   char name[RBAC_MAX_NUM_PERMISSIONS][RBAC_MAX_PERMISSION_NAME_LEN];
 } rbac_permissions_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern bool rbac_check_user_permission(const char *username, const char *permissions);
 extern bool rbac_get_user_permissions(const char *username, rbac_permissions_t *permissions);
 extern bool rbac_get_user_role(const char *username, rbac_role_t *role);
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* RBAC_H */

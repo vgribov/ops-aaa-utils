@@ -18,3 +18,4 @@ project ("ops-aaa-utils")
 
 add_subdirectory(src/rbac)
 add_subdirectory(src/cli)
+add_subdirectory(tests/rbac_ut)
