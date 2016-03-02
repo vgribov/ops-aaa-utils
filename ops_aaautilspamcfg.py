@@ -86,7 +86,7 @@ SFTP_SERVER_CONFIG = "sftp_server_enable"
 PERFORMED = "performed"
 URL = "url"
 
-RADIUS_PAP  = "pap"
+RADIUS_PAP = "pap"
 RADIUS_CHAP = "chap"
 
 #---------------- unixctl_exit --------------------------
@@ -306,7 +306,8 @@ def update_ssh_config_file():
 
 
 # ----------------------- modify_common_auth_file -------------------
-def modify_common_auth_session_file(fallback_value, radius_value):
+def modify_common_auth_session_file(fallback_value, radius_value,
+                                    radius_xap_value):
     '''
     modify common-auth-access files, based on radius and fallback
     values set in the DB
@@ -323,12 +324,21 @@ def modify_common_auth_session_file(fallback_value, radius_value):
     fallback_local_auth = [" ", " "]
     filename = [" ", " "]
 
+    # If radius with CHAP is enabled then for all auth
+    # functions use pam_radius_chap_auth.so module.
+    # Other functions, e.g. session, accounting etc. should
+    # continue to use pam_radius_auth.so module
+
+    if radius_xap_value == RADIUS_CHAP:
+        radius_lib_suffix = "chap_auth.so"
+    else:
+        radius_lib_suffix = "auth.so"
+
     local_auth[0] = "auth\t[success=1 default=ignore]\tpam_unix.so nullok\n"
     radius_auth[0] = \
-        "auth\t[success=1 default=ignore]\tpam_radius_auth.so\tretry="
+        "auth\t[success=1 default=ignore]\tpam_radius_"
     fallback_and_radius_auth[0] = \
-        "auth\t[success=2 authinfo_unavail=ignore default=1] \
-    \tpam_radius_auth.so\tretry="
+        "auth\t[success=2 authinfo_unavail=ignore default=1]\tpam_radius_"
 
     fallback_local_auth[0] =  \
         "auth\t[success=1 default=ignore]\tpam_unix.so\ttry_first_pass\n"
@@ -362,7 +372,8 @@ def modify_common_auth_session_file(fallback_value, radius_value):
 
         if radius_value == OPS_TRUE and fallback_value == OPS_FALSE  \
            and count == 0:
-            contents.insert(index, radius_auth[count] + radius_retries + "\n")
+            contents.insert(index, radius_auth[count] + radius_lib_suffix +
+                            "\tretry=" + radius_retries + "\n")
 
         if radius_value == OPS_TRUE and fallback_value == OPS_FALSE and  \
            count == 1:
@@ -372,6 +383,7 @@ def modify_common_auth_session_file(fallback_value, radius_value):
            count == 0:
             contents.insert(index, fallback_local_auth[count])
             contents.insert(index, fallback_and_radius_auth[count] +
+                            radius_lib_suffix + "\tretry=" +
                             radius_retries + "\n")
 
         if radius_value == OPS_TRUE and fallback_value == OPS_TRUE \
@@ -416,9 +428,12 @@ def update_access_files():
                         my_auth = "radius"
                     else:
                         my_auth = "passwd"
+                if key == AAA_RADIUS_AUTH:
+                    radius_auth_value = value
 
     # To modify common auth and common session files
-    modify_common_auth_session_file(fallback_value, radius_value)
+    modify_common_auth_session_file(fallback_value, radius_value,
+                                    radius_auth_value)
 
     # To modify common accounting and common password files
     for count in range(0, 2):
