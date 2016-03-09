@@ -205,7 +205,7 @@ DEFUN (cli_aaa_set_radius_authentication,
          "Radius authentication\n"
          "Radius authentication type\n"
          "Set PAP Radius authentication\n"
-         "set CHAP Radius authentication\n")
+         "Set CHAP Radius authentication\n")
 {
     return aaa_set_radius_authentication(argv[0]);
 }
