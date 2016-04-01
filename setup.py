@@ -19,7 +19,7 @@ setup(
     name='ops_aaautilspamcfg',
     version='1.0',
     py_modules=['ops_aaautilspamcfg', 'autoprovision', 'userauth',
-                'cookiesecret', 'rbac'],
+                'cookiesecret'],
     entry_points={
         'console_scripts': ['ops_aaautilspamcfg = ops_aaautilspamcfg:main',
                             'autoprovision = autoprovision:main']
