@@ -56,6 +56,12 @@ PAM_ETC_CONFIG_DIR = "/etc/pam.d/"
 RADIUS_CLIENT = "/etc/raddb/server"
 SSHD_CONFIG = "/etc/ssh/sshd_config"
 
+# OpenSSH banner files
+# Post login banner
+MOTD_FILE = "/etc/motd"
+# Pre login banner
+BANNER_FILE = "/etc/issue.net"
+
 dispatch_list = []
 SYSTEM_TABLE = "System"
 SYSTEM_AAA_COLUMN = "aaa"
@@ -80,6 +86,8 @@ RADIUS_SEREVR_PRIORITY = "priority"
 
 SSH_PASSKEY_AUTHENTICATION_ENABLE = "ssh_passkeyauthentication_enable"
 SSH_PUBLICKEY_AUTHENTICATION_ENABLE = "ssh_publickeyauthentication_enable"
+BANNER = "banner"
+BANNER_EXEC= "banner_exec"
 AUTH_KEY_ENABLE = "true"
 
 SFTP_SERVER_CONFIG = "sftp_server_enable"
@@ -287,6 +295,13 @@ def update_ssh_config_file():
                 if key == SFTP_SERVER_CONFIG:
                     if value == "true":
                         sftpserver_enable = True
+                # modify the openssh banner files, this requires root access
+                if key == BANNER:
+                    with open(BANNER_FILE, "w") as f:
+                        f.write(value + '\n')
+                if key == BANNER_EXEC:
+                    with open(MOTD_FILE, "w") as f:
+                        f.write(value + '\n')
 
     # Add default values if not present, later change to values present in DB
     default_sshd_config()
