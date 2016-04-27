@@ -272,7 +272,7 @@ DEFUN(cli_aaa_remove_fallback,
         "User authentication\n"
         "Switch login\n"
         "Fallback authentication\n"
-        "Radius server unreachable\n" "Local authentication")
+        "Radius server unreachable\n" "Local authentication (Default)")
 {
     return aaa_fallback_option(OPS_TRUE_STR);
 }
@@ -286,7 +286,7 @@ DEFUN(cli_aaa_no_remove_fallback,
         "User authentication\n"
         "Switch login\n"
         "Fallback authentication\n"
-        "Radius server unreachable\n" "Local authentication")
+        "Radius server unreachable\n" "Local authentication (Default)")
 {
     return aaa_fallback_option(OPS_FALSE_STR);
 }
