@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (C) 2015 Hewlett Packard Enterprise Development LP
+# Copyright (C) 2015-2016 Hewlett Packard Enterprise Development LP
 # All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,6 +19,20 @@ import PAM
 import pwd
 
 val = ''
+
+# ============================================================
+# Cookie expiration time, represent by day(s)
+# Example:
+#  Set EXPIRES_DAYS to 0.07 to instruct browser discard cookie
+#  after approximately 1 hour 40 minutes
+#
+#  (Optional) Set MAX_AGE_DAYS as oldest cookie that server
+#   will accept, which is approximately 1 hour 55 minutes
+#   notice MAX_AGE_DAYS should be larger than EXPIRES_DAYS
+# ============================================================
+MAX_AGE_DAYS = 0.08
+EXPIRES_DAYS = 0.07
+
 
 # =======================================================
 # Module: userauth.py
@@ -47,7 +61,7 @@ def get_request_user(request):
     in the request.
     Returns the authenticated user or None is not authenticated
     '''
-    return request.get_secure_cookie("user")
+    return request.get_secure_cookie("user", max_age_days=MAX_AGE_DAYS)
 
 
 def _pam_conv(auth, query_list, userData):
@@ -109,5 +123,7 @@ def handle_user_login(request):
     except:
         return False
     else:
-        request.set_secure_cookie("user", request.get_argument("username"))
+        request.set_secure_cookie("user",
+                                  request.get_argument("username"),
+                                  expires_days=EXPIRES_DAYS)
         return True
