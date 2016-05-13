@@ -24,6 +24,34 @@ topoDict = {"topoExecution": 120,
 # Global variables
 dut01Obj = None
 
+# Generates shell command to add feature in config file
+
+
+def gen_shell_cmd_add_conf(daemon, feature):
+    shell_cmd = 'printf \'\n---\n  -\n    feature_name: \"' + feature + \
+        '\"\n    feature_desc: \"Sample feature\"\n' + \
+        '    daemon:\n     - [name: \"' + daemon + '\", \"diag_dump\":\"y\"]' \
+        + ' \' ' + ' > /etc/openswitch/supportability/ops_featuremapping.yaml'
+    return shell_cmd
+
+# Generates shell command to backup config
+
+
+def gen_shell_cmd_backup_conf():
+    shell_cmd = "mv \
+    /etc/openswitch/supportability/ops_featuremapping.yaml \
+    /etc/openswitch/supportability/ops_featuremapping.yaml.bak"
+    return shell_cmd
+
+# Generates shell command to restore old backup config
+
+
+def gen_shell_cmd_restore_conf():
+    shell_cmd = "mv \
+    /etc/openswitch/supportability/ops_featuremapping.yaml.bak \
+    /etc/openswitch/supportability/ops_featuremapping.yaml"
+    return shell_cmd
+
 
 def checkAAADaemonDiag(dut01Obj, daemon, feature):
     # Variables
@@ -37,16 +65,11 @@ def checkAAADaemonDiag(dut01Obj, daemon, feature):
     LogOutput('info', "1.1 Running Diagnostic test for AAA. " + tc_desc)
     LogOutput('info', "############################################\n")
 
-    shell_cmd = "cp /etc/openswitch/supportability/ops_featuremapping.yaml\
-     /etc/openswitch/supportability/ops_featuremapping.yaml2 "
+    shell_cmd = gen_shell_cmd_backup_conf()
     returnDevInt = dut01Obj.DeviceInteract(command=shell_cmd)
     LogOutput('info', str(returnDevInt['buffer']))
 
-    shell_cmd = 'printf \'\n  -\n    feature_name: \"' + feature + \
-        '\"\n    feature_desc: \"AAA feature Sample\"\n' + \
-        '    daemon:\n     - \"' + daemon + '\"    ' + ' \' ' + \
-        ' > /etc/openswitch/supportability/ops_featuremapping.yaml'
-
+    shell_cmd = gen_shell_cmd_add_conf(daemon, feature)
     dut01Obj.DeviceInteract(command=shell_cmd)
     LogOutput('info', str(returnDevInt['buffer']))
 
@@ -59,8 +82,7 @@ def checkAAADaemonDiag(dut01Obj, daemon, feature):
     finalReturnCode = returnDevInt['returnCode']
     overallBuffer.append(returnDevInt['buffer'])
 
-    shell_cmd = "mv /etc/openswitch/supportability/ops_featuremapping.yaml2\
-     /etc/openswitch/supportability/ops_featuremapping.yaml "
+    shell_cmd = gen_shell_cmd_restore_conf()
     dut01Obj.DeviceInteract(command=shell_cmd)
 
     if finalReturnCode != 0:
