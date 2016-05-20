@@ -125,5 +125,6 @@ def handle_user_login(request):
     else:
         request.set_secure_cookie("user",
                                   request.get_argument("username"),
-                                  expires_days=EXPIRES_DAYS)
+                                  expires_days=EXPIRES_DAYS,
+                                  secure=True)
         return True
