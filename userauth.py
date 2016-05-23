@@ -128,3 +128,10 @@ def handle_user_login(request):
                                   expires_days=EXPIRES_DAYS,
                                   secure=True)
         return True
+
+def handle_user_logout(request):
+    '''
+    The request argument is an instance of class tornado.web.RequestHandler.
+    This function clears the cookie contained in the request.
+    '''
+    request.clear_cookie("user")
