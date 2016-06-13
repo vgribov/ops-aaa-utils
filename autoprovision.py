@@ -22,6 +22,7 @@ import cookielib
 from time import sleep
 
 import ovs.dirs
+import ovs.vlog
 import ovs.db.idl
 from ovs.db import error
 from ovs.db import types
@@ -42,6 +43,9 @@ URL = "url"
 AUTOPROVISION_SCRIPT = '/var/tmp/autoprovision'
 AUTOPROVISION_STATUS_FILE = '/var/local/autoprovision'
 
+# VLOG
+vlog = ovs.vlog.Vlog("ops_aaautilspamcfg")
+vlog.init("/var/log/messages")
 
 #------------------ wait_for_config_complete() ----------------
 def wait_for_config_complete(idl):
@@ -93,11 +97,11 @@ def check_for_startup_config(remote):
                 if ovs_rec.config:
                     tbl_found = True
                 else:
-                    print("startup config row does not have config column")
+                    vlog.err("startup config row does not have config column")
                 break
 
     if not tbl_found:
-        print("No startup config rows found in the config table")
+        vlog.err("No startup config rows found in the config table")
 
     idl_cfg.close()
 
@@ -114,7 +118,7 @@ def fetch_autoprovision_script(url):
         opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
         request = urllib2.Request(url, None, header)
 
-        print("Sending HTTP GET to %s" % url)
+        vlog.info("Sending HTTP GET to %s" % url)
         f = opener.open(request)
         data = f.read()
         f.close()
@@ -148,7 +152,7 @@ def fetch_autoprovision_script(url):
             print('generic exception: ' + str(e))
             return ret
     else:
-        print("Error, downloaded autoprovision script does not contain"
+        vlog.err("Error, downloaded autoprovision script does not contain"
               "OPS-PROVISIONING string in comment")
         ret = False
 
@@ -180,7 +184,6 @@ def main():
     global idl
     argv = sys.argv
     n_args = 2
-
     if len(argv) != n_args:
         print("Requires %d arguments but %d provided \n" % (n_args, len(argv)))
         return
@@ -208,7 +211,7 @@ def main():
     wait_for_config_complete(idl)
 
     if os.path.exists(AUTOPROVISION_STATUS_FILE):
-        print("Autoprovisioning already completed")
+        vlog.info("Autoprovisioning already completed")
         update_autoprovision_status(OPS_TRUE, argv[1])
         idl.close()
         return
@@ -240,10 +243,10 @@ def main():
                 return
 
             update_autoprovision_status(OPS_TRUE, argv[1])
-            print("Autoprovision status: performed = %s URL =  %s"
+            vlog.info("Autoprovision status: performed = %s URL =  %s"
                   % (OPS_TRUE, argv[1]))
         else:
-            print("Error, executing autoprovision script returned error %d"
+            vlog.err("Error, executing autoprovision script returned error %d"
                   % ret)
 
     idl.close()
