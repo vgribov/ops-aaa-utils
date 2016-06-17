@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (C) 2015 Hewlett Packard Enterprise Development LP
+# Copyright (C) 2015-2016 Hewlett Packard Enterprise Development LP
 # All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,14 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import os
-import sys
-import time
-from time import sleep
-
 import ovs.dirs
-from ovs.db import error
-from ovs.db import types
 import ovs.daemon
 import ovs.db.idl
 import ovs.unixctl
@@ -87,7 +80,7 @@ RADIUS_SEREVR_PRIORITY = "priority"
 SSH_PASSKEY_AUTHENTICATION_ENABLE = "ssh_passkeyauthentication_enable"
 SSH_PUBLICKEY_AUTHENTICATION_ENABLE = "ssh_publickeyauthentication_enable"
 BANNER = "banner"
-BANNER_EXEC= "banner_exec"
+BANNER_EXEC = "banner_exec"
 AUTH_KEY_ENABLE = "true"
 
 SFTP_SERVER_CONFIG = "sftp_server_enable"
@@ -99,6 +92,8 @@ RADIUS_PAP = "pap"
 RADIUS_CHAP = "chap"
 
 #---------------- unixctl_exit --------------------------
+
+
 def unixctl_exit(conn, unused_argv, unused_aux):
     global exiting
 
@@ -244,7 +239,6 @@ def update_server_file():
     radius_port = 0
     radius_passkey = 0
     radius_timeout = 0
-    count = 0
     row_count = 0
     for ovs_rec in idl.tables[RADIUS_SERVER_TABLE].rows.itervalues():
         if ovs_rec.ip_address:
@@ -264,7 +258,7 @@ def update_server_file():
 
     with open(RADIUS_CLIENT, "w+") as f:
         f.write("\n".join(insert_server_info[count] for count in range(0,
-                row_count)))
+                                                           row_count)))
 
     radius_passkey = 0
 
@@ -321,12 +315,14 @@ def update_ssh_config_file():
             del contents[index]
             contents.insert(index, "PasswordAuthentication " + passkey + "\n")
         elif "Subsystem	sftp	/usr/lib/openssh/sftp-server" in line:
-              if sftpserver_enable == True:
-                 del contents[index]
-                 contents.insert(index, "Subsystem	sftp	/usr/lib/openssh/sftp-server"+ "\n")
-              else:
-                 del contents[index]
-                 contents.insert(index, "#Subsystem	sftp	/usr/lib/openssh/sftp-server"+ "\n")
+            if sftpserver_enable is True:
+                del contents[index]
+                contents.insert(
+                    index, "Subsystem	sftp	/usr/lib/openssh/sftp-server" + "\n")
+            else:
+                del contents[index]
+                contents.insert(
+                    index, "#Subsystem	sftp	/usr/lib/openssh/sftp-server" + "\n")
 
     with open(SSHD_CONFIG, "w") as f:
         contents = "".join(contents)
@@ -385,7 +381,6 @@ def modify_common_auth_session_file(fallback_value, radius_value,
     for count in range(0, 2):
         with open(filename[count], "r") as f:
             contents = f.readlines()
-        cfgnow = 0
         for index, line in enumerate(contents):
             if local_auth[count] in line or radius_auth[count] in line:
                 del contents[index]
@@ -437,7 +432,9 @@ def update_access_files():
     passwdText = "pam_unix.so"
     radiusText = "pam_radius_auth.so"
     commonPasswordText = "pam_unix.so obscure sha512"
-
+    fallback_value = OPS_TRUE
+    radius_value = OPS_FALSE
+    radius_auth_value = RADIUS_PAP
     # Hardcoded file path
     filename = [PAM_ETC_CONFIG_DIR + "common-password-access",
                 PAM_ETC_CONFIG_DIR + "common-account-access"]
@@ -595,7 +592,7 @@ def main():
         idl.wait(poller)
         poller.block()
 
-    #Daemon Exit
+    # Daemon Exit
     unixctl_server.close()
     idl.close()
 

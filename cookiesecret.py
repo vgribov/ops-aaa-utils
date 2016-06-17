@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (C) 2015 Hewlett Packard Enterprise Development LP
+# Copyright (C) 2015-2016 Hewlett Packard Enterprise Development LP
 # All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -30,17 +30,16 @@ import os
 
 
 def generate_cookie_secret():
-    SECURE_COOKIE_LEN = 256/8
-    FILE = "/var/run/persistant_cookie_secret"
-    if os.path.isfile(FILE):
-        with open(FILE, 'r') as file:
-            string2 = file.read()
+    SECURE_COOKIE_LEN = 256 / 8
+    cookie_secret_file_path = "/var/run/persistant_cookie_secret"
+    if os.path.isfile(cookie_secret_file_path):
+        with open(cookie_secret_file_path, 'r') as cookie_secret_file:
+            string2 = cookie_secret_file.read()
     else:
         string1 = os.urandom(SECURE_COOKIE_LEN)
         OpenSSL.rand.seed(string1)
         string2 = OpenSSL.rand.bytes(SECURE_COOKIE_LEN)
-        file = open(FILE, 'w+')
-        file.write(string2)
-        file.close()
-        os.chmod(FILE, 0600)
+        with open(cookie_secret_file_path, 'w+') as cookie_secret_file:
+            cookie_secret_file.write(string2)
+        os.chmod(cookie_secret_file_path, 0600)
     return string2

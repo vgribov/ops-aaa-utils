@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (C) 2015 Hewlett Packard Enterprise Development LP
+# Copyright (C) 2015-2016 Hewlett Packard Enterprise Development LP
 # All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,13 +19,11 @@ import sys
 import urllib2
 import httplib
 import cookielib
-from time import sleep
 
 import ovs.dirs
 import ovs.vlog
 import ovs.db.idl
 from ovs.db import error
-from ovs.db import types
 
 # ovs definitions
 idl = None
@@ -47,7 +45,9 @@ AUTOPROVISION_STATUS_FILE = '/var/local/autoprovision'
 vlog = ovs.vlog.Vlog("ops_aaautilspamcfg")
 vlog.init("/var/log/messages")
 
-#------------------ wait_for_config_complete() ----------------
+# ------------------ wait_for_config_complete() ----------------
+
+
 def wait_for_config_complete(idl):
 
     system_is_configured = 0
@@ -108,7 +108,9 @@ def check_for_startup_config(remote):
     return tbl_found
 
 
-#------------------ fetch_autoprovision_script() ----------------
+# ------------------ fetch_autoprovision_script() ----------------
+
+
 def fetch_autoprovision_script(url):
     ret = False
     try:
@@ -141,9 +143,9 @@ def fetch_autoprovision_script(url):
 
     if ("OPS-PROVISIONING" in data):
         try:
-            FILE = open(AUTOPROVISION_SCRIPT, "wb")
-            FILE.write(data)
-            FILE.close()
+            autoprovision_file = open(AUTOPROVISION_SCRIPT, "wb")
+            autoprovision_file.write(data)
+            autoprovision_file.close()
             ret = True
         except IOError as e:
             print "I/O error({0}): {1}".format(e.errno, e.strerror)
@@ -153,7 +155,7 @@ def fetch_autoprovision_script(url):
             return ret
     else:
         vlog.err("Error, downloaded autoprovision script does not contain"
-              "OPS-PROVISIONING string in comment")
+                 "OPS-PROVISIONING string in comment")
         ret = False
 
     return ret
@@ -178,8 +180,9 @@ def update_autoprovision_status(performed_value, url):
 
     return True
 
-
     ###############################  main  ###########################
+
+
 def main():
     global idl
     argv = sys.argv
@@ -229,25 +232,25 @@ def main():
         ret = os.system(AUTOPROVISION_SCRIPT)
         if (ret == 0):
             try:
-                FILE = open(AUTOPROVISION_STATUS_FILE, "w")
-                FILE.close()
+                autoprovision_file = open(AUTOPROVISION_STATUS_FILE, "w")
+                autoprovision_file.close()
             except IOError as e:
                 print "Creating autoprovision status file, I/O error({0}): \
                       {1}".format(e.errno, e.strerror)
                 idl.close()
                 return
             except Exception, e:
-                print('Creating autoprovision status file, generic exception: '
-                      + str(e))
+                print('Creating autoprovision status file,'\
+                    'generic exception: ' + str(e))
                 idl.close()
                 return
 
             update_autoprovision_status(OPS_TRUE, argv[1])
             vlog.info("Autoprovision status: performed = %s URL =  %s"
-                  % (OPS_TRUE, argv[1]))
+                      % (OPS_TRUE, argv[1]))
         else:
             vlog.err("Error, executing autoprovision script returned error %d"
-                  % ret)
+                     % ret)
 
     idl.close()
 

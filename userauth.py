@@ -14,7 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import tornado.web
 import PAM
 import pwd
 
@@ -128,6 +127,7 @@ def handle_user_login(request):
                                   expires_days=EXPIRES_DAYS,
                                   secure=True)
         return True
+
 
 def handle_user_logout(request):
     '''
