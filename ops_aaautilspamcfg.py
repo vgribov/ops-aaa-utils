@@ -266,6 +266,8 @@ def update_server_file():
         f.write("\n".join(insert_server_info[count] for count in range(0,
                 row_count)))
 
+    radius_passkey = 0
+
     return
 
 
