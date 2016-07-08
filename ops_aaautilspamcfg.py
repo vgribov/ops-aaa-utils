@@ -28,7 +28,6 @@ import ovs.unixctl
 import ovs.unixctl.server
 import argparse
 import ovs.vlog
-import ops_diagdump
 
 # Assign my_auth to default local config
 my_auth = "passwd"
@@ -96,16 +95,6 @@ def unixctl_exit(conn, unused_argv, unused_aux):
 
     exiting = True
     conn.reply(None)
-
-
-#------daemon handler function for diagnostic dump--------
-def diag_basic_handler(argv):
-    # argv[0] is basic
-    # argv[1] is feature name
-    feature = argv.pop()
-    buff = 'Diagnostic dump response for feature ' + feature + '.\n'
-    buff = buff + 'diag-dump feature for AAA is not implemented'
-    return buff
 
 
 #------------------ db_get_system_status() ----------------
@@ -557,8 +546,6 @@ def main():
     idl = ovs.db.idl.Idl(remote, schema_helper)
 
     ovs.daemon.daemonize()
-
-    ops_diagdump.init_diag_dump_basic(diag_basic_handler)
 
     ovs.unixctl.command_register("exit", "", 0, 0, unixctl_exit, None)
     error, unixctl_server = ovs.unixctl.server.UnixctlServer.create(None)
