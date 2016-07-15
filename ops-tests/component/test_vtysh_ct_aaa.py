@@ -22,6 +22,7 @@ OpenSwitch Test for switchd related configurations.
 
 # from pytest import set_trace
 # from time import sleep
+from pytest import mark
 
 TOPOLOGY = """
 # +-------+
@@ -302,6 +303,7 @@ def noradiusretries(dut):
         'Test to remove radius server Retries and reset to default: Failed'
 
 
+@mark.gate
 def test_vtysh_ct_aaa(topology, step):
     ops1 = topology.get('ops1')
     assert ops1 is not None

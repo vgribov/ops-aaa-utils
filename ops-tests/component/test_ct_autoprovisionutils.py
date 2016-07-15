@@ -15,6 +15,7 @@
 
 from time import sleep
 from os.path import realpath, join, dirname
+from pytest import mark
 
 TOPOLOGY = """
 #               +-------+
@@ -124,6 +125,7 @@ def executeautoprovision(sw1, h1, step):
          "autoprovision not performed  ###\n")
 
 
+@mark.gate
 def test_autoprovisionfeature(topology, step):
     sw1 = topology.get('sw1')
     h1 = topology.get('h1')
