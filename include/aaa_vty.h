@@ -33,10 +33,7 @@ typedef struct tacacs_server_params_s {
 } tacacs_server_params_t;
 
 
-/*
- * depending on the outcome of the db transaction, return
- * the appropriate value for the cli command execution.
-*/
+/* Return value based on outcome of the db transaction */
 inline static int
 config_finish_result (enum ovsdb_idl_txn_status status)
 {
@@ -91,6 +88,9 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 #define SYSTEM_AAA_RADIUS_AUTH          "radius_auth"
 #define RADIUS_CHAP                     "chap"
 #define RADIUS_PAP                      "pap"
+#define SYSTEM_TACACS_CONFIG_PASSKEY    "passkey"
+#define SYSTEM_TACACS_CONFIG_PORT       "port"
+#define SYSTEM_TACACS_CONFIG_TIMEOUT    "timeout"
 #define OPS_TRUE_STR                        "true"
 #define OPS_FALSE_STR                       "false"
 
@@ -102,8 +102,10 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 
 #define MAX_TACACS_SERVERS                    64
 #define TACACS_SERVER_DEFAULT_PASSKEY         "testing123-1"
-#define TACACS_SERVER_DEFAULT_PORT            1812
+#define TACACS_SERVER_DEFAULT_PORT            49
+#define TACACS_SERVER_DEFAULT_PORT_STR        "49"
 #define TACACS_SERVER_DEFAULT_TIMEOUT         5
+#define TACACS_SERVER_DEFAULT_TIMEOUT_STR     "5"
 
 #define AUTO_PROVISIONING_ENABLE              "enable"
 #define AUTO_PROVISIONING_DISABLE             "disable"

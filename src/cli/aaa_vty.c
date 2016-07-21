@@ -54,6 +54,9 @@ static int aaa_set_global_status (const char *status);
 static int aaa_set_radius_authentication(const char *auth);
 static int aaa_fallback_option (const char *value);
 static int aaa_show_aaa_authenctication ();
+static int tacacs_set_global_passkey (const char *passkey);
+static int tacacs_set_global_port (const char *port);
+static int tacacs_set_global_timeout (const char *timeout);
 static int radius_server_add_host (const char *ipv4);
 static int radius_server_remove_auth_port (const char *ipv4,
                        const char *authport);
@@ -350,6 +353,173 @@ DEFUN(cli_aaa_show_aaa_authenctication,
 {
     return aaa_show_aaa_authenctication();
 }
+
+/* Specifies the TACACS+ server global configuration*/
+/* Modify TACACS+ server passkey
+ * default 'passkey' is 'testing123-1'
+ */
+static int
+tacacs_set_global_passkey(const char *passkey)
+{
+    const struct ovsrec_system *ovs_system = NULL;
+    struct ovsdb_idl_txn *tacacs_txn = NULL;
+    struct smap smap_tacacs_config;
+
+    /* Start of transaction */
+    START_DB_TXN(tacacs_txn);
+
+    ovs_system = ovsrec_system_first(idl);
+
+    if (ovs_system == NULL)
+    {
+        vty_out(vty, "Could not access the System Table\n");
+        ERRONEOUS_DB_TXN(tacacs_txn, "Could not access the System Table");
+    }
+
+    smap_clone(&smap_tacacs_config, &ovs_system->tacacs_config);
+
+    smap_replace(&smap_tacacs_config, SYSTEM_TACACS_CONFIG_PASSKEY, passkey);
+
+    ovsrec_system_set_tacacs_config(ovs_system, &smap_tacacs_config);
+
+    smap_destroy(&smap_tacacs_config);
+
+    /* End of transaction */
+    END_DB_TXN(tacacs_txn);
+}
+
+/* CLI to configure the shared secret key between the TACACS+ client
+ * and the TACACS+ server, default value is 'testing123-1'
+ */
+DEFUN(cli_tacacs_server_set_passkey,
+      tacacs_server_set_passkey_cmd,
+      "tacacs-server key WORD",
+      "TACACS+ server configuration\n"
+      "Set shared secret key\n"
+      "TACACS+ shared secret key. (Default: testing123-1)\n")
+{
+    if (vty_flags & CMD_FLAG_NO_CMD)
+        return tacacs_set_global_passkey(TACACS_SERVER_DEFAULT_PASSKEY);
+
+    return tacacs_set_global_passkey(argv[0]);
+}
+
+DEFUN_NO_FORM(cli_tacacs_server_set_passkey,
+              tacacs_server_set_passkey_cmd,
+              "tacacs-server key",
+              "TACACS+ server configuration\n"
+              "Set shared secret key\n");
+
+/* Modify TACACS+ server TCP port
+ * default 'port' is 49
+ */
+static int
+tacacs_set_global_port(const char *port)
+{
+    const struct ovsrec_system *ovs_system = NULL;
+    struct ovsdb_idl_txn *tacacs_txn = NULL;
+    struct smap smap_tacacs_config;
+
+    /* Start of transaction */
+    START_DB_TXN(tacacs_txn);
+
+    ovs_system = ovsrec_system_first(idl);
+
+    if (ovs_system == NULL)
+    {
+        vty_out(vty, "Could not access the System Table\n");
+        ERRONEOUS_DB_TXN(tacacs_txn, "Could not access the System Table");
+    }
+
+    smap_clone(&smap_tacacs_config, &ovs_system->tacacs_config);
+
+    smap_replace(&smap_tacacs_config, SYSTEM_TACACS_CONFIG_PORT, port);
+
+    ovsrec_system_set_tacacs_config(ovs_system, &smap_tacacs_config);
+
+    smap_destroy(&smap_tacacs_config);
+
+    /* End of transaction */
+    END_DB_TXN(tacacs_txn);
+}
+
+/* CLI to configure the TCP port number used for exchanging TACACS+
+ * messages between the client and server. Default TCP port number is 49
+ */
+DEFUN(cli_tacacs_server_set_port,
+      tacacs_server_set_port_cmd,
+      "tacacs-server port <1-65535>",
+      "TACACS+ server configuration\n"
+      "Set TCP port number\n"
+      "TCP port range is 1 to 65535 (Default: 49)\n")
+{
+    if (vty_flags & CMD_FLAG_NO_CMD)
+        return tacacs_set_global_port(TACACS_SERVER_DEFAULT_PORT_STR);
+
+    return tacacs_set_global_port(argv[0]);
+}
+
+DEFUN_NO_FORM (cli_tacacs_server_set_port,
+               tacacs_server_set_port_cmd,
+               "tacacs-server port",
+               "TACACS+ server configuration\n"
+               "Set TCP port number\n");
+
+/* Modify TACACS+ server timeout
+ * default 'timeout' is 5
+ */
+static int
+tacacs_set_global_timeout(const char *timeout)
+{
+    const struct ovsrec_system *ovs_system = NULL;
+    struct ovsdb_idl_txn *tacacs_txn = NULL;
+    struct smap smap_tacacs_config;
+
+    /* Start of transaction */
+    START_DB_TXN(tacacs_txn);
+
+    ovs_system = ovsrec_system_first(idl);
+
+    if (ovs_system == NULL)
+    {
+        vty_out(vty, "Could not access the System Table\n");
+        ERRONEOUS_DB_TXN(tacacs_txn, "Could not access the System Table");
+    }
+
+    smap_clone(&smap_tacacs_config, &ovs_system->tacacs_config);
+
+    smap_replace(&smap_tacacs_config, SYSTEM_TACACS_CONFIG_TIMEOUT, timeout);
+
+    ovsrec_system_set_tacacs_config(ovs_system, &smap_tacacs_config);
+
+    smap_destroy(&smap_tacacs_config);
+
+    /* End of transaction */
+    END_DB_TXN(tacacs_txn);
+}
+
+/* CLI to configure the timeout interval that the switch waits
+ * for response from the TACACS+ server before issue a timeout failure.
+ * Default timeout value is 5 seconds
+ */
+DEFUN(cli_tacacs_server_set_timeout,
+      tacacs_server_set_timeout_cmd,
+      "tacacs-server timeout <0-60>",
+      "TACACS+ server configuration\n"
+      "Set transmission timeout interval\n"
+      "Timeout interval 0 to 60 seconds. (Default: 5)\n")
+{
+    if (vty_flags & CMD_FLAG_NO_CMD)
+        return tacacs_set_global_timeout(TACACS_SERVER_DEFAULT_TIMEOUT_STR);
+
+    return tacacs_set_global_timeout(argv[0]);
+}
+
+DEFUN_NO_FORM(cli_tacacs_server_set_timeout,
+              tacacs_server_set_timeout_cmd,
+              "tacacs-server timeout",
+              "TACACS+ server configuration\n"
+              "Set transmission timeout interval\n");
 
 /* Adding RADIUS server host.
  * Add the host 'ipv4' with default values
@@ -1595,9 +1765,13 @@ aaa_ovsdb_init(void)
     ovsdb_idl_add_column(idl, &ovsrec_radius_server_col_passkey);
     ovsdb_idl_add_column(idl, &ovsrec_radius_server_col_priority);
 
+    /* Add tacacs-server columns. */
     ovsdb_idl_add_column(idl, &ovsrec_system_col_tacacs_servers);
     ovsdb_idl_add_table(idl, &ovsrec_table_tacacs_server);
     ovsdb_idl_add_column(idl, &ovsrec_tacacs_server_col_ip_address);
+    /* Columns in System table. */
+    ovsdb_idl_add_column(idl, &ovsrec_system_col_tacacs_config);
+
     return;
 }
 
@@ -1619,6 +1793,14 @@ cli_post_init(void)
     install_element(CONFIG_NODE, &aaa_set_radius_authentication_cmd);
     install_element(CONFIG_NODE, &aaa_remove_fallback_cmd);
     install_element(CONFIG_NODE, &aaa_no_remove_fallback_cmd);
+    install_element(CONFIG_NODE, &tacacs_server_set_passkey_cmd);
+    install_element(CONFIG_NODE, &tacacs_server_set_port_cmd);
+    install_element(CONFIG_NODE, &tacacs_server_set_timeout_cmd);
+    install_element(CONFIG_NODE, &no_tacacs_server_set_passkey_cmd);
+    install_element(CONFIG_NODE, &no_tacacs_server_set_port_cmd);
+    install_element(CONFIG_NODE, &no_tacacs_server_set_timeout_cmd);
+    install_element(CONFIG_NODE, &tacacs_server_host_cmd);
+    install_element(CONFIG_NODE, &no_tacacs_server_host_cmd);
     install_element(CONFIG_NODE, &radius_server_add_host_cmd);
     install_element(CONFIG_NODE, &radius_server_remove_host_cmd);
     install_element(CONFIG_NODE, &radius_server_remove_passkey_cmd);
@@ -1630,8 +1812,6 @@ cli_post_init(void)
     install_element(CONFIG_NODE, &radius_server_configure_timeout_cmd);
     install_element(CONFIG_NODE, &radius_server_set_auth_port_cmd);
     install_element(ENABLE_NODE, &show_radius_server_cmd);
-    install_element(CONFIG_NODE, &tacacs_server_host_cmd);
-    install_element(CONFIG_NODE, &no_tacacs_server_host_cmd);
     install_element(ENABLE_NODE, &show_auto_provisioning_cmd);
     install_element(ENABLE_NODE, &show_ssh_auth_method_cmd);
     install_element(CONFIG_NODE, &set_ssh_publickey_auth_cmd);
