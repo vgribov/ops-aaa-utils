@@ -30,6 +30,9 @@
 typedef struct tacacs_server_params_s {
     bool no_form;           /* TRUE/FALSE */
     char *server_name;      /* FQDN or IP Address */
+    char *timeout;          /* Timeout */
+    char *shared_key;       /* Shared secret key */
+    char *auth_port;        /* Authentication port */
 } tacacs_server_params_t;
 
 
@@ -115,6 +118,17 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 
 #define SSH_PUBLICKEY_AUTHENTICATION_ENABLE "ssh_publickeyauthentication_enable"
 #define SSH_PASSWORD_AUTHENTICATION_ENABLE  "ssh_passkeyauthentication_enable"
+
+#define AUTH_PORT_HELP_STR                    "Set authentication port\n"
+#define AUTH_PORT_RANGE_HELP_STR              "TCP port range is 1 to 65535. (Default: 49)\n"
+#define TIMEOUT_HELP_STR                      "Set the transmission timeout interval\n"
+#define TIMEOUT_RANGE_HELP_STR                "Timeout interval 1 to 60 seconds. (Default: 5)\n"
+#define SHARED_KEY_HELP_STR                   "Set shared secret\n"
+#define SHARED_KEY_VAL_HELP_STR               "TACACS+ shared secret. (Default: testing123-1)\n"
+#define TACACS_SERVER_HELP_STR                "TACACS+ server configuration\n"
+#define TACACS_SERVER_HOST_HELP_STR           "Specify a TACACS+ server\n"
+#define TACACS_SERVER_NAME_HELP_STR           "TACACS+ server IP address or hostname\n"
+
 
 void cli_pre_init(void);
 void cli_post_init(void);
