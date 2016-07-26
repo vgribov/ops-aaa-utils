@@ -504,10 +504,10 @@ tacacs_set_global_timeout(const char *timeout)
  */
 DEFUN(cli_tacacs_server_set_timeout,
       tacacs_server_set_timeout_cmd,
-      "tacacs-server timeout <0-60>",
+      "tacacs-server timeout <1-60>",
       "TACACS+ server configuration\n"
       "Set transmission timeout interval\n"
-      "Timeout interval 0 to 60 seconds. (Default: 5)\n")
+      "Timeout interval 1 to 60 seconds. (Default: 5)\n")
 {
     if (vty_flags & CMD_FLAG_NO_CMD)
         return tacacs_set_global_timeout(TACACS_SERVER_DEFAULT_TIMEOUT_STR);
