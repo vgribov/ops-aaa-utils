@@ -58,6 +58,7 @@ dispatch_list = []
 SYSTEM_TABLE = "System"
 SYSTEM_AAA_COLUMN = "aaa"
 SYSTEM_OTHER_CONFIG = "other_config"
+SYSTEM_TACACS_CONFIG_COLUMN = "tacacs_config"
 SYSTEM_RADIUS_SERVER_COLUMN = "radius_servers"
 RADIUS_SERVER_TABLE = "Radius_Server"
 
@@ -75,6 +76,14 @@ RADIUS_SERVER_PASSKEY = "passkey"
 RADIUS_SERVER_TIMEOUT = "timeout"
 RADIUS_SERVER_RETRIES = "retries"
 RADIUS_SEREVR_PRIORITY = "priority"
+
+TACACS_SERVER_PORT = "tcp_port"
+TACACS_SERVER_PASSKEY = "passkey"
+TACACS_SERVER_TIMEOUT = "timeout"
+
+TACACS_SERVER_DEFAULT_PORT = "49"
+TACACS_SERVER_DEFAULT_PASSKEY = "testing123-1"
+TACACS_SERVER_DEFAULT_TIMEOUT = "5"
 
 SSH_PASSKEY_AUTHENTICATION_ENABLE = "ssh_passkeyauthentication_enable"
 SSH_PUBLICKEY_AUTHENTICATION_ENABLE = "ssh_publickeyauthentication_enable"
@@ -170,6 +179,7 @@ def add_default_row():
 
     data = {}
     auto_provisioning_data = {}
+    tacacs_data = {}
 
     # Default values for aaa column
     data[AAA_FALLBACK] = OPS_TRUE
@@ -182,6 +192,11 @@ def add_default_row():
     auto_provisioning_data[PERFORMED] = "False"
     auto_provisioning_data[URL] = ""
 
+    # Default values for tacacs_config column
+    tacacs_data[TACACS_SERVER_PORT] = TACACS_SERVER_DEFAULT_PORT;
+    tacacs_data[TACACS_SERVER_PASSKEY] = TACACS_SERVER_DEFAULT_PASSKEY;
+    tacacs_data[TACACS_SERVER_TIMEOUT] = TACACS_SERVER_DEFAULT_TIMEOUT;
+
     # create the transaction
     txn = ovs.db.idl.Transaction(idl)
     for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
@@ -190,6 +205,7 @@ def add_default_row():
     setattr(ovs_rec, SYSTEM_AAA_COLUMN, data)
     setattr(ovs_rec, SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN,
             auto_provisioning_data)
+    setattr(ovs_rec, SYSTEM_TACACS_CONFIG_COLUMN, tacacs_data)
 
     txn.commit_block()
 
@@ -543,6 +559,7 @@ def main():
     schema_helper.register_columns(
         SYSTEM_TABLE,
         [SYSTEM_AAA_COLUMN, SYSTEM_OTHER_CONFIG,
+         SYSTEM_TACACS_CONFIG_COLUMN,
          SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN])
 
     schema_helper.register_columns(SYSTEM_TABLE,

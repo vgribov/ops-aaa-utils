@@ -89,7 +89,7 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 #define RADIUS_CHAP                     "chap"
 #define RADIUS_PAP                      "pap"
 #define SYSTEM_TACACS_CONFIG_PASSKEY    "passkey"
-#define SYSTEM_TACACS_CONFIG_PORT       "port"
+#define SYSTEM_TACACS_CONFIG_PORT       "tcp_port"
 #define SYSTEM_TACACS_CONFIG_TIMEOUT    "timeout"
 #define OPS_TRUE_STR                        "true"
 #define OPS_FALSE_STR                       "false"
