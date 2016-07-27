@@ -128,7 +128,8 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 #define TACACS_SERVER_HELP_STR                "TACACS+ server configuration\n"
 #define TACACS_SERVER_HOST_HELP_STR           "Specify a TACACS+ server\n"
 #define TACACS_SERVER_NAME_HELP_STR           "TACACS+ server IP address or hostname\n"
-
+#define SHOW_TACACS_SERVER_HELP_STR           "Show TACACS+ server configuration\n"
+#define SHOW_DETAILS_HELP_STR                 "Detailed information about TACACS+ servers\n"
 
 void cli_pre_init(void);
 void cli_post_init(void);

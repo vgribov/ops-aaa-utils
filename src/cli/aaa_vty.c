@@ -1396,7 +1396,7 @@ tacacs_server_sanitize_parameters(tacacs_server_params_t *server_params)
         }
     }
 
-    /* Check the validity of timeout value */
+   /* Check the validity of timeout value */
    if (server_params->timeout != NULL) {
        int timeout = atoi(server_params->timeout);
        if (timeout < 1 || timeout > 60) {
@@ -1404,6 +1404,15 @@ tacacs_server_sanitize_parameters(tacacs_server_params_t *server_params)
            return CMD_ERR_NOTHING_TODO;
        }
    }
+
+   /* Check the validity of passkey */
+   if (server_params->shared_key != NULL) {
+       if (strlen(server_params->shared_key) > 63) {
+           vty_out(vty, "Length of passkey should be less than 64 %s", VTY_NEWLINE);
+           return CMD_ERR_NOTHING_TODO;
+       }
+   }
+
    return CMD_SUCCESS;
 }
 
@@ -1424,6 +1433,7 @@ static int
 configure_tacacs_server_host(tacacs_server_params_t *server_params)
 {
     const struct ovsrec_tacacs_server *row = NULL;
+    const struct ovsrec_tacacs_server *temp_row = NULL;
     const struct ovsrec_tacacs_server **tacacs_info = NULL;
     const struct ovsrec_system *ovs = NULL;
     struct ovsdb_idl_txn *status_txn = NULL;
@@ -1459,7 +1469,6 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
                 END_DB_TXN(status_txn);
             }
 
-            //TODO  (kshridha) - Max server validation to go here
             row = ovsrec_tacacs_server_insert(status_txn);
             if (NULL == row) {
                 fprintf (stdout, "Could not insert a row into the TACACS Server Table\n");
@@ -1489,6 +1498,7 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
                 ovsrec_tacacs_server_set_timeout(row, &timeout, 1);
                 ovsrec_tacacs_server_set_passkey(row, passkey);
                 ovsrec_tacacs_server_set_tcp_port(row, &tcp_port, 1);
+                ovsrec_tacacs_server_set_priority(row, ovs->n_tacacs_servers + 1);
 
                 /* Update System table */
                 tacacs_info = xmalloc(sizeof *ovs->tacacs_servers * (ovs->n_tacacs_servers + 1));
@@ -1513,7 +1523,18 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
             }
 
             VLOG_DBG("Deleting a row from the Tacacs Server table\n");
+
+            int64_t priority = row->priority;
+
+            /* Delete the server */
             ovsrec_tacacs_server_delete(row);
+
+            /* Update priority of each server */
+            OVSREC_TACACS_SERVER_FOR_EACH(temp_row, idl) {
+                if (temp_row->priority >= priority) {
+                    ovsrec_tacacs_server_set_priority(temp_row, temp_row->priority - 1);
+                }
+            }
 
             /* Update System table */
             tacacs_info = xmalloc(sizeof *ovs->tacacs_servers * ovs->n_tacacs_servers);
@@ -1527,7 +1548,6 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
                         (struct ovsrec_tacacs_server **) tacacs_info,
                         n);
             free(tacacs_info);
-
         } else {
             // TODO (kshridha) - Add code to modfify parameters instead of
             // re-adding row
@@ -1544,6 +1564,116 @@ DEFUN(cli_show_radius_server,
 {
     return show_radius_server_info();
 }
+
+static void
+show_global_tacacs_config(const struct ovsrec_system *ovs)
+{
+    const char *passkey = NULL;
+    int64_t tcp_port = 0;
+    int64_t timeout = 0;
+
+    /* Fetch global values */
+    passkey = smap_get(&ovs->tacacs_config,       SYSTEM_TACACS_CONFIG_PASSKEY);
+    tcp_port = atoi(smap_get(&ovs->tacacs_config, SYSTEM_TACACS_CONFIG_PORT));
+    timeout = atoi(smap_get(&ovs->tacacs_config,  SYSTEM_TACACS_CONFIG_TIMEOUT));
+
+    vty_out(vty, "%s******** Global TACACS+ configuration ******* %s", VTY_NEWLINE, VTY_NEWLINE);
+    vty_out(vty, "Shared secret: %s %s", passkey, VTY_NEWLINE);
+    vty_out(vty, "Timeout: %ld %s", timeout, VTY_NEWLINE);
+    vty_out(vty, "Auth port: %ld %s", tcp_port, VTY_NEWLINE);
+    vty_out(vty, "Number of servers: %zd %s%s", ovs->n_tacacs_servers, VTY_NEWLINE, VTY_NEWLINE);
+}
+
+static int
+show_tacacs_server_info(bool showDetails)
+{
+    const struct ovsrec_tacacs_server *row = NULL;
+    const struct ovsrec_system *ovs = NULL;
+    char *temp[64];
+    int count = 0;
+    int temp_count = 0;
+
+    /* Fetch the system row */
+    ovs = ovsrec_system_first(idl);
+    if (ovs == NULL) {
+        vty_out(vty, "Command failed%s", VTY_NEWLINE);
+        return CMD_OVSDB_FAILURE;
+    }
+
+    /* display global config */
+    show_global_tacacs_config(ovs);
+
+    row = ovsrec_tacacs_server_first(idl);
+    if (row == NULL) {
+        vty_out(vty, "No TACACS+ Servers configured%s", VTY_NEWLINE);
+        return CMD_SUCCESS;
+    }
+
+    if (showDetails) {
+        //TODO (kshridha) - can be moved to a function
+        /* Display details for each TACACS+ server */
+           OVSREC_TACACS_SERVER_FOR_EACH(row, idl)   {
+               /* Array buff max size is 60, since it should accomodate a string
+                * in below format, where IP address max lenght is 15, port max
+                * length is 5, passkey/shared secret max length is 32,
+                * and timeout max length is 2.
+                * {"<ipaddress>:<port> <passkey> <retries> <timeout> "}
+                */
+
+               char buff[60]= {0};
+               sprintf(buff, "%s:%ld %s %ld ", row->ip_address, *(row->tcp_port), \
+                       row->passkey, *(row->timeout));
+               temp[row->priority - 1] = (char *)malloc(strlen(buff));
+               strncpy(temp[row->priority - 1], buff, strlen(buff));
+               temp_count += 1;
+           }
+
+           vty_out(vty, "***** TACACS+ Server information ******%s", VTY_NEWLINE);
+           while( temp_count-- ) {
+               vty_out(vty, "tacacs-server:%d%s", count + 1, VTY_NEWLINE);
+               vty_out(vty, " Server name:\t\t: %s%s",strtok(temp[count], ":"), VTY_NEWLINE);
+               vty_out(vty, " Auth port\t\t: %s%s", strtok(NULL, " "), VTY_NEWLINE);
+               vty_out(vty, " Shared secret\t\t: %s%s", strtok(NULL, " "), VTY_NEWLINE);
+               vty_out(vty, " Timeout\t\t: %s%s", strtok(NULL, " "), VTY_NEWLINE);
+               vty_out(vty, "%s", VTY_NEWLINE);
+               free(temp[count]);
+               count++;
+           }
+    }
+
+    else {
+        //TODO (kshridha) - can be moved to a function
+        vty_out(vty, "------------------------------------------------------------------------------"
+                "----------------------------------------------------------------%s", VTY_NEWLINE);
+        vty_out(vty, "%39s  %15s  %3s %s", "NAME", "PORT", "STATUS", VTY_NEWLINE);
+        vty_out(vty, "------------------------------------------------------------------------------"
+                "----------------------------------------------------------------\%s", VTY_NEWLINE);
+        OVSREC_TACACS_SERVER_FOR_EACH(row, idl) {
+            vty_out(vty,"  %39s", row->ip_address);
+            vty_out(vty," %15ld", *(row->tcp_port));
+            vty_out(vty, "%s", VTY_NEWLINE);
+        }
+    }
+    return CMD_SUCCESS;
+}
+
+
+DEFUN(cli_show_tacacs_server,
+      show_tacacs_server_cmd,
+      "show tacacs-server {detail}",
+      SHOW_STR
+      SHOW_TACACS_SERVER_HELP_STR
+      SHOW_DETAILS_HELP_STR)
+{
+    bool detail = false;
+
+    if (argv[0] != NULL && !strcmp(argv[0], "detail")) {
+        detail = true;
+    }
+
+   return show_tacacs_server_info(detail);
+}
+
 
 /* CLI to add tacacs-sever */
 DEFUN (cli_tacacs_server_host,
@@ -1850,6 +1980,11 @@ aaa_ovsdb_init(void)
     ovsdb_idl_add_column(idl, &ovsrec_system_col_tacacs_servers);
     ovsdb_idl_add_table(idl, &ovsrec_table_tacacs_server);
     ovsdb_idl_add_column(idl, &ovsrec_tacacs_server_col_ip_address);
+    ovsdb_idl_add_column(idl, &ovsrec_tacacs_server_col_tcp_port);
+    ovsdb_idl_add_column(idl, &ovsrec_tacacs_server_col_timeout);
+    ovsdb_idl_add_column(idl, &ovsrec_tacacs_server_col_passkey);
+    ovsdb_idl_add_column(idl, &ovsrec_tacacs_server_col_priority);
+
     /* Columns in System table. */
     ovsdb_idl_add_column(idl, &ovsrec_system_col_tacacs_config);
 
@@ -1893,6 +2028,7 @@ cli_post_init(void)
     install_element(CONFIG_NODE, &radius_server_configure_timeout_cmd);
     install_element(CONFIG_NODE, &radius_server_set_auth_port_cmd);
     install_element(ENABLE_NODE, &show_radius_server_cmd);
+    install_element(ENABLE_NODE, &show_tacacs_server_cmd);
     install_element(ENABLE_NODE, &show_auto_provisioning_cmd);
     install_element(ENABLE_NODE, &show_ssh_auth_method_cmd);
     install_element(CONFIG_NODE, &set_ssh_publickey_auth_cmd);
