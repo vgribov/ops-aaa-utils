@@ -45,6 +45,7 @@
 #include "openswitch-idl.h"
 #include "vtysh/vtysh_ovsdb_if.h"
 #include "vtysh/vtysh_ovsdb_config.h"
+#include "vtysh_ovsdb_aaa_context.h"
 #include <arpa/inet.h>
 #include <string.h>
 
@@ -2059,6 +2060,7 @@ cli_pre_init(void)
 void
 cli_post_init(void)
 {
+    vtysh_ret_val retval = e_vtysh_error;
     install_element(ENABLE_NODE, &aaa_show_aaa_authenctication_cmd);
     install_element(CONFIG_NODE, &aaa_set_global_status_cmd);
     install_element(CONFIG_NODE, &aaa_set_radius_authentication_cmd);
@@ -2093,5 +2095,16 @@ cli_post_init(void)
     install_element(CONFIG_NODE, &set_ssh_password_auth_cmd);
     install_element(CONFIG_NODE, &no_set_ssh_password_auth_cmd);
 
+    /* Installing running config sub-context with global config context */
+    retval = install_show_run_config_subcontext(e_vtysh_config_context,
+                                                e_vtysh_config_context_aaa,
+                                                &vtysh_config_context_aaa_clientcallback,
+                                                NULL, NULL);
+    if(e_vtysh_ok != retval)
+    {
+        vtysh_ovsdb_config_logmsg(VTYSH_OVSDB_CONFIG_ERR,
+                              "config context unable to add aaa client callback");
+        assert(0);
+    }
     return;
 }
