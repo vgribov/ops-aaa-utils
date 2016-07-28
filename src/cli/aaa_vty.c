@@ -1387,31 +1387,13 @@ tacacs_server_sanitize_parameters(tacacs_server_params_t *server_params)
         return CMD_ERR_NOTHING_TODO;
     }
 
-    /* Check the validity of authentication port */
-    if (server_params->auth_port != NULL) {
-        int auth_port = atoi(server_params->auth_port);
-        if (auth_port < 1 || auth_port > 65535) {
-            vty_out(vty, "Invalid authentication port %s", VTY_NEWLINE);
+    /* Check the validity of passkey */
+    if (server_params->shared_key != NULL) {
+        if (strlen(server_params->shared_key) > 63) {
+            vty_out(vty, "Length of passkey should be less than 64 %s", VTY_NEWLINE);
             return CMD_ERR_NOTHING_TODO;
         }
     }
-
-   /* Check the validity of timeout value */
-   if (server_params->timeout != NULL) {
-       int timeout = atoi(server_params->timeout);
-       if (timeout < 1 || timeout > 60) {
-           vty_out(vty, "Invalid timeout value %s", VTY_NEWLINE);
-           return CMD_ERR_NOTHING_TODO;
-       }
-   }
-
-   /* Check the validity of passkey */
-   if (server_params->shared_key != NULL) {
-       if (strlen(server_params->shared_key) > 63) {
-           vty_out(vty, "Length of passkey should be less than 64 %s", VTY_NEWLINE);
-           return CMD_ERR_NOTHING_TODO;
-       }
-   }
 
    return CMD_SUCCESS;
 }
@@ -1428,6 +1410,57 @@ get_row_by_server_name(const char *server_name)
     return NULL;
 }
 
+static void
+tacacs_server_replace_parameters(const struct ovsrec_tacacs_server *row,
+        tacacs_server_params_t *server_params)
+{
+    if (server_params->auth_port != NULL) {
+        int64_t tcp_port = atoi(server_params->auth_port);
+        ovsrec_tacacs_server_set_tcp_port(row, &tcp_port, 1);
+    }
+
+    if (server_params->timeout != NULL) {
+        int64_t timeout = atoi(server_params->timeout);
+        ovsrec_tacacs_server_set_timeout(row, &timeout, 1);
+    }
+
+    if (server_params->shared_key != NULL) {
+        ovsrec_tacacs_server_set_passkey(row, server_params->shared_key);
+    }
+}
+
+static void
+tacacs_server_add_parameters(const struct ovsrec_system *ovs,
+        const struct ovsrec_tacacs_server *row,
+        tacacs_server_params_t *server_params)
+{
+    int64_t tcp_port = 0, timeout = 0;
+    const char *passkey = NULL;
+
+    /* Fetch global config values */
+    passkey = smap_get(&ovs->tacacs_config, SYSTEM_TACACS_CONFIG_PASSKEY);
+    tcp_port = atoi(smap_get(&ovs->tacacs_config, SYSTEM_TACACS_CONFIG_PORT));
+    timeout = atoi(smap_get(&ovs->tacacs_config, SYSTEM_TACACS_CONFIG_TIMEOUT));
+
+    if (server_params->auth_port != NULL) {
+        tcp_port = atoi(server_params->auth_port);
+    }
+
+    if (server_params->timeout != NULL) {
+        timeout = atoi(server_params->timeout);
+    }
+
+    if (server_params->shared_key != NULL) {
+        passkey = server_params->shared_key;
+    }
+
+    ovsrec_tacacs_server_set_ip_address(row, server_params->server_name);
+    ovsrec_tacacs_server_set_timeout(row, &timeout, 1);
+    ovsrec_tacacs_server_set_passkey(row, passkey);
+    ovsrec_tacacs_server_set_tcp_port(row, &tcp_port, 1);
+    ovsrec_tacacs_server_set_priority(row, ovs->n_tacacs_servers + 1);
+}
+
 /* Add or remove a TACACS+ server */
 static int
 configure_tacacs_server_host(tacacs_server_params_t *server_params)
@@ -1437,12 +1470,16 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
     const struct ovsrec_tacacs_server **tacacs_info = NULL;
     const struct ovsrec_system *ovs = NULL;
     struct ovsdb_idl_txn *status_txn = NULL;
-    int64_t tcp_port = 0, timeout = 0;
-    const char *passkey = NULL;
 
     int retVal = tacacs_server_sanitize_parameters(server_params);
     if (retVal != CMD_SUCCESS) {
         return retVal;
+    }
+
+    /* Fetch the System row */
+    ovs = ovsrec_system_first(idl);
+    if (ovs == NULL) {
+        ABORT_DB_TXN(status_txn, "Unable to fetch System table row");
     }
 
     /* Start of transaction */
@@ -1456,13 +1493,6 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
             vty_out(vty, "This server does not exist\n");
         }
         else {
-
-            /* Fetch the System row */
-            ovs = ovsrec_system_first(idl);
-            if (ovs == NULL) {
-                ABORT_DB_TXN(status_txn, "Unable to fetch System table row");
-            }
-
             /* Check if maximum allowed TACACS+ servers are already configured */
             if (ovs->n_tacacs_servers >= MAX_TACACS_SERVERS) {
                 vty_out(vty, "Exceeded maximum TACACS+ servers support%s", VTY_NEWLINE);
@@ -1478,27 +1508,7 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
                 fprintf (stdout, "Inserted a row\n");
                 VLOG_DBG("Inserted a row into the TACACS Server Table successfully\n");
 
-                passkey = smap_get(&ovs->tacacs_config, SYSTEM_TACACS_CONFIG_PASSKEY);
-                tcp_port = atoi(smap_get(&ovs->tacacs_config, SYSTEM_TACACS_CONFIG_PORT));
-                timeout = atoi(smap_get(&ovs->tacacs_config, SYSTEM_TACACS_CONFIG_TIMEOUT));
-
-                if (server_params->server_name != NULL) {
-                    ovsrec_tacacs_server_set_ip_address(row, server_params->server_name);
-                }
-                if (server_params->auth_port != NULL) {
-                    tcp_port = atoi(server_params->auth_port);
-                }
-                if (server_params->timeout != NULL) {
-                    timeout = atoi(server_params->timeout);
-                }
-                if (server_params->shared_key != NULL) {
-                    passkey = server_params->shared_key;
-                }
-
-                ovsrec_tacacs_server_set_timeout(row, &timeout, 1);
-                ovsrec_tacacs_server_set_passkey(row, passkey);
-                ovsrec_tacacs_server_set_tcp_port(row, &tcp_port, 1);
-                ovsrec_tacacs_server_set_priority(row, ovs->n_tacacs_servers + 1);
+                tacacs_server_add_parameters(ovs, row, server_params);
 
                 /* Update System table */
                 tacacs_info = xmalloc(sizeof *ovs->tacacs_servers * (ovs->n_tacacs_servers + 1));
@@ -1515,13 +1525,6 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
     }
     else {
         if (server_params->no_form) {
-
-            /* Fetch the System row */
-            ovs = ovsrec_system_first(idl);
-            if (ovs == NULL) {
-                ABORT_DB_TXN(status_txn, "Unable to fetch System table row");
-            }
-
             VLOG_DBG("Deleting a row from the Tacacs Server table\n");
 
             int64_t priority = row->priority;
@@ -1549,8 +1552,8 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
                         n);
             free(tacacs_info);
         } else {
-            // TODO (kshridha) - Add code to modfify parameters instead of
-            // re-adding row
+            /* Update existing server */
+            tacacs_server_replace_parameters(row, server_params);
         }
     }
 
