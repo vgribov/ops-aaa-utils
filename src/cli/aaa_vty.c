@@ -1592,9 +1592,7 @@ show_tacacs_server_info(bool showDetails)
 {
     const struct ovsrec_tacacs_server *row = NULL;
     const struct ovsrec_system *ovs = NULL;
-    char *temp[64];
     int count = 0;
-    int temp_count = 0;
 
     /* Fetch the system row */
     ovs = ovsrec_system_first(idl);
@@ -1614,34 +1612,18 @@ show_tacacs_server_info(bool showDetails)
 
     if (showDetails) {
         //TODO (kshridha) - can be moved to a function
+
         /* Display details for each TACACS+ server */
-           OVSREC_TACACS_SERVER_FOR_EACH(row, idl)   {
-               /* Array buff max size is 60, since it should accomodate a string
-                * in below format, where IP address max lenght is 15, port max
-                * length is 5, passkey/shared secret max length is 32,
-                * and timeout max length is 2.
-                * {"<ipaddress>:<port> <passkey> <retries> <timeout> "}
-                */
-
-               char buff[60]= {0};
-               sprintf(buff, "%s:%ld %s %ld ", row->ip_address, *(row->tcp_port), \
-                       row->passkey, *(row->timeout));
-               temp[row->priority - 1] = (char *)malloc(strlen(buff));
-               strncpy(temp[row->priority - 1], buff, strlen(buff));
-               temp_count += 1;
-           }
-
-           vty_out(vty, "***** TACACS+ Server information ******%s", VTY_NEWLINE);
-           while( temp_count-- ) {
-               vty_out(vty, "tacacs-server:%d%s", count + 1, VTY_NEWLINE);
-               vty_out(vty, " Server name:\t\t: %s%s",strtok(temp[count], ":"), VTY_NEWLINE);
-               vty_out(vty, " Auth port\t\t: %s%s", strtok(NULL, " "), VTY_NEWLINE);
-               vty_out(vty, " Shared secret\t\t: %s%s", strtok(NULL, " "), VTY_NEWLINE);
-               vty_out(vty, " Timeout\t\t: %s%s", strtok(NULL, " "), VTY_NEWLINE);
-               vty_out(vty, "%s", VTY_NEWLINE);
-               free(temp[count]);
+        vty_out(vty, "***** TACACS+ Server information ******%s", VTY_NEWLINE);
+        OVSREC_TACACS_SERVER_FOR_EACH(row, idl) {
                count++;
-           }
+               vty_out(vty, "tacacs-server:%d%s", count, VTY_NEWLINE);
+               vty_out(vty, " Server name:\t\t: %s%s", row->ip_address, VTY_NEWLINE);
+               vty_out(vty, " Auth port\t\t: %ld%s", *(row->tcp_port), VTY_NEWLINE);
+               vty_out(vty, " Shared secret\t\t: %s%s", row->passkey, VTY_NEWLINE);
+               vty_out(vty, " Timeout\t\t: %ld%s", *(row->timeout), VTY_NEWLINE);
+               vty_out(vty, "%s", VTY_NEWLINE);
+        }
     }
 
     else {
