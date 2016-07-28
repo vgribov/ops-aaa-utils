@@ -1381,6 +1381,13 @@ tacacs_is_valid_server_name(const char *server_name)
 const int
 tacacs_server_sanitize_parameters(tacacs_server_params_t *server_params)
 {
+
+    /* Check server_name to see if it exceeds maximum number of characters*/
+    if (strlen(server_params->server_name) > MAX_CHARS_IN_TACACS_SERVER_NAME) {
+        vty_out(vty, "Server name should be less than 58 characters%s", VTY_NEWLINE);
+        return CMD_ERR_NOTHING_TODO;
+    }
+
     /* Check the validity of server name */
     if (!tacacs_is_valid_server_name(server_params->server_name)) {
         vty_out(vty, "Invalid server name %s", VTY_NEWLINE);

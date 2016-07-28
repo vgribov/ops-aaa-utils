@@ -109,6 +109,7 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 #define TACACS_SERVER_DEFAULT_PORT_STR        "49"
 #define TACACS_SERVER_DEFAULT_TIMEOUT         5
 #define TACACS_SERVER_DEFAULT_TIMEOUT_STR     "5"
+#define MAX_CHARS_IN_TACACS_SERVER_NAME       57
 
 #define AUTO_PROVISIONING_ENABLE              "enable"
 #define AUTO_PROVISIONING_DISABLE             "disable"
