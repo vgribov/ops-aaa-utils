@@ -26,7 +26,7 @@
 #define _AAA_VTY_H
 
 
-/* Structure defiitions */
+/* Structure definitions */
 typedef struct tacacs_server_params_s {
     bool no_form;           /* TRUE/FALSE */
     char *server_name;      /* FQDN or IP Address */
@@ -34,7 +34,6 @@ typedef struct tacacs_server_params_s {
     char *shared_key;       /* Shared secret key */
     char *auth_port;        /* Authentication port */
 } tacacs_server_params_t;
-
 
 /* Return value based on outcome of the db transaction */
 inline static int
