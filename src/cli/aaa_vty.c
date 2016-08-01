@@ -429,6 +429,13 @@ tacacs_set_global_passkey(const char *passkey)
     struct ovsdb_idl_txn *tacacs_txn = NULL;
     struct smap smap_tacacs_config;
 
+    /* validate the length of passkey */
+    if (strlen(passkey) > MAX_LENGTH_TACACS_PASSKEY)
+    {
+        vty_out(vty, "Length of passkey should be less than 64%s", VTY_NEWLINE);
+        return CMD_ERR_NOTHING_TODO;
+    }
+
     /* Start of transaction */
     START_DB_TXN(tacacs_txn);
 
@@ -458,12 +465,12 @@ tacacs_set_global_passkey(const char *passkey)
 DEFUN(cli_tacacs_server_set_passkey,
       tacacs_server_set_passkey_cmd,
       "tacacs-server key WORD",
-      "TACACS+ server configuration\n"
-      "Set shared secret key\n"
-      "TACACS+ shared secret key. (Default: testing123-1)\n")
+      TACACS_SERVER_HELP_STR
+      SHARED_KEY_HELP_STR
+      SHARED_KEY_VAL_HELP_STR)
 {
     if (vty_flags & CMD_FLAG_NO_CMD)
-        return tacacs_set_global_passkey(TACACS_SERVER_DEFAULT_PASSKEY);
+        return tacacs_set_global_passkey(TACACS_SERVER_PASSKEY_DEFAULT);
 
     return tacacs_set_global_passkey(argv[0]);
 }
@@ -471,8 +478,8 @@ DEFUN(cli_tacacs_server_set_passkey,
 DEFUN_NO_FORM(cli_tacacs_server_set_passkey,
               tacacs_server_set_passkey_cmd,
               "tacacs-server key",
-              "TACACS+ server configuration\n"
-              "Set shared secret key\n");
+              TACACS_SERVER_HELP_STR
+              SHARED_KEY_HELP_STR);
 
 /* Modify TACACS+ server TCP port
  * default 'port' is 49
@@ -497,7 +504,7 @@ tacacs_set_global_port(const char *port)
 
     smap_clone(&smap_tacacs_config, &ovs_system->tacacs_config);
 
-    smap_replace(&smap_tacacs_config, SYSTEM_TACACS_CONFIG_PORT, port);
+    smap_replace(&smap_tacacs_config, SYSTEM_TACACS_CONFIG_TCP_PORT, port);
 
     ovsrec_system_set_tacacs_config(ovs_system, &smap_tacacs_config);
 
@@ -513,12 +520,12 @@ tacacs_set_global_port(const char *port)
 DEFUN(cli_tacacs_server_set_port,
       tacacs_server_set_port_cmd,
       "tacacs-server port <1-65535>",
-      "TACACS+ server configuration\n"
-      "Set TCP port number\n"
-      "TCP port range is 1 to 65535 (Default: 49)\n")
+      TACACS_SERVER_HELP_STR
+      AUTH_PORT_HELP_STR
+      AUTH_PORT_RANGE_HELP_STR)
 {
     if (vty_flags & CMD_FLAG_NO_CMD)
-        return tacacs_set_global_port(TACACS_SERVER_DEFAULT_PORT_STR);
+        return tacacs_set_global_port(TACACS_SERVER_TCP_PORT_DEFAULT_VAL);
 
     return tacacs_set_global_port(argv[0]);
 }
@@ -526,8 +533,8 @@ DEFUN(cli_tacacs_server_set_port,
 DEFUN_NO_FORM (cli_tacacs_server_set_port,
                tacacs_server_set_port_cmd,
                "tacacs-server port",
-               "TACACS+ server configuration\n"
-               "Set TCP port number\n");
+               TACACS_SERVER_HELP_STR
+               AUTH_PORT_HELP_STR);
 
 /* Modify TACACS+ server timeout
  * default 'timeout' is 5
@@ -569,12 +576,12 @@ tacacs_set_global_timeout(const char *timeout)
 DEFUN(cli_tacacs_server_set_timeout,
       tacacs_server_set_timeout_cmd,
       "tacacs-server timeout <1-60>",
-      "TACACS+ server configuration\n"
-      "Set transmission timeout interval\n"
-      "Timeout interval 1 to 60 seconds. (Default: 5)\n")
+      TACACS_SERVER_HELP_STR
+      TIMEOUT_HELP_STR
+      TIMEOUT_RANGE_HELP_STR)
 {
     if (vty_flags & CMD_FLAG_NO_CMD)
-        return tacacs_set_global_timeout(TACACS_SERVER_DEFAULT_TIMEOUT_STR);
+        return tacacs_set_global_timeout(TACACS_SERVER_TIMEOUT_DEFAULT_VAL);
 
     return tacacs_set_global_timeout(argv[0]);
 }
@@ -582,8 +589,8 @@ DEFUN(cli_tacacs_server_set_timeout,
 DEFUN_NO_FORM(cli_tacacs_server_set_timeout,
               tacacs_server_set_timeout_cmd,
               "tacacs-server timeout",
-              "TACACS+ server configuration\n"
-              "Set transmission timeout interval\n");
+              TACACS_SERVER_HELP_STR
+              TIMEOUT_HELP_STR);
 
 /* Adding RADIUS server host.
  * Add the host 'ipv4' with default values
@@ -1460,7 +1467,7 @@ tacacs_server_sanitize_parameters(tacacs_server_params_t *server_params)
 
     /* Check the validity of passkey */
     if (server_params->shared_key != NULL) {
-        if (strlen(server_params->shared_key) > 63) {
+        if (strlen(server_params->shared_key) > MAX_LENGTH_TACACS_PASSKEY) {
             vty_out(vty, "Length of passkey should be less than 64 %s", VTY_NEWLINE);
             return CMD_ERR_NOTHING_TODO;
         }
@@ -1510,7 +1517,7 @@ tacacs_server_add_parameters(const struct ovsrec_system *ovs,
 
     /* Fetch global config values */
     passkey = smap_get(&ovs->tacacs_config, SYSTEM_TACACS_CONFIG_PASSKEY);
-    tcp_port = atoi(smap_get(&ovs->tacacs_config, SYSTEM_TACACS_CONFIG_PORT));
+    tcp_port = atoi(smap_get(&ovs->tacacs_config, SYSTEM_TACACS_CONFIG_TCP_PORT));
     timeout = atoi(smap_get(&ovs->tacacs_config, SYSTEM_TACACS_CONFIG_TIMEOUT));
 
     if (server_params->auth_port != NULL) {
@@ -1648,7 +1655,7 @@ show_global_tacacs_config(const struct ovsrec_system *ovs)
 
     /* Fetch global values */
     passkey = smap_get(&ovs->tacacs_config,       SYSTEM_TACACS_CONFIG_PASSKEY);
-    tcp_port = atoi(smap_get(&ovs->tacacs_config, SYSTEM_TACACS_CONFIG_PORT));
+    tcp_port = atoi(smap_get(&ovs->tacacs_config, SYSTEM_TACACS_CONFIG_TCP_PORT));
     timeout = atoi(smap_get(&ovs->tacacs_config,  SYSTEM_TACACS_CONFIG_TIMEOUT));
 
     vty_out(vty, "%s******** Global TACACS+ configuration ******* %s", VTY_NEWLINE, VTY_NEWLINE);
@@ -1762,13 +1769,13 @@ DEFUN (cli_tacacs_server_host,
     return configure_tacacs_server_host(&tacacs_server_params);
 }
 
-/* CLI to add tacacs-sever */
+/* CLI to remove tacacs-sever */
 DEFUN_NO_FORM (cli_tacacs_server_host,
        tacacs_server_host_cmd,
        "tacacs-server host WORD",
-       "TACACS+ server configuration\n"
-       "Specify a TACACS+ server\n"
-       "TACACS+ server IP address or hostname\n");
+       TACACS_SERVER_HELP_STR
+       TACACS_SERVER_HOST_HELP_STR
+       TACACS_SERVER_NAME_HELP_STR);
 
 /* Shows auto provisioning status.*/
 static int

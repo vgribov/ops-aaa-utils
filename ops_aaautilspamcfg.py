@@ -81,9 +81,9 @@ TACACS_SERVER_PORT = "tcp_port"
 TACACS_SERVER_PASSKEY = "passkey"
 TACACS_SERVER_TIMEOUT = "timeout"
 
-TACACS_SERVER_DEFAULT_PORT = "49"
-TACACS_SERVER_DEFAULT_PASSKEY = "testing123-1"
-TACACS_SERVER_DEFAULT_TIMEOUT = "5"
+TACACS_SERVER_TCP_PORT_DEFAULT = "49"
+TACACS_SERVER_PASSKEY_DEFAULT = "testing123-1"
+TACACS_SERVER_TIMEOUT_DEFAULT = "5"
 
 SSH_PASSKEY_AUTHENTICATION_ENABLE = "ssh_passkeyauthentication_enable"
 SSH_PUBLICKEY_AUTHENTICATION_ENABLE = "ssh_publickeyauthentication_enable"
@@ -193,9 +193,9 @@ def add_default_row():
     auto_provisioning_data[URL] = ""
 
     # Default values for tacacs_config column
-    tacacs_data[TACACS_SERVER_PORT] = TACACS_SERVER_DEFAULT_PORT;
-    tacacs_data[TACACS_SERVER_PASSKEY] = TACACS_SERVER_DEFAULT_PASSKEY;
-    tacacs_data[TACACS_SERVER_TIMEOUT] = TACACS_SERVER_DEFAULT_TIMEOUT;
+    tacacs_data[TACACS_SERVER_PORT] = TACACS_SERVER_TCP_PORT_DEFAULT;
+    tacacs_data[TACACS_SERVER_PASSKEY] = TACACS_SERVER_PASSKEY_DEFAULT;
+    tacacs_data[TACACS_SERVER_TIMEOUT] = TACACS_SERVER_TIMEOUT_DEFAULT;
 
     # create the transaction
     txn = ovs.db.idl.Transaction(idl)
