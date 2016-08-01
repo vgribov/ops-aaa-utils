@@ -1689,7 +1689,7 @@ show_tacacs_server_info(bool showDetails)
         OVSREC_TACACS_SERVER_FOR_EACH(row, idl) {
                count++;
                vty_out(vty, "tacacs-server:%d%s", count, VTY_NEWLINE);
-               vty_out(vty, " Server name:\t\t: %s%s", row->ip_address, VTY_NEWLINE);
+               vty_out(vty, " Server name\t\t: %s%s", row->ip_address, VTY_NEWLINE);
                vty_out(vty, " Auth port\t\t: %ld%s", *(row->tcp_port), VTY_NEWLINE);
                vty_out(vty, " Shared secret\t\t: %s%s", row->passkey, VTY_NEWLINE);
                vty_out(vty, " Timeout\t\t: %ld%s", *(row->timeout), VTY_NEWLINE);
