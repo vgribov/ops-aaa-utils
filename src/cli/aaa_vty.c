@@ -45,6 +45,7 @@
 #include "openswitch-idl.h"
 #include "vtysh/vtysh_ovsdb_if.h"
 #include "vtysh/vtysh_ovsdb_config.h"
+#include "vtysh/utils/ovsdb_vtysh_utils.h"
 #include "vtysh_ovsdb_aaa_context.h"
 #include <arpa/inet.h>
 #include <string.h>
@@ -721,7 +722,8 @@ aaa_server_group_sanitize_parameters(aaa_server_group_params_t *server_group_par
 
    /*Prevent user from configure default group*/
    if ((strcmp(server_group_params->group_name, SYSTEM_AAA_RADIUS) == 0) ||
-       (strcmp(server_group_params->group_name, SYSTEM_AAA_TACACS_PLUS) == 0))
+       (strcmp(server_group_params->group_name, SYSTEM_AAA_TACACS_PLUS) == 0) ||
+       (strcmp(server_group_params->group_name, AAA_GROUP_TYPE_LOCAL) == 0))
    {
         vty_out(vty, "Invalid server group name%s", VTY_NEWLINE);
         return CMD_ERR_NOTHING_TODO;
@@ -762,7 +764,6 @@ configure_aaa_server_group(aaa_server_group_params_t *server_group_params)
             /* aaa server group does not exist */
             vty_out(vty, "AAA server group %s does not exist%s",
                          server_group_params->group_name, VTY_NEWLINE);
-            END_DB_TXN(server_group_txn);
         }
         else
         {
@@ -785,10 +786,31 @@ configure_aaa_server_group(aaa_server_group_params_t *server_group_params)
     {
         if (server_group_params->no_form)
         {
-            VLOG_DBG("Deleting a row from the AAA Server Group table\n");
-            /* Delete the server */
+            const struct ovsrec_tacacs_server *row_iter = NULL;
+            const struct ovsrec_aaa_server_group *default_group = NULL;
+            const struct ovsrec_aaa_server_group *sg_row_iter = NULL;
+            int64_t priority = AAA_GROUP_DEFAULT_PRIORITY;
+            default_group = get_row_by_server_group_name((char *)row->group_type);
+            VLOG_DBG("Moving servers from server group %s to default", row->group_name);
+            OVSREC_TACACS_SERVER_FOR_EACH(row_iter, idl) {
+                if (row == row_iter->group_id)
+                {
+                    ovsrec_tacacs_server_set_group_priority(row_iter, priority);
+                    ovsrec_tacacs_server_set_group_id(row_iter, default_group);
+                }
+            }
+            /* Update server group rows priority by -1*/
+            priority = row->priority;
+            OVSREC_AAA_SERVER_GROUP_FOR_EACH(sg_row_iter, idl) {
+                if (priority < sg_row_iter->priority)
+                {
+                    int64_t new_priority = sg_row_iter->priority - 1;
+                    ovsrec_aaa_server_group_set_priority(sg_row_iter, new_priority);
+                }
+            }
+
+            VLOG_DBG("Deleting server group %s from AAA Server Group table", row->group_name);
             ovsrec_aaa_server_group_delete(row);
-            /*TODO update all server entry, move them to default*/
         }
     }
     /* End of transaction. */
@@ -801,15 +823,17 @@ DEFUN (cli_aaa_create_tacacs_server_group,
        "aaa group server (radius | tacacs+) WORD",
        AAA_STR
        AAA_GROUP_HELP_STR
-       AAA_SERVER_HELP_STR
+       AAA_SERVER_TYPE_HELP_STR
        RADIUS_HELP_STR
        TACACS_HELP_STR
        AAA_GROUP_NAME_HELP_STR)
 {
+    int result = CMD_SUCCESS;
     aaa_server_group_params_t aaa_server_group_params;
     aaa_server_group_params.group_type = (char *)argv[0];
     aaa_server_group_params.group_name = (char *)argv[1];
     aaa_server_group_params.no_form = false;
+    static char group_name[MAX_CHARS_IN_SERVER_GROUP_NAME];
     /*TODO add radius server group support and remove this hack*/
     if (strcmp("radius", argv[0]) == 0)
     {
@@ -820,7 +844,16 @@ DEFUN (cli_aaa_create_tacacs_server_group,
     {
         aaa_server_group_params.no_form = true;
     }
-    return configure_aaa_server_group(&aaa_server_group_params);
+    result =  configure_aaa_server_group(&aaa_server_group_params);
+    if (result != CMD_SUCCESS)
+        return result;
+    if (!aaa_server_group_params.no_form)
+    {
+        vty->node = AAA_SERVER_GROUP_NODE;
+        strncpy(group_name, argv[1], MAX_CHARS_IN_SERVER_GROUP_NAME);
+        vty->index = group_name;
+    }
+   return CMD_SUCCESS;
 }
 
 DEFUN_NO_FORM (cli_aaa_create_tacacs_server_group,
@@ -828,10 +861,110 @@ DEFUN_NO_FORM (cli_aaa_create_tacacs_server_group,
                "aaa group server (radius | tacacs+) WORD",
                AAA_STR
                AAA_GROUP_HELP_STR
-               AAA_SERVER_HELP_STR
+               AAA_SERVER_TYPE_HELP_STR
                RADIUS_HELP_STR
                TACACS_HELP_STR
                AAA_GROUP_NAME_HELP_STR);
+
+static const struct ovsrec_tacacs_server*
+get_row_by_server_name(const char *server_name)
+{
+    const struct ovsrec_tacacs_server *row = NULL;
+    OVSREC_TACACS_SERVER_FOR_EACH(row, idl) {
+        if (!strcmp(row->ip_address, server_name)) {
+            return row;
+        }
+    }
+    return NULL;
+}
+
+static int
+configure_aaa_server_group_add_server(aaa_server_group_params_t *server_group_params, char* server_name)
+{
+    const struct ovsrec_aaa_server_group *group_row = NULL;
+    struct ovsdb_idl_txn* status_txn = NULL;
+
+    START_DB_TXN(status_txn);
+
+    /* See if specified AAA server group already exists */
+    group_row = get_row_by_server_group_name(server_group_params->group_name);
+    if (group_row == NULL)
+    {
+        /* aaa server group does not exist */
+        ERRONEOUS_DB_TXN(status_txn, "AAA server group does not exist!");
+    }
+
+    /*TODO add code for radius group as well*/
+    if (strcmp(group_row->group_type, SYSTEM_AAA_RADIUS) == 0)
+    {
+        vty_out(vty, "RADIUS server group not supported yet%s", VTY_NEWLINE);
+    }
+    else if (strcmp(group_row->group_type, SYSTEM_AAA_TACACS_PLUS) == 0)
+    {
+        const struct ovsrec_tacacs_server *server_row = NULL;
+        /* See if specified TACACS+ server exist */
+        server_row = get_row_by_server_name(server_name);
+        if (server_row == NULL)
+        {
+           /* Server does not exist*/
+           ERRONEOUS_DB_TXN(status_txn, "TACACS+ server does not exist!");
+        }
+
+        /* Remove server from group */
+        if (server_group_params->no_form)
+        {
+            int64_t priority = AAA_GROUP_DEFAULT_PRIORITY;
+            const struct ovsrec_aaa_server_group *default_group = NULL;
+            char *tacacs_group = SYSTEM_AAA_TACACS_PLUS;
+            default_group = get_row_by_server_group_name(tacacs_group);
+            ovsrec_tacacs_server_set_group_priority(server_row, priority);
+            ovsrec_tacacs_server_set_group_id(server_row, default_group);
+        }
+        /* Add server to group */
+        else
+        {
+            const struct ovsrec_tacacs_server *row_iter = NULL;
+            int64_t group_priority = 0;
+
+            OVSREC_TACACS_SERVER_FOR_EACH(row_iter, idl) {
+                if ((group_row == row_iter->group_id) &&
+                    (group_priority <= row_iter->group_priority))
+                {
+                    group_priority = row_iter->group_priority;
+                }
+            }
+            ++group_priority;
+            ovsrec_tacacs_server_set_group_priority(server_row, group_priority);
+            ovsrec_tacacs_server_set_group_id(server_row, group_row);
+        }
+    }
+    /* End of transaction. */
+    END_DB_TXN(status_txn);
+}
+
+/* CLI to add/remove AAA server to server group  */
+DEFUN (aaa_group_add_server,
+       aaa_group_add_server_cmd,
+       "server WORD",
+       AAA_SERVER_HELP_STR
+       AAA_SERVER_NAME_HELP_STR)
+{
+    aaa_server_group_params_t aaa_server_group_params;
+    aaa_server_group_params.group_name = (char *)vty->index;
+    aaa_server_group_params.no_form = false;
+    char *server_name = (char *)argv[0];
+    if (vty_flags & CMD_FLAG_NO_CMD)
+    {
+        aaa_server_group_params.no_form = true;
+    }
+    return configure_aaa_server_group_add_server(&aaa_server_group_params, server_name);
+}
+
+DEFUN_NO_FORM (aaa_group_add_server,
+               aaa_group_add_server_cmd,
+               "server WORD",
+               AAA_SERVER_HELP_STR
+               AAA_SERVER_NAME_HELP_STR);
 
 /* Specifies the TACACS+ server global configuration*/
 /* Modify TACACS+ server passkey
@@ -1891,18 +2024,6 @@ tacacs_server_sanitize_parameters(tacacs_server_params_t *server_params)
    return CMD_SUCCESS;
 }
 
-static const struct ovsrec_tacacs_server*
-get_row_by_server_name(const char *server_name)
-{
-    const struct ovsrec_tacacs_server *row = NULL;
-    OVSREC_TACACS_SERVER_FOR_EACH(row, idl) {
-        if (!strcmp(row->ip_address, server_name)) {
-            return row;
-        }
-    }
-    return NULL;
-}
-
 static void
 tacacs_server_replace_parameters(const struct ovsrec_tacacs_server *row,
         tacacs_server_params_t *server_params)
@@ -2503,6 +2624,9 @@ void
 cli_post_init(void)
 {
     vtysh_ret_val retval = e_vtysh_error;
+
+    /* Install default VTY commands to new nodes.  */
+    install_default (AAA_SERVER_GROUP_NODE);
     install_element(ENABLE_NODE, &aaa_show_aaa_authenctication_cmd);
     install_element(CONFIG_NODE, &aaa_set_global_status_cmd);
     install_element(CONFIG_NODE, &no_aaa_set_global_status_cmd);
@@ -2516,6 +2640,8 @@ cli_post_init(void)
     install_element(CONFIG_NODE, &aaa_no_remove_fallback_cmd);
     install_element(CONFIG_NODE, &aaa_create_tacacs_server_group_cmd);
     install_element(CONFIG_NODE, &no_aaa_create_tacacs_server_group_cmd);
+    install_element(AAA_SERVER_GROUP_NODE, &aaa_group_add_server_cmd);
+    install_element(AAA_SERVER_GROUP_NODE, &no_aaa_group_add_server_cmd);
     install_element(CONFIG_NODE, &tacacs_server_set_passkey_cmd);
     install_element(CONFIG_NODE, &tacacs_server_set_port_cmd);
     install_element(CONFIG_NODE, &tacacs_server_set_timeout_cmd);

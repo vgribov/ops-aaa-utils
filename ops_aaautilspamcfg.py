@@ -61,16 +61,23 @@ SYSTEM_OTHER_CONFIG = "other_config"
 SYSTEM_TACACS_CONFIG_COLUMN = "tacacs_config"
 SYSTEM_RADIUS_SERVER_COLUMN = "radius_servers"
 RADIUS_SERVER_TABLE = "Radius_Server"
+AAA_SERVER_GROUP_TABLE = "AAA_Server_Group"
 
 SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN = "auto_provisioning_status"
 
 AAA_RADIUS = "radius"
 AAA_RADIUS_AUTH = "radius_auth"
 AAA_TACACS = "tacacs"
+AAA_TACACS_PLUS = "tacacs+"
+AAA_LOCAL = "local"
 AAA_TACACS_AUTH = "tacacs_auth"
 AAA_FALLBACK = "fallback"
 OPS_TRUE = "true"
 OPS_FALSE = "false"
+
+AAA_SERVER_GROUP_PRIORITY = "priority"
+AAA_SERVER_GROUP_NAME = "group_name"
+AAA_SERVER_GROUP_TYPE = "group_type"
 
 RADIUS_SERVER_IPADDRESS = "ip_address"
 RADIUS_SERVER_PORT = "udp_port"
@@ -83,6 +90,7 @@ TACACS_SERVER_PORT = "tcp_port"
 TACACS_SERVER_PASSKEY = "passkey"
 TACACS_SERVER_TIMEOUT = "timeout"
 
+SERVER_GROUP_PRIORITY_DEFAULT = -1
 TACACS_SERVER_TCP_PORT_DEFAULT = "49"
 TACACS_SERVER_PASSKEY_DEFAULT = "testing123-1"
 TACACS_SERVER_TIMEOUT_DEFAULT = "5"
@@ -176,8 +184,12 @@ def default_sshd_config():
 # ----------------- add_default_row -----------------------
 def add_default_row():
     '''
-    Add default values to the radius and fallback columns
-    by default radius is false and fallback is true
+    System Table:
+       Add default values to the radius and fallback columns
+       by default radius is false and fallback is true
+       Add default global config value for tacacs column
+    AAA_Server_Group Table:
+       Add default group local, tacacs+ and radius
     '''
     global idl
     global default_row_initialized
@@ -185,6 +197,9 @@ def add_default_row():
     data = {}
     auto_provisioning_data = {}
     tacacs_data = {}
+    local_group_data = {}
+    tacacs_group_data = {}
+    radius_group_data = {}
 
     # Default values for aaa column
     data[AAA_FALLBACK] = OPS_TRUE
@@ -200,9 +215,9 @@ def add_default_row():
     auto_provisioning_data[URL] = ""
 
     # Default values for tacacs_config column
-    tacacs_data[TACACS_SERVER_PORT] = TACACS_SERVER_TCP_PORT_DEFAULT;
-    tacacs_data[TACACS_SERVER_PASSKEY] = TACACS_SERVER_PASSKEY_DEFAULT;
-    tacacs_data[TACACS_SERVER_TIMEOUT] = TACACS_SERVER_TIMEOUT_DEFAULT;
+    tacacs_data[TACACS_SERVER_PORT] = TACACS_SERVER_TCP_PORT_DEFAULT
+    tacacs_data[TACACS_SERVER_PASSKEY] = TACACS_SERVER_PASSKEY_DEFAULT
+    tacacs_data[TACACS_SERVER_TIMEOUT] = TACACS_SERVER_TIMEOUT_DEFAULT
 
     # create the transaction
     txn = ovs.db.idl.Transaction(idl)
@@ -213,6 +228,22 @@ def add_default_row():
     setattr(ovs_rec, SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN,
             auto_provisioning_data)
     setattr(ovs_rec, SYSTEM_TACACS_CONFIG_COLUMN, tacacs_data)
+
+    # create default server groups: local, tacacs+ and radius
+    local_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
+    setattr(local_row, AAA_SERVER_GROUP_PRIORITY, 0)
+    setattr(local_row, AAA_SERVER_GROUP_NAME, AAA_LOCAL)
+    setattr(local_row, AAA_SERVER_GROUP_TYPE, AAA_LOCAL)
+
+    tacacs_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
+    setattr(tacacs_row, AAA_SERVER_GROUP_PRIORITY, SERVER_GROUP_PRIORITY_DEFAULT)
+    setattr(tacacs_row, AAA_SERVER_GROUP_NAME, AAA_TACACS_PLUS)
+    setattr(tacacs_row, AAA_SERVER_GROUP_TYPE, AAA_TACACS_PLUS)
+
+    radius_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
+    setattr(radius_row, AAA_SERVER_GROUP_PRIORITY, SERVER_GROUP_PRIORITY_DEFAULT)
+    setattr(radius_row, AAA_SERVER_GROUP_NAME, AAA_RADIUS)
+    setattr(radius_row, AAA_SERVER_GROUP_TYPE, AAA_RADIUS)
 
     txn.commit_block()
 
@@ -578,6 +609,10 @@ def main():
                                     RADIUS_SERVER_TIMEOUT,
                                     RADIUS_SERVER_RETRIES,
                                     RADIUS_SEREVR_PRIORITY])
+    schema_helper.register_columns(AAA_SERVER_GROUP_TABLE,
+                                   [AAA_SERVER_GROUP_PRIORITY,
+                                    AAA_SERVER_GROUP_NAME,
+                                    AAA_SERVER_GROUP_TYPE])
 
     idl = ovs.db.idl.Idl(remote, schema_helper)
 

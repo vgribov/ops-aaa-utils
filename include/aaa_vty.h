@@ -42,55 +42,6 @@ typedef struct aaa_server_group_params_s {
     char *group_name;       /* WORD */
 } aaa_server_group_params_t;
 
-/* Return value based on outcome of the db transaction */
-inline static int
-config_finish_result (enum ovsdb_idl_txn_status status)
-{
-    if ((status == TXN_SUCCESS) || (status == TXN_UNCHANGED)) {
-        fprintf(stdout, "txn success\n"); /*TODO remove after feature concludes*/
-        return CMD_SUCCESS;
-    }
-    return CMD_WARNING;
-}
-
-/********************** standard database txn operations **********************/
-
-#define START_DB_TXN(txn)                                       \
-    do {                                                        \
-        txn = cli_do_config_start();                            \
-        if (txn == NULL) {                                      \
-            vty_out(vty, "ovsdb_idl_txn_create failed: %s: %d\n",   \
-                    __FILE__, __LINE__);                            \
-            cli_do_config_abort(txn);                               \
-            return CMD_OVSDB_FAILURE;                               \
-        }                                                           \
-    } while (0)
-
-#define END_DB_TXN(txn)                                   \
-    do {                                                  \
-        enum ovsdb_idl_txn_status status;                 \
-        status = cli_do_config_finish(txn);               \
-        return config_finish_result(status);                \
-    } while (0)
-
-#define ERRONEOUS_DB_TXN(txn, error_message)                        \
-    do {                                                            \
-        cli_do_config_abort(txn);                                   \
-        vty_out(vty, "database transaction failed: %s: %d -- %s\n", \
-                __FILE__, __LINE__, error_message);                 \
-        return CMD_WARNING;                                         \
-    } while (0)
-
-/* used when NO error is detected but still need to terminate */
-#define ABORT_DB_TXN(txn, message)                             \
-    do {                                                       \
-        cli_do_config_abort(txn);                                   \
-        vty_out(vty, "database transaction aborted: %s: %d, %s\n",  \
-                __FILE__, __LINE__, message);                       \
-        return CMD_WARNING;                                         \
-    } while (0)
-
-
 /* Commonly used declarations */
 #define AAA_GROUP_TYPE_LOCAL            "local"
 #define SYSTEM_AAA_RADIUS               "radius"
@@ -129,7 +80,9 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 #define SSH_PASSWORD_AUTHENTICATION_ENABLE  "ssh_passkeyauthentication_enable"
 
 #define AAA_GROUP_HELP_STR                    "Define AAA server group\n"
-#define AAA_SERVER_HELP_STR                   "Specify a server type. (TACACS+)\n"
+#define AAA_SERVER_TYPE_HELP_STR              "Specify a server type\n"
+#define AAA_SERVER_HELP_STR                   "Specify a server\n"
+#define AAA_SERVER_NAME_HELP_STR              "Server IP address or hostname\n"
 #define RADIUS_HELP_STR                       "Radius server\n"
 #define TACACS_HELP_STR                       "TACACS+ server\n"
 #define AAA_GROUP_NAME_HELP_STR               "Specify a server group name\n"
