@@ -484,10 +484,8 @@ DEFUN(cli_aaa_show_aaa_authenctication,
     return aaa_show_aaa_authenctication();
 }
 
-/* Specifies the TACACS+ server global configuration*/
-/* Modify TACACS+ server passkey
- * default 'passkey' is 'testing123-1'
- */
+/* Enable AAA TACACS+ authorization
+ * By default disabled */
 static int
 aaa_enable_tacacs_authorization(bool no_form)
 {
@@ -522,7 +520,6 @@ aaa_enable_tacacs_authorization(bool no_form)
     END_DB_TXN(tacacs_txn);
 }
 
-
 /* CLI to set AAA TACACS+ authorization  */
 DEFUN (cli_aaa_enable_tacacs_authorization,
       aaa_enable_tacacs_authorization_cmd,
@@ -547,6 +544,146 @@ DEFUN (cli_aaa_no_enable_tacacs_authorization,
 {
     return aaa_enable_tacacs_authorization(true);
 }
+
+/* AAA server group utility functions*/
+static const struct ovsrec_aaa_server_group*
+get_row_by_server_group_name(const char *name)
+{
+    const struct ovsrec_aaa_server_group *row = NULL;
+    OVSREC_AAA_SERVER_GROUP_FOR_EACH(row, idl) {
+        if (strcmp(row->group_name, name) == 0)
+        {
+            return row;
+        }
+    }
+    return NULL;
+}
+
+const int
+aaa_server_group_sanitize_parameters(aaa_server_group_params_t *server_group_params)
+{
+   /* validate server group name*/
+   if (strlen(server_group_params->group_name) > MAX_CHARS_IN_SERVER_GROUP_NAME)
+   {
+        vty_out(vty, "Server group name should be less than %d characters%s",
+                MAX_CHARS_IN_SERVER_GROUP_NAME, VTY_NEWLINE);
+        return CMD_ERR_NOTHING_TODO;
+   }
+
+   /*Prevent user from configure default group*/
+   if ((strcmp(server_group_params->group_name, SYSTEM_AAA_RADIUS) == 0) ||
+       (strcmp(server_group_params->group_name, SYSTEM_AAA_TACACS) == 0))
+   {
+        vty_out(vty, "Invalid server group name%s", VTY_NEWLINE);
+        return CMD_ERR_NOTHING_TODO;
+   }
+
+   if ((strcmp(server_group_params->group_type, SYSTEM_AAA_RADIUS) != 0) &&
+       (strcmp(server_group_params->group_type, SYSTEM_AAA_TACACS) != 0))
+   {
+        vty_out(vty, "Invalid server group type%s", VTY_NEWLINE);
+        return CMD_ERR_NOTHING_TODO;
+   }
+
+   return CMD_SUCCESS;
+}
+
+/* Create/remove RADIUS or TACACS+ server-groups */
+static int
+configure_aaa_server_group(aaa_server_group_params_t *server_group_params)
+{
+    const struct ovsrec_aaa_server_group *row = NULL;
+    struct ovsdb_idl_txn *server_group_txn = NULL;
+
+    int retVal = aaa_server_group_sanitize_parameters(server_group_params);
+    if (retVal != CMD_SUCCESS)
+    {
+        return retVal;
+    }
+
+    /* Start of transaction */
+    START_DB_TXN(server_group_txn);
+
+    /* See if specified AAA server group already exists */
+    row = get_row_by_server_group_name(server_group_params->group_name);
+    if (row == NULL)
+    {
+        if (server_group_params->no_form)
+        {
+            /* aaa server group does not exist */
+            vty_out(vty, "AAA server group %s does not exist%s",
+                         server_group_params->group_name, VTY_NEWLINE);
+            END_DB_TXN(server_group_txn);
+        }
+        else
+        {
+            int64_t priority = AAA_GROUP_DEFAULT_PRIORITY;
+            row = ovsrec_aaa_server_group_insert(server_group_txn);
+            if (row == NULL)
+            {
+                VLOG_ERR("Could not insert a row into AAA Server Group Table\n");
+                ERRONEOUS_DB_TXN(server_group_txn,
+                         "Could not insert a row into AAA Server Group Table");
+            }
+
+            VLOG_DBG("SUCCESS: Inserted a row into AAA Server Group Table\n");
+            ovsrec_aaa_server_group_set_group_name(row, server_group_params->group_name);
+            ovsrec_aaa_server_group_set_group_type(row, server_group_params->group_type);
+            ovsrec_aaa_server_group_set_priority(row, priority);
+        }
+    }
+    else
+    {
+        if (server_group_params->no_form)
+        {
+            VLOG_DBG("Deleting a row from the AAA Server Group table\n");
+            /* Delete the server */
+            ovsrec_aaa_server_group_delete(row);
+            /*TODO update all server entry, move them to default*/
+        }
+    }
+    /* End of transaction. */
+    END_DB_TXN(server_group_txn);
+}
+
+/* CLI to create AAA TACACS+ server group  */
+DEFUN (cli_aaa_create_tacacs_server_group,
+       aaa_create_tacacs_server_group_cmd,
+       "aaa group server (radius | tacacs+) WORD",
+       AAA_STR
+       AAA_GROUP_HELP_STR
+       AAA_SERVER_HELP_STR
+       RADIUS_HELP_STR
+       TACACS_HELP_STR
+       AAA_GROUP_NAME_HELP_STR)
+{
+    aaa_server_group_params_t aaa_server_group_params;
+    aaa_server_group_params.group_type = (char *)argv[0];
+    aaa_server_group_params.group_name = (char *)argv[1];
+    aaa_server_group_params.no_form = false;
+    /*TODO add radius server group support and remove this hack*/
+    if (strcmp("radius", argv[0]) == 0)
+    {
+        vty_out(vty, "Radius server group not supported yet%s", VTY_NEWLINE);
+        return CMD_ERR_NOTHING_TODO;
+    }
+    if (vty_flags & CMD_FLAG_NO_CMD)
+    {
+        aaa_server_group_params.no_form = true;
+    }
+    return configure_aaa_server_group(&aaa_server_group_params);
+}
+
+DEFUN_NO_FORM (cli_aaa_create_tacacs_server_group,
+               aaa_create_tacacs_server_group_cmd,
+               "aaa group server (radius | tacacs+) WORD",
+               AAA_STR
+               AAA_GROUP_HELP_STR
+               AAA_SERVER_HELP_STR
+               RADIUS_HELP_STR
+               TACACS_HELP_STR
+               AAA_GROUP_NAME_HELP_STR);
+
 /* Specifies the TACACS+ server global configuration*/
 /* Modify TACACS+ server passkey
  * default 'passkey' is 'testing123-1'
@@ -2168,6 +2305,10 @@ aaa_ovsdb_init(void)
 {
     /* Add AAA columns. */
     ovsdb_idl_add_column(idl, &ovsrec_system_col_aaa);
+    ovsdb_idl_add_table(idl, &ovsrec_table_aaa_server_group);
+    ovsdb_idl_add_column(idl, &ovsrec_aaa_server_group_col_group_type);
+    ovsdb_idl_add_column(idl, &ovsrec_aaa_server_group_col_group_name);
+    ovsdb_idl_add_column(idl, &ovsrec_aaa_server_group_col_priority);
 
     /* Add Auto Provision Column. */
     ovsdb_idl_add_column(idl, &ovsrec_system_col_auto_provisioning_status);
@@ -2190,6 +2331,8 @@ aaa_ovsdb_init(void)
     ovsdb_idl_add_column(idl, &ovsrec_tacacs_server_col_timeout);
     ovsdb_idl_add_column(idl, &ovsrec_tacacs_server_col_passkey);
     ovsdb_idl_add_column(idl, &ovsrec_tacacs_server_col_priority);
+    ovsdb_idl_add_column(idl, &ovsrec_tacacs_server_col_group_priority);
+    ovsdb_idl_add_column(idl, &ovsrec_tacacs_server_col_group_id);
 
     /* Columns in System table. */
     ovsdb_idl_add_column(idl, &ovsrec_system_col_tacacs_config);
@@ -2220,6 +2363,8 @@ cli_post_init(void)
     install_element(CONFIG_NODE, &aaa_no_enable_tacacs_authorization_cmd);
     install_element(CONFIG_NODE, &aaa_remove_fallback_cmd);
     install_element(CONFIG_NODE, &aaa_no_remove_fallback_cmd);
+    install_element(CONFIG_NODE, &aaa_create_tacacs_server_group_cmd);
+    install_element(CONFIG_NODE, &no_aaa_create_tacacs_server_group_cmd);
     install_element(CONFIG_NODE, &tacacs_server_set_passkey_cmd);
     install_element(CONFIG_NODE, &tacacs_server_set_port_cmd);
     install_element(CONFIG_NODE, &tacacs_server_set_timeout_cmd);

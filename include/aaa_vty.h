@@ -35,12 +35,20 @@ typedef struct tacacs_server_params_s {
     char *auth_port;        /* Authentication port */
 } tacacs_server_params_t;
 
+
+typedef struct aaa_server_group_params_s {
+    bool no_form;           /* TRUE/FALSE */
+    char *group_type;         /* AAA_GROUP_TYPE_TACACS*/
+    char *group_name;       /* WORD */
+} aaa_server_group_params_t;
+
 /* Return value based on outcome of the db transaction */
 inline static int
 config_finish_result (enum ovsdb_idl_txn_status status)
 {
     if ((status == TXN_SUCCESS) || (status == TXN_UNCHANGED)) {
-        fprintf(stdout, "txn success\n"); return CMD_SUCCESS;
+        fprintf(stdout, "txn success\n"); /*TODO remove after feature concludes*/
+        return CMD_SUCCESS;
     }
     return CMD_WARNING;
 }
@@ -84,6 +92,8 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 
 
 /* Commonly used declarations */
+#define AAA_GROUP_TYPE_LOCAL            "local"
+#define SYSTEM_AAA_TACACS               "tacacs+"
 #define SYSTEM_AAA_RADIUS               "radius"
 #define SYSTEM_AAA_TACACS               "tacacs"
 #define SYSTEM_AAA_TACACS_PLUS          "tacacs+"
@@ -98,6 +108,8 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 #define OPS_TRUE_STR                        "true"
 #define OPS_FALSE_STR                       "false"
 
+#define AAA_GROUP_DEFAULT_PRIORITY      -1
+
 #define MAX_RADIUS_SERVERS                    64
 #define RADIUS_SERVER_DEFAULT_PASSKEY         "testing123-1"
 #define RADIUS_SERVER_DEFAULT_PORT            1812
@@ -106,6 +118,7 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 
 #define MAX_CHARS_IN_TACACS_SERVER_NAME       58
 #define MAX_LENGTH_TACACS_PASSKEY             64
+#define MAX_CHARS_IN_SERVER_GROUP_NAME        32
 
 #define AUTO_PROVISIONING_ENABLE              "enable"
 #define AUTO_PROVISIONING_DISABLE             "disable"
@@ -116,6 +129,11 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 #define SSH_PUBLICKEY_AUTHENTICATION_ENABLE "ssh_publickeyauthentication_enable"
 #define SSH_PASSWORD_AUTHENTICATION_ENABLE  "ssh_passkeyauthentication_enable"
 
+#define AAA_GROUP_HELP_STR                    "Define AAA server group\n"
+#define AAA_SERVER_HELP_STR                   "Specify a server type. (TACACS+)\n"
+#define RADIUS_HELP_STR                       "Radius server\n"
+#define TACACS_HELP_STR                       "TACACS+ server\n"
+#define AAA_GROUP_NAME_HELP_STR               "Specify a server group name\n"
 #define AUTH_PORT_HELP_STR                    "Set authentication port\n"
 #define AUTH_PORT_RANGE_HELP_STR              "TCP port range is 1 to 65535. (Default: 49)\n"
 #define TIMEOUT_HELP_STR                      "Set the transmission timeout interval\n"
@@ -130,7 +148,7 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 
 #define AAA_USER_AUTHOR_STR                   "User authorization\n"
 #define AAA_USER_AUTHOR_TYPE_STR              "Authorization type\n"
-#define TACACS_ENABLE_AUTHOR_STR         "Enable TACACS+ authorization\n"
+#define TACACS_ENABLE_AUTHOR_STR              "Enable TACACS+ authorization\n"
 #define TACACS_AUTHOR_TRUE_STR                "true"
 #define TACACS_AUTHOR_FALSE_STR               "false"
 void cli_pre_init(void);
