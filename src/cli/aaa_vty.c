@@ -113,7 +113,7 @@ aaa_set_global_status(const char *status)
     else if (strcmp("tacacs+", status) == 0)
     {
         smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_TRUE_STR);
-        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, RADIUS_PAP);
+        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_PAP);
     }
     else if (strcmp(SYSTEM_AAA_RADIUS_LOCAL, status) == 0)
     {
@@ -230,15 +230,15 @@ static int aaa_set_tacacs_authentication(const char *auth)
 
     smap_clone(&smap_aaa, &row->aaa);
 
-    if (strcmp(RADIUS_CHAP, auth) == 0)
+    if (strcmp(TACACS_CHAP, auth) == 0)
     {
         smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_TRUE_STR);
-        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, RADIUS_CHAP);
+        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_CHAP);
     }
-    else if (strcmp(RADIUS_PAP, auth) == 0)
+    else if (strcmp(TACACS_PAP, auth) == 0)
     {
         smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_TRUE_STR);
-        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, RADIUS_PAP);
+        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_PAP);
     }
 
     ovsrec_system_set_aaa(row, &smap_aaa);
@@ -415,6 +415,18 @@ aaa_show_aaa_authenctication()
         vty_out(vty, "  Fallback to local authentication\t: %s%s",
                 "Disabled", VTY_NEWLINE);
     }
+
+    if (!strcmp(smap_get(&row->aaa, SYSTEM_AAA_TACACS), OPS_TRUE_STR))
+    {
+        vty_out(vty, "  TACACS+ authentication\t\t: %s%s",
+                "Enabled", VTY_NEWLINE);
+    }
+    else
+    {
+        vty_out(vty, "  TACACS+ authentication\t\t: %s%s",
+                "Disabled", VTY_NEWLINE);
+    }
+
 
     return CMD_SUCCESS;
 }

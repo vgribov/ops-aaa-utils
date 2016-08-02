@@ -101,6 +101,9 @@ URL = "url"
 RADIUS_PAP = "pap"
 RADIUS_CHAP = "chap"
 
+TACACS_PAP = "pap"
+TACACS_CHAP = "chap"
+
 #---------------- unixctl_exit --------------------------
 
 
@@ -188,7 +191,7 @@ def add_default_row():
     data[AAA_RADIUS] = OPS_FALSE
     data[AAA_RADIUS_AUTH] = RADIUS_PAP
     data[AAA_TACACS] = OPS_FALSE
-    data[AAA_TACACS_AUTH] = RADIUS_PAP
+    data[AAA_TACACS_AUTH] = TACACS_PAP
     data[SSH_PASSKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
     data[SSH_PUBLICKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
 

@@ -92,6 +92,8 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 #define SYSTEM_AAA_TACACS_AUTH          "tacacs_auth"
 #define RADIUS_CHAP                     "chap"
 #define RADIUS_PAP                      "pap"
+#define TACACS_CHAP                     "chap"
+#define TACACS_PAP                      "pap"
 #define OPS_TRUE_STR                        "true"
 #define OPS_FALSE_STR                       "false"
 
