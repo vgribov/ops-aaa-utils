@@ -86,6 +86,7 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 /* Commonly used declarations */
 #define SYSTEM_AAA_RADIUS               "radius"
 #define SYSTEM_AAA_TACACS               "tacacs"
+#define SYSTEM_AAA_TACACS_PLUS          "tacacs+"
 #define SYSTEM_AAA_FALLBACK             "fallback"
 #define SYSTEM_AAA_RADIUS_LOCAL         "local"
 #define SYSTEM_AAA_RADIUS_AUTH          "radius_auth"

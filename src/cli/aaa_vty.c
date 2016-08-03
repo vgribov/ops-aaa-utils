@@ -109,16 +109,22 @@ aaa_set_global_status(const char *status)
     {
         smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_TRUE_STR);
         smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
+        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_FALSE_STR);
+        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_PAP);
     }
-    else if (strcmp("tacacs+", status) == 0)
+    else if (strcmp(SYSTEM_AAA_TACACS_PLUS, status) == 0)
     {
         smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_TRUE_STR);
         smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_PAP);
+        smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_FALSE_STR);
+        smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
     }
     else if (strcmp(SYSTEM_AAA_RADIUS_LOCAL, status) == 0)
     {
         smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_FALSE_STR);
         smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
+        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_FALSE_STR);
+        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_PAP);
     }
 
     ovsrec_system_set_aaa(row, &smap_aaa);
@@ -189,6 +195,10 @@ static int aaa_set_radius_authentication(const char *auth)
         smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
     }
 
+    /* Disable tacacs+ */
+    smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_FALSE_STR);
+    smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_PAP);
+
     ovsrec_system_set_aaa(row, &smap_aaa);
     smap_destroy(&smap_aaa);
 
@@ -240,6 +250,10 @@ static int aaa_set_tacacs_authentication(const char *auth)
         smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_TRUE_STR);
         smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_PAP);
     }
+
+    /* Disable radius */
+    smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_FALSE_STR);
+    smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
 
     ovsrec_system_set_aaa(row, &smap_aaa);
     smap_destroy(&smap_aaa);
@@ -388,6 +402,7 @@ aaa_show_aaa_authenctication()
         VLOG_ERR(OVSDB_ROW_FETCH_ERROR);
         return CMD_OVSDB_FAILURE;
     }
+
     vty_out(vty, "AAA Authentication:%s", VTY_NEWLINE);
     if (!strcmp(smap_get(&row->aaa, SYSTEM_AAA_RADIUS), OPS_TRUE_STR))
     {
@@ -397,6 +412,19 @@ aaa_show_aaa_authenctication()
                 VTY_NEWLINE);
         vty_out(vty, "  Radius authentication type\t\t: %s%s",
                 smap_get(&row->aaa, SYSTEM_AAA_RADIUS_AUTH), VTY_NEWLINE);
+        vty_out(vty, "  TACACS+ authentication\t\t: %s%s", "Disabled",
+                VTY_NEWLINE);
+    }
+    else  if (!strcmp(smap_get(&row->aaa, SYSTEM_AAA_TACACS), OPS_TRUE_STR))
+    {
+        vty_out(vty, "  Local authentication\t\t\t: %s%s", "Disabled",
+                VTY_NEWLINE);
+        vty_out(vty, "  Radius authentication\t\t\t: %s%s", "Disabled",
+                VTY_NEWLINE);
+        vty_out(vty, "  TACACS+ authentication\t\t: %s%s", "Enabled",
+                VTY_NEWLINE);
+        vty_out(vty, "  TACACS+ authentication type\t\t: %s%s",
+                smap_get(&row->aaa, SYSTEM_AAA_TACACS_AUTH), VTY_NEWLINE);
     }
     else
     {
@@ -404,7 +432,10 @@ aaa_show_aaa_authenctication()
                 VTY_NEWLINE);
         vty_out(vty, "  Radius authentication\t\t\t: %s%s", "Disabled",
                 VTY_NEWLINE);
+        vty_out(vty, "  TACACS+ authentication\t\t: %s%s", "Disabled",
+                VTY_NEWLINE);
     }
+
     if (!strcmp(smap_get(&row->aaa, SYSTEM_AAA_FALLBACK), OPS_TRUE_STR))
     {
         vty_out(vty, "  Fallback to local authentication\t: %s%s",
@@ -415,18 +446,6 @@ aaa_show_aaa_authenctication()
         vty_out(vty, "  Fallback to local authentication\t: %s%s",
                 "Disabled", VTY_NEWLINE);
     }
-
-    if (!strcmp(smap_get(&row->aaa, SYSTEM_AAA_TACACS), OPS_TRUE_STR))
-    {
-        vty_out(vty, "  TACACS+ authentication\t\t: %s%s",
-                "Enabled", VTY_NEWLINE);
-    }
-    else
-    {
-        vty_out(vty, "  TACACS+ authentication\t\t: %s%s",
-                "Disabled", VTY_NEWLINE);
-    }
-
 
     return CMD_SUCCESS;
 }
