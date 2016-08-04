@@ -1794,12 +1794,49 @@ show_global_tacacs_config(const struct ovsrec_system *ovs)
     vty_out(vty, "Number of servers: %zd %s%s", ovs->n_tacacs_servers, VTY_NEWLINE, VTY_NEWLINE);
 }
 
+
+/* Display details for each TACACS+ server */
+static void
+show_detailed_tacacs_server_data()
+{
+    int count = 0;
+    const struct ovsrec_tacacs_server *row = NULL;
+
+    vty_out(vty, "***** TACACS+ Server information ******%s", VTY_NEWLINE);
+    OVSREC_TACACS_SERVER_FOR_EACH(row, idl) {
+        count++;
+        vty_out(vty, "tacacs-server:%d%s", count, VTY_NEWLINE);
+        vty_out(vty, " Server name\t\t: %s%s", row->ip_address, VTY_NEWLINE);
+        vty_out(vty, " Auth port\t\t: %ld%s", *(row->tcp_port), VTY_NEWLINE);
+        vty_out(vty, " Shared secret\t\t: %s%s", row->passkey, VTY_NEWLINE);
+        vty_out(vty, " Timeout\t\t: %ld%s", *(row->timeout), VTY_NEWLINE);
+        vty_out(vty, "%s", VTY_NEWLINE);
+    }
+}
+
+/* Summarized details for TACACS+ servers */
+static void
+show_summarized_tacacs_server_data()
+{
+    const struct ovsrec_tacacs_server *row = NULL;
+
+    vty_out(vty, "------------------------------------------------------------------------------"
+            "----------------------------------------------------------------%s", VTY_NEWLINE);
+    vty_out(vty, "%39s  %15s  %3s %s", "NAME", "PORT", "STATUS", VTY_NEWLINE);
+    vty_out(vty, "------------------------------------------------------------------------------"
+            "----------------------------------------------------------------\%s", VTY_NEWLINE);
+    OVSREC_TACACS_SERVER_FOR_EACH(row, idl) {
+        vty_out(vty,"  %39s", row->ip_address);
+        vty_out(vty," %15ld", *(row->tcp_port));
+        vty_out(vty, "%s", VTY_NEWLINE);
+    }
+}
+
 static int
 show_tacacs_server_info(bool showDetails)
 {
     const struct ovsrec_tacacs_server *row = NULL;
     const struct ovsrec_system *ovs = NULL;
-    int count = 0;
 
     /* Fetch the system row */
     ovs = ovsrec_system_first(idl);
@@ -1818,34 +1855,11 @@ show_tacacs_server_info(bool showDetails)
     }
 
     if (showDetails) {
-        //TODO (kshridha) - can be moved to a function
-
-        /* Display details for each TACACS+ server */
-        vty_out(vty, "***** TACACS+ Server information ******%s", VTY_NEWLINE);
-        OVSREC_TACACS_SERVER_FOR_EACH(row, idl) {
-               count++;
-               vty_out(vty, "tacacs-server:%d%s", count, VTY_NEWLINE);
-               vty_out(vty, " Server name\t\t: %s%s", row->ip_address, VTY_NEWLINE);
-               vty_out(vty, " Auth port\t\t: %ld%s", *(row->tcp_port), VTY_NEWLINE);
-               vty_out(vty, " Shared secret\t\t: %s%s", row->passkey, VTY_NEWLINE);
-               vty_out(vty, " Timeout\t\t: %ld%s", *(row->timeout), VTY_NEWLINE);
-               vty_out(vty, "%s", VTY_NEWLINE);
-        }
+        show_detailed_tacacs_server_data();
+    } else {
+        show_summarized_tacacs_server_data();
     }
 
-    else {
-        //TODO (kshridha) - can be moved to a function
-        vty_out(vty, "------------------------------------------------------------------------------"
-                "----------------------------------------------------------------%s", VTY_NEWLINE);
-        vty_out(vty, "%39s  %15s  %3s %s", "NAME", "PORT", "STATUS", VTY_NEWLINE);
-        vty_out(vty, "------------------------------------------------------------------------------"
-                "----------------------------------------------------------------\%s", VTY_NEWLINE);
-        OVSREC_TACACS_SERVER_FOR_EACH(row, idl) {
-            vty_out(vty,"  %39s", row->ip_address);
-            vty_out(vty," %15ld", *(row->tcp_port));
-            vty_out(vty, "%s", VTY_NEWLINE);
-        }
-    }
     return CMD_SUCCESS;
 }
 
