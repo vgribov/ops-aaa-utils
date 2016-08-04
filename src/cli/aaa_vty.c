@@ -51,7 +51,7 @@
 
 extern struct ovsdb_idl *idl;
 
-static int aaa_set_global_status (const char *status);
+static int aaa_set_global_status (const char *status, bool no_flag);
 static int aaa_set_radius_authentication(const char *auth);
 static int aaa_fallback_option (const char *value);
 static int aaa_show_aaa_authenctication ();
@@ -80,7 +80,7 @@ VLOG_DEFINE_THIS_MODULE(vtysh_aaa_cli);
 
 /* Set global status of AAA. */
 static int
-aaa_set_global_status(const char *status)
+aaa_set_global_status(const char *status, bool no_flag)
 {
     const struct ovsrec_system *row = NULL;
     enum ovsdb_idl_txn_status txn_status;
@@ -105,26 +105,37 @@ aaa_set_global_status(const char *status)
 
     smap_clone(&smap_aaa, &row->aaa);
 
-    if (strcmp(SYSTEM_AAA_RADIUS, status) == 0)
-    {
-        smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_TRUE_STR);
-        smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
-        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_FALSE_STR);
-        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_PAP);
-    }
-    else if (strcmp(SYSTEM_AAA_TACACS_PLUS, status) == 0)
-    {
-        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_TRUE_STR);
-        smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_PAP);
-        smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_FALSE_STR);
-        smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
-    }
-    else if (strcmp(SYSTEM_AAA_RADIUS_LOCAL, status) == 0)
+    /* handle no command: reset aaa authentication to local */
+    if (no_flag)
     {
         smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_FALSE_STR);
         smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
         smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_FALSE_STR);
         smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_PAP);
+    }
+    else
+    {
+        if (strcmp(SYSTEM_AAA_RADIUS, status) == 0)
+        {
+            smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_TRUE_STR);
+            smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
+            smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_FALSE_STR);
+            smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_PAP);
+        }
+        else if (strcmp(SYSTEM_AAA_TACACS_PLUS, status) == 0)
+        {
+            smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_TRUE_STR);
+            smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_PAP);
+            smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_FALSE_STR);
+            smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
+        }
+        else if (strcmp(SYSTEM_AAA_RADIUS_LOCAL, status) == 0)
+        {
+            smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_FALSE_STR);
+            smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
+            smap_replace(&smap_aaa, SYSTEM_AAA_TACACS, OPS_FALSE_STR);
+            smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, TACACS_PAP);
+        }
     }
 
     ovsrec_system_set_aaa(row, &smap_aaa);
@@ -153,8 +164,21 @@ DEFUN(cli_aaa_set_global_status,
          TACACS+ authentication\n \
          Local authentication (Default)\n")
 {
-    return aaa_set_global_status(argv[0]);
+    bool is_no_cmd = false;
+
+    if (vty_flags & CMD_FLAG_NO_CMD) {
+        is_no_cmd = true;
+    }
+
+    return aaa_set_global_status(argv[0], is_no_cmd);
 }
+
+DEFUN_NO_FORM(cli_aaa_set_global_status,
+              aaa_set_global_status_cmd,
+              "aaa authentication login",
+              AAA_STR
+              "User authentication\n"
+              "Switch login\n");
 
 /* Set AAA radius authentication encoding to CHAP or PAP
  * On success, returns CMD_SUCCESS. On failure, returns CMD_OVSDB_FAILURE.
@@ -2175,6 +2199,7 @@ cli_post_init(void)
     vtysh_ret_val retval = e_vtysh_error;
     install_element(ENABLE_NODE, &aaa_show_aaa_authenctication_cmd);
     install_element(CONFIG_NODE, &aaa_set_global_status_cmd);
+    install_element(CONFIG_NODE, &no_aaa_set_global_status_cmd);
     install_element(CONFIG_NODE, &aaa_set_radius_authentication_cmd);
     install_element(CONFIG_NODE, &aaa_set_tacacs_authentication_cmd);
     install_element(CONFIG_NODE, &aaa_enable_tacacs_authorization_cmd);
