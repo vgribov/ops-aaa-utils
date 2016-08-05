@@ -572,14 +572,14 @@ aaa_server_group_sanitize_parameters(aaa_server_group_params_t *server_group_par
 
    /*Prevent user from configure default group*/
    if ((strcmp(server_group_params->group_name, SYSTEM_AAA_RADIUS) == 0) ||
-       (strcmp(server_group_params->group_name, SYSTEM_AAA_TACACS) == 0))
+       (strcmp(server_group_params->group_name, SYSTEM_AAA_TACACS_PLUS) == 0))
    {
         vty_out(vty, "Invalid server group name%s", VTY_NEWLINE);
         return CMD_ERR_NOTHING_TODO;
    }
 
    if ((strcmp(server_group_params->group_type, SYSTEM_AAA_RADIUS) != 0) &&
-       (strcmp(server_group_params->group_type, SYSTEM_AAA_TACACS) != 0))
+       (strcmp(server_group_params->group_type, SYSTEM_AAA_TACACS_PLUS) != 0))
    {
         vty_out(vty, "Invalid server group type%s", VTY_NEWLINE);
         return CMD_ERR_NOTHING_TODO;
