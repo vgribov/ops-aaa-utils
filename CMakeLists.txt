@@ -17,3 +17,4 @@ cmake_minimum_required (VERSION 2.8)
 project ("ops-aaa-utils")
 
 add_subdirectory(src/cli)
+add_subdirectory(src/lib)
