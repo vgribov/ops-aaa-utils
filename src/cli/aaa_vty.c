@@ -180,6 +180,56 @@ DEFUN_NO_FORM(cli_aaa_set_global_status,
               "User authentication\n"
               "Switch login\n");
 
+
+const static int
+validate_aaa_groups(int grp_count, const char **grp_name)
+{
+    /* First group name is null, so starting from index 1 */
+    for (int i = 1; i < grp_count; i++) {
+        fprintf(stdout, "Group name :: %s\n", grp_name[i]);
+    }
+
+    return CMD_SUCCESS;
+}
+
+DEFUN(cli_aaa_set_authentication,
+      aaa_set_authentication_cmd,
+      "aaa authentication login default {local | group .WORD}",
+      AAA_STR
+      AAA_AUTHENTICATION_HELP_STR
+      AAA_LOGIN_HELP_STR
+      AAA_DEFAULT_LINE_HELP_STR
+      AAA_LOCAL_AUTHENTICATION_HELP_STR
+      GROUP_HELP_STR
+      GROUP_NAME_HELP_STR)
+
+{
+    bool is_no_cmd = false;
+
+    /* Set flag for no command */
+    if (vty_flags & CMD_FLAG_NO_CMD) {
+        is_no_cmd = true;
+    }
+
+    /* Check validity of AAA server-groups */
+    if (!is_no_cmd) {
+        int retVal = validate_aaa_groups(argc, argv);
+        if (retVal != CMD_SUCCESS) {
+            return retVal;
+        }
+    }
+
+    return CMD_SUCCESS;
+}
+
+DEFUN_NO_FORM(cli_aaa_set_authentication,
+    aaa_set_authentication_cmd,
+    "aaa authentication login default",
+    AAA_STR
+    AAA_AUTHENTICATION_HELP_STR
+    AAA_LOGIN_HELP_STR
+    AAA_DEFAULT_LINE_HELP_STR);
+
 /* Set AAA radius authentication encoding to CHAP or PAP
  * On success, returns CMD_SUCCESS. On failure, returns CMD_OVSDB_FAILURE.
  */
@@ -2357,6 +2407,8 @@ cli_post_init(void)
     install_element(ENABLE_NODE, &aaa_show_aaa_authenctication_cmd);
     install_element(CONFIG_NODE, &aaa_set_global_status_cmd);
     install_element(CONFIG_NODE, &no_aaa_set_global_status_cmd);
+    install_element(CONFIG_NODE, &aaa_set_authentication_cmd);
+    install_element(CONFIG_NODE, &no_aaa_set_authentication_cmd);
     install_element(CONFIG_NODE, &aaa_set_radius_authentication_cmd);
     install_element(CONFIG_NODE, &aaa_set_tacacs_authentication_cmd);
     install_element(CONFIG_NODE, &aaa_enable_tacacs_authorization_cmd);

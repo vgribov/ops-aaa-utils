@@ -142,6 +142,12 @@ config_finish_result (enum ovsdb_idl_txn_status status)
 #define TACACS_SERVER_HELP_STR                "TACACS+ server configuration\n"
 #define TACACS_SERVER_HOST_HELP_STR           "Specify a TACACS+ server\n"
 #define TACACS_SERVER_NAME_HELP_STR           "TACACS+ server IP address or hostname\n"
+#define AAA_AUTHENTICATION_HELP_STR           "User authentication\n"
+#define AAA_LOGIN_HELP_STR                    "Switch login\n"
+#define AAA_DEFAULT_LINE_HELP_STR             "Default authentication list\n"
+#define AAA_LOCAL_AUTHENTICATION_HELP_STR     "Local authentication\n"
+#define GROUP_HELP_STR                        "Server-group\n"
+#define GROUP_NAME_HELP_STR                   "Group Name or family name (Valid family names: tacacs+, radius, and local)\n"
 #define SHOW_TACACS_SERVER_HELP_STR           "Show TACACS+ server configuration\n"
 #define SHOW_DETAILS_HELP_STR                 "Detailed information about TACACS+ servers\n"
 
