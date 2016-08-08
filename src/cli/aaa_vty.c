@@ -180,16 +180,137 @@ DEFUN_NO_FORM(cli_aaa_set_global_status,
               "User authentication\n"
               "Switch login\n");
 
+/* AAA server group utility functions*/
+static const struct ovsrec_aaa_server_group*
+get_row_by_server_group_name(const char *name)
+{
+    const struct ovsrec_aaa_server_group *row = NULL;
+    OVSREC_AAA_SERVER_GROUP_FOR_EACH(row, idl) {
+        if (strcmp(row->group_name, name) == 0)
+        {
+            return row;
+        }
+    }
+    return NULL;
+}
+
+const bool
+server_group_exists(const char *name)
+{
+    return get_row_by_server_group_name(name) != NULL;
+}
 
 const static int
 validate_aaa_groups(int grp_count, const char **grp_name)
 {
-    /* First group name is null, so starting from index 1 */
-    for (int i = 1; i < grp_count; i++) {
-        fprintf(stdout, "Group name :: %s\n", grp_name[i]);
+    int iter1, iter2;
+    /* if local is not given before group keyword */
+    int index = (grp_name[0] == NULL) ? 1 : 0;
+
+    /* check no group is given more than once in priority order */
+    for (iter1 = index; iter1 < grp_count; iter1++) {
+        for (iter2 = iter1 + 1; iter2 < grp_count; iter2++) {
+            if (strcmp(grp_name[iter1], grp_name[iter2]) == 0) {
+                vty_out(vty, "Group %s is mentioned more than once%s",
+                        grp_name[iter1], VTY_NEWLINE);
+                return CMD_ERR_NOTHING_TODO;
+            }
+        }
+    }
+
+    /* check if all groups are already defined */
+    for (iter1 = index; iter1 < grp_count; iter1++) {
+        if (!server_group_exists(grp_name[iter1])) {
+                vty_out(vty, "Group %s is not defined%s", grp_name[iter1],
+                        VTY_NEWLINE);
+                return CMD_ERR_NOTHING_TODO;
+        }
     }
 
     return CMD_SUCCESS;
+}
+
+const int
+reset_group_priority()
+{
+    struct ovsdb_idl_txn *status_txn = NULL;
+    const struct ovsrec_aaa_server_group *row = NULL;
+
+    START_DB_TXN(status_txn);
+
+    /* set priority of all server groups except local to -1
+     * Local group's priority is set to 0
+     */
+    OVSREC_AAA_SERVER_GROUP_FOR_EACH(row, idl) {
+        ovsrec_aaa_server_group_set_priority(row, AAA_GROUP_DEFAULT_PRIORITY);
+        if (strcmp(row->group_name, AAA_GROUP_TYPE_LOCAL) == 0) {
+            ovsrec_aaa_server_group_set_priority(row, 0);
+        }
+    }
+
+    END_DB_TXN(status_txn);
+}
+
+const int
+configure_aaa_authentication(int group_count, const char **group, bool is_no_cmd)
+{
+    struct ovsdb_idl_txn *status_txn = NULL;
+    const struct ovsrec_aaa_server_group *group_row = NULL;
+    bool is_local_configured = false;
+    int priority = 1;
+    int retVal;
+    int iter;
+    int index;
+
+    /* Check validity of AAA server-groups */
+    if (!is_no_cmd) {
+        retVal = validate_aaa_groups(group_count, group);
+        if (retVal != CMD_SUCCESS) {
+            return retVal;
+        }
+    }
+
+    /* reset priority of all groups to avoid inconsitent state in db */
+    retVal = reset_group_priority();
+    if (retVal != CMD_SUCCESS) {
+        return retVal;
+    }
+
+    /* No need to go further it is no version of command */
+    if (is_no_cmd) {
+        return CMD_SUCCESS;
+    }
+
+    /* Start of transaction */
+    START_DB_TXN(status_txn);
+
+    /* if local is not given before group keyword */
+    index = (group[0] == NULL) ? 1 : 0;
+
+    for (iter = index; iter < group_count; iter++) {
+        group_row = get_row_by_server_group_name(group[iter]);
+        if (group_row == NULL) {
+            ERRONEOUS_DB_TXN(status_txn, "AAA server group does not exist.");
+        }
+
+        /* check to determine if user explicitly configures local */
+        if (strcmp(group[iter], AAA_GROUP_TYPE_LOCAL) == 0) {
+            is_local_configured = true;
+        }
+
+        /* update the group priotity */
+        ovsrec_aaa_server_group_set_priority(group_row, priority);
+        priority++;
+    }
+
+    /* set priority of local to last if user didn't add it to configuration */
+    if (!is_local_configured) {
+        group_row = get_row_by_server_group_name(AAA_GROUP_TYPE_LOCAL);
+        ovsrec_aaa_server_group_set_priority(group_row, priority);
+    }
+
+    /* End of transaction. */
+    END_DB_TXN(status_txn);
 }
 
 DEFUN(cli_aaa_set_authentication,
@@ -211,15 +332,7 @@ DEFUN(cli_aaa_set_authentication,
         is_no_cmd = true;
     }
 
-    /* Check validity of AAA server-groups */
-    if (!is_no_cmd) {
-        int retVal = validate_aaa_groups(argc, argv);
-        if (retVal != CMD_SUCCESS) {
-            return retVal;
-        }
-    }
-
-    return CMD_SUCCESS;
+    return configure_aaa_authentication(argc, argv, is_no_cmd);
 }
 
 DEFUN_NO_FORM(cli_aaa_set_authentication,
@@ -593,20 +706,6 @@ DEFUN (cli_aaa_no_enable_tacacs_authorization,
       TACACS_ENABLE_AUTHOR_STR)
 {
     return aaa_enable_tacacs_authorization(true);
-}
-
-/* AAA server group utility functions*/
-static const struct ovsrec_aaa_server_group*
-get_row_by_server_group_name(const char *name)
-{
-    const struct ovsrec_aaa_server_group *row = NULL;
-    OVSREC_AAA_SERVER_GROUP_FOR_EACH(row, idl) {
-        if (strcmp(row->group_name, name) == 0)
-        {
-            return row;
-        }
-    }
-    return NULL;
 }
 
 const int
