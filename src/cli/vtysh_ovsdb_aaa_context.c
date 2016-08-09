@@ -30,6 +30,7 @@
 #include "vtysh/vtysh_ovsdb_config.h"
 #include "vtysh/utils/system_vtysh_utils.h"
 #include "vtysh_ovsdb_aaa_context.h"
+#include "aaa_vty.h"
 
 /*-----------------------------------------------------------------------------
 | Function : vtysh_ovsdb_ovstable_parse_tacacs_cfg
@@ -136,8 +137,8 @@ sort_tacacs_server(const struct shash *list)
 }
 
 /*-----------------------------------------------------------------------------
-| Function : vtysh_display_tacacs_server_commands
-| Responsibility : display tacacs server table commands
+| Function : vtysh_display_tacacs_server_table
+| Responsibility : display tacacs server table
 | scope : static
 | Parameters :
 |    pmsg : callback arguments from show running config handler|
@@ -172,6 +173,7 @@ vtysh_display_tacacs_server_table(vtysh_ovsdb_cbmsg *p_msg)
   }
   count = shash_count(&sorted_tacacs_servers);
 
+  vtysh_ovsdb_cli_print(p_msg, "!");
   for(idx = 0; idx < count; idx++)
   {
       /* buff size based on port 11 " port %5d", timeout 11 " timeout %2d"
@@ -199,6 +201,68 @@ vtysh_display_tacacs_server_table(vtysh_ovsdb_cbmsg *p_msg)
 
 
 /*-----------------------------------------------------------------------------
+| Function : vtysh_display_aaa_server_group_table
+| Responsibility : display AAA Server Group table
+| scope : static
+| Parameters :
+|    pmsg : callback arguments from show running config handler|
+| Return : vtysh_ret_val, e_vtysh_ok
+-----------------------------------------------------------------------------*/
+static vtysh_ret_val
+vtysh_display_aaa_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
+{
+  const struct ovsrec_tacacs_server *server_row = NULL;
+  const struct ovsrec_aaa_server_group *group_row = NULL;
+  struct shash sorted_tacacs_servers;
+  const struct shash_node **nodes;
+  int count = 0;
+  int idx = 0;
+
+  if (!ovsrec_aaa_server_group_first(p_msg->idl))
+  {
+      return e_vtysh_ok;
+  }
+
+  shash_init(&sorted_tacacs_servers);
+
+  OVSREC_TACACS_SERVER_FOR_EACH(server_row, p_msg->idl)
+  {
+      shash_add(&sorted_tacacs_servers, server_row->ip_address, (void *)server_row);
+  }
+
+  nodes = sort_tacacs_server(&sorted_tacacs_servers);
+  if (nodes == NULL)
+  {
+     shash_destroy(&sorted_tacacs_servers);
+     return e_vtysh_error;
+  }
+  count = shash_count(&sorted_tacacs_servers);
+
+  OVSREC_AAA_SERVER_GROUP_FOR_EACH(group_row, p_msg->idl)
+  {
+      const char* name = group_row->group_name;
+      if (strcmp(name, AAA_GROUP_TYPE_LOCAL) == 0)
+          continue;
+      vtysh_ovsdb_cli_print(p_msg, "!");
+      vtysh_ovsdb_cli_print(p_msg, "aaa group server %s %s", group_row->group_type, name);
+
+      for(idx = 0; idx < count; idx++)
+      {
+          server_row = (const struct ovsrec_tacacs_server *)nodes[idx]->data;
+          if (server_row->group_id == group_row)
+          {
+              vtysh_ovsdb_cli_print(p_msg, "    server %s", server_row->ip_address);
+          }
+      }
+  }
+
+  shash_destroy(&sorted_tacacs_servers);
+  free(nodes);
+
+  return e_vtysh_ok;
+}
+
+/*-----------------------------------------------------------------------------
 | Function : vtysh_config_context_aaa_clientcallback
 | Responsibility : AAA config client callback routine
 | Parameters :
@@ -221,6 +285,8 @@ vtysh_config_context_aaa_clientcallback(void *p_private)
     }
     /* Generate CLI for the Tacacs_Server Table*/
     vtysh_display_tacacs_server_table(p_msg);
+    /* Generate CLI for the AAA_Server_Group Table*/
+    vtysh_display_aaa_server_group_table(p_msg);
 
     return e_vtysh_ok;
 }

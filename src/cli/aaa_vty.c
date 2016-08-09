@@ -59,6 +59,8 @@ static int aaa_show_aaa_authenctication ();
 static int tacacs_set_global_passkey (const char *passkey);
 static int tacacs_set_global_port (const char *port);
 static int tacacs_set_global_timeout (const char *timeout);
+static const struct ovsrec_aaa_server_group*
+           get_row_by_server_group_name(const char *name);
 static int radius_server_add_host (const char *ipv4);
 static int radius_server_remove_auth_port (const char *ipv4,
                        const char *authport);
@@ -805,7 +807,8 @@ configure_aaa_server_group(aaa_server_group_params_t *server_group_params)
             const struct ovsrec_aaa_server_group *default_group = NULL;
             const struct ovsrec_aaa_server_group *sg_row_iter = NULL;
             int64_t priority = AAA_GROUP_DEFAULT_PRIORITY;
-            default_group = get_row_by_server_group_name((char *)row->group_type);
+            const char* group_name = row->group_type;
+            default_group = get_row_by_server_group_name(group_name);
             VLOG_DBG("Moving servers from server group %s to default", row->group_name);
             OVSREC_TACACS_SERVER_FOR_EACH(row_iter, idl) {
                 if (row == row_iter->group_id)
@@ -930,7 +933,7 @@ configure_aaa_server_group_add_server(aaa_server_group_params_t *server_group_pa
         {
             int64_t priority = AAA_GROUP_DEFAULT_PRIORITY;
             const struct ovsrec_aaa_server_group *default_group = NULL;
-            char *tacacs_group = SYSTEM_AAA_TACACS_PLUS;
+            const char *tacacs_group = SYSTEM_AAA_TACACS_PLUS;
             default_group = get_row_by_server_group_name(tacacs_group);
             ovsrec_tacacs_server_set_group_priority(server_row, priority);
             ovsrec_tacacs_server_set_group_id(server_row, default_group);
