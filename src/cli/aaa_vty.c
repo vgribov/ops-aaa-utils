@@ -208,6 +208,13 @@ validate_aaa_groups(int grp_count, const char **grp_name)
     /* if local is not given before group keyword */
     int index = (grp_name[0] == NULL) ? 1 : 0;
 
+    /* Handling the case when only local authentication is added.
+     * First group will be local and second group comes as NULL
+     * in such a scenario. Decrement the grp_count to avoid crash*/
+    if (!index && grp_name[1] == NULL) {
+        grp_count--;
+    }
+
     /* check no group is given more than once in priority order */
     for (iter1 = index; iter1 < grp_count; iter1++) {
         for (iter2 = iter1 + 1; iter2 < grp_count; iter2++) {
@@ -287,6 +294,14 @@ configure_aaa_authentication(int group_count, const char **group, bool is_no_cmd
 
     /* if local is not given before group keyword */
     index = (group[0] == NULL) ? 1 : 0;
+
+    /* Handling the case when only local authentication is added.
+     * First group will be local and second group comes as NULL
+     * in such a scenario. Decrement the grp_count to avoid crash*/
+    if (!index && group[1] == NULL) {
+        group_count--;
+    }
+
 
     for (iter = index; iter < group_count; iter++) {
         group_row = get_row_by_server_group_name(group[iter]);
@@ -2115,11 +2130,9 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
 
             row = ovsrec_tacacs_server_insert(status_txn);
             if (NULL == row) {
-                fprintf (stdout, "Could not insert a row into the TACACS Server Table\n");
                 VLOG_ERR("Could not insert a row into the TACACS Server Table\n");
                 ERRONEOUS_DB_TXN(status_txn, "Could not insert a row into the TACACS Server Table");
             } else {
-                fprintf (stdout, "Inserted a row\n");
                 VLOG_DBG("Inserted a row into the TACACS Server Table successfully\n");
 
                 tacacs_server_add_parameters(ovs, row, server_params);
