@@ -45,5 +45,4 @@ add_library (${LIBAAA_UTILS_LIB} SHARED ${SOURCES_LIB})
 
 # Installation
 install(TARGETS ${LIBAAA_UTILS_LIB}
-        LIBRARY DESTINATION lib/cli/plugins
-       )
+        LIBRARY DESTINATION lib/security)
