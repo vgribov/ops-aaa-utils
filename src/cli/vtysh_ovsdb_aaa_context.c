@@ -34,9 +34,9 @@
 
 /*-----------------------------------------------------------------------------
 | Function : vtysh_ovsdb_ovstable_parse_tacacs_cfg
-| Responsibility : parse tacacs_config column in system table
+| Responsibility : parse tacacs config in aaa column in system table
 | Parameters :
-|    ifrow_tacacs_config   : tacacs_config column object pointer
+|    ifrow_tacacs : aaa column object pointer
 |    pmsg : callback arguments from show running config handler|
 -----------------------------------------------------------------------------*/
 static vtysh_ret_val
@@ -65,7 +65,7 @@ vtysh_ovsdb_ovstable_parse_tacacs_cfg(const struct smap *ifrow_tacacs, vtysh_ovs
     }
   }
 
-  passkey = smap_get(ifrow_tacacs, SYSTEM_TACACS_CONFIG_PASSKEY);
+  passkey = smap_get(ifrow_tacacs, SYSTEM_AAA_TACACS_PASSKEY);
   if (passkey)
   {
     if (!VTYSH_STR_EQ(passkey, TACACS_SERVER_PASSKEY_DEFAULT))
@@ -74,7 +74,7 @@ vtysh_ovsdb_ovstable_parse_tacacs_cfg(const struct smap *ifrow_tacacs, vtysh_ovs
     }
   }
 
-  tcp_port = smap_get(ifrow_tacacs, SYSTEM_TACACS_CONFIG_TCP_PORT);
+  tcp_port = smap_get(ifrow_tacacs, SYSTEM_AAA_TACACS_TCP_PORT);
   if (tcp_port)
   {
     if (!VTYSH_STR_EQ(tcp_port, TACACS_SERVER_TCP_PORT_DEFAULT_VAL))
@@ -83,7 +83,7 @@ vtysh_ovsdb_ovstable_parse_tacacs_cfg(const struct smap *ifrow_tacacs, vtysh_ovs
     }
   }
 
-  timeout = smap_get(ifrow_tacacs, SYSTEM_TACACS_CONFIG_TIMEOUT);
+  timeout = smap_get(ifrow_tacacs, SYSTEM_AAA_TACACS_TIMEOUT);
   if (timeout)
   {
     if (!VTYSH_STR_EQ(timeout, TACACS_SERVER_TIMEOUT_DEFAULT_VAL))
@@ -181,8 +181,8 @@ vtysh_display_tacacs_server_table(vtysh_ovsdb_cbmsg *p_msg)
       char buff[128]= {0};
       char *append_buff = buff;
       row = (const struct ovsrec_tacacs_server *)nodes[idx]->data;
-      if (*(row->tcp_port) != TACACS_SERVER_TCP_PORT_DEFAULT)
-         append_buff += sprintf(append_buff, " port %ld", *(row->tcp_port));
+      if (row->tcp_port != TACACS_SERVER_TCP_PORT_DEFAULT)
+         append_buff += sprintf(append_buff, " port %ld", row->tcp_port);
 
       if (*(row->timeout) != TACACS_SERVER_TIMEOUT_DEFAULT)
          append_buff += sprintf(append_buff, " timeout %ld", *(row->timeout));
@@ -249,7 +249,7 @@ vtysh_display_aaa_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
       for(idx = 0; idx < count; idx++)
       {
           server_row = (const struct ovsrec_tacacs_server *)nodes[idx]->data;
-          if (server_row->group_id == group_row)
+          if (server_row->group == group_row)
           {
               vtysh_ovsdb_cli_print(p_msg, "    server %s", server_row->ip_address);
           }
@@ -276,12 +276,12 @@ vtysh_config_context_aaa_clientcallback(void *p_private)
     const struct ovsrec_system *vswrow;
     vtysh_ovsdb_config_logmsg(VTYSH_OVSDB_CONFIG_DBG,
                               "vtysh_config_context_aaa_clientcallback entered");
-     vswrow = ovsrec_system_first(p_msg->idl);
+    vswrow = ovsrec_system_first(p_msg->idl);
 
     if(vswrow)
     {
-       /* Generate CLI for tacacs_config column */
-       vtysh_ovsdb_ovstable_parse_tacacs_cfg(&vswrow->tacacs_config, p_msg);
+       /* Generate CLI for aaa column */
+       vtysh_ovsdb_ovstable_parse_tacacs_cfg(&vswrow->aaa, p_msg);
     }
     /* Generate CLI for the Tacacs_Server Table*/
     vtysh_display_tacacs_server_table(p_msg);

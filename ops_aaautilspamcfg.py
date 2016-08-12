@@ -58,7 +58,6 @@ dispatch_list = []
 SYSTEM_TABLE = "System"
 SYSTEM_AAA_COLUMN = "aaa"
 SYSTEM_OTHER_CONFIG = "other_config"
-SYSTEM_TACACS_CONFIG_COLUMN = "tacacs_config"
 SYSTEM_RADIUS_SERVER_COLUMN = "radius_servers"
 RADIUS_SERVER_TABLE = "Radius_Server"
 AAA_SERVER_GROUP_TABLE = "AAA_Server_Group"
@@ -75,7 +74,7 @@ AAA_FALLBACK = "fallback"
 OPS_TRUE = "true"
 OPS_FALSE = "false"
 
-AAA_SERVER_GROUP_PRIORITY = "priority"
+AAA_SERVER_GROUP_IS_STATIC = "is_static"
 AAA_SERVER_GROUP_NAME = "group_name"
 AAA_SERVER_GROUP_TYPE = "group_type"
 
@@ -86,11 +85,11 @@ RADIUS_SERVER_TIMEOUT = "timeout"
 RADIUS_SERVER_RETRIES = "retries"
 RADIUS_SEREVR_PRIORITY = "priority"
 
-TACACS_SERVER_PORT = "tcp_port"
-TACACS_SERVER_PASSKEY = "passkey"
-TACACS_SERVER_TIMEOUT = "timeout"
+TACACS_SERVER_PORT = "tacacs_tcp_port"
+TACACS_SERVER_PASSKEY = "tacacs_passkey"
+TACACS_SERVER_TIMEOUT = "tacacs_timeout"
+TACACS_SERVER_AUTH = "tacacs_auth"
 
-SERVER_GROUP_PRIORITY_DEFAULT = -1
 TACACS_SERVER_TCP_PORT_DEFAULT = "49"
 TACACS_SERVER_PASSKEY_DEFAULT = "testing123-1"
 TACACS_SERVER_TIMEOUT_DEFAULT = "5"
@@ -196,10 +195,6 @@ def add_default_row():
 
     data = {}
     auto_provisioning_data = {}
-    tacacs_data = {}
-    local_group_data = {}
-    tacacs_group_data = {}
-    radius_group_data = {}
 
     # Default values for aaa column
     data[AAA_FALLBACK] = OPS_TRUE
@@ -209,15 +204,15 @@ def add_default_row():
     data[AAA_TACACS_AUTH] = TACACS_PAP
     data[SSH_PASSKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
     data[SSH_PUBLICKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
+    # Default values for tacacs
+    data[TACACS_SERVER_PORT] = TACACS_SERVER_TCP_PORT_DEFAULT
+    data[TACACS_SERVER_PASSKEY] = TACACS_SERVER_PASSKEY_DEFAULT
+    data[TACACS_SERVER_TIMEOUT] = TACACS_SERVER_TIMEOUT_DEFAULT
+    data[TACACS_SERVER_AUTH] = TACACS_PAP
 
     # Default values for auto provisioning status column
     auto_provisioning_data[PERFORMED] = "False"
     auto_provisioning_data[URL] = ""
-
-    # Default values for tacacs_config column
-    tacacs_data[TACACS_SERVER_PORT] = TACACS_SERVER_TCP_PORT_DEFAULT
-    tacacs_data[TACACS_SERVER_PASSKEY] = TACACS_SERVER_PASSKEY_DEFAULT
-    tacacs_data[TACACS_SERVER_TIMEOUT] = TACACS_SERVER_TIMEOUT_DEFAULT
 
     # create the transaction
     txn = ovs.db.idl.Transaction(idl)
@@ -227,21 +222,20 @@ def add_default_row():
     setattr(ovs_rec, SYSTEM_AAA_COLUMN, data)
     setattr(ovs_rec, SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN,
             auto_provisioning_data)
-    setattr(ovs_rec, SYSTEM_TACACS_CONFIG_COLUMN, tacacs_data)
 
     # create default server groups: local, tacacs+ and radius
     local_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
-    setattr(local_row, AAA_SERVER_GROUP_PRIORITY, 0)
+    # setattr(local_row, AAA_SERVER_GROUP_IS_STATIC, OPS_TRUE) TODO
     setattr(local_row, AAA_SERVER_GROUP_NAME, AAA_LOCAL)
     setattr(local_row, AAA_SERVER_GROUP_TYPE, AAA_LOCAL)
 
     tacacs_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
-    setattr(tacacs_row, AAA_SERVER_GROUP_PRIORITY, SERVER_GROUP_PRIORITY_DEFAULT)
+    # setattr(tacacs_row, AAA_SERVER_GROUP_IS_STATIC, OPS_TRUE) TODO
     setattr(tacacs_row, AAA_SERVER_GROUP_NAME, AAA_TACACS_PLUS)
     setattr(tacacs_row, AAA_SERVER_GROUP_TYPE, AAA_TACACS_PLUS)
 
     radius_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
-    setattr(radius_row, AAA_SERVER_GROUP_PRIORITY, SERVER_GROUP_PRIORITY_DEFAULT)
+    # setattr(radius_row, AAA_SERVER_GROUP_IS_STATIC, OPS_TRUE) TODO
     setattr(radius_row, AAA_SERVER_GROUP_NAME, AAA_RADIUS)
     setattr(radius_row, AAA_SERVER_GROUP_TYPE, AAA_RADIUS)
 
@@ -597,7 +591,6 @@ def main():
     schema_helper.register_columns(
         SYSTEM_TABLE,
         [SYSTEM_AAA_COLUMN, SYSTEM_OTHER_CONFIG,
-         SYSTEM_TACACS_CONFIG_COLUMN,
          SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN])
 
     schema_helper.register_columns(SYSTEM_TABLE,
@@ -610,7 +603,7 @@ def main():
                                     RADIUS_SERVER_RETRIES,
                                     RADIUS_SEREVR_PRIORITY])
     schema_helper.register_columns(AAA_SERVER_GROUP_TABLE,
-                                   [AAA_SERVER_GROUP_PRIORITY,
+                                   [AAA_SERVER_GROUP_IS_STATIC,
                                     AAA_SERVER_GROUP_NAME,
                                     AAA_SERVER_GROUP_TYPE])
 

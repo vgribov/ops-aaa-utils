@@ -58,6 +58,13 @@ typedef struct aaa_server_group_params_s {
 #define OPS_TRUE_STR                        "true"
 #define OPS_FALSE_STR                       "false"
 
+/* TODO relocate to schema/openswitch-idl.h */
+#define SYSTEM_AAA_TACACS_TIMEOUT              "tacacs_timeout"
+#define SYSTEM_AAA_TACACS_TCP_PORT             "tacacs_tcp_port"
+#define SYSTEM_AAA_TACACS_PASSKEY              "tacacs_passkey"
+#define SYSTEM_AAA_TACACS_AUTH                 "tacacs_auth"
+#define SYSTEM_AAA_TACACS_AUTHORIZATION_ENABLE "tacacs_authorization_enable"
+
 #define AAA_GROUP_DEFAULT_PRIORITY      -1
 
 #define MAX_RADIUS_SERVERS                    64
