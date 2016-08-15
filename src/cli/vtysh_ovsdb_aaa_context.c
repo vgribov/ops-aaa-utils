@@ -46,6 +46,7 @@ vtysh_ovsdb_ovstable_parse_tacacs_cfg(const struct smap *ifrow_tacacs, vtysh_ovs
   const char *tcp_port = NULL;
   const char *timeout = NULL;
   const char *passkey = NULL;
+  const char *auth_type = NULL;
 
   if(ifrow_tacacs == NULL)
   {
@@ -89,6 +90,15 @@ vtysh_ovsdb_ovstable_parse_tacacs_cfg(const struct smap *ifrow_tacacs, vtysh_ovs
     if (!VTYSH_STR_EQ(timeout, TACACS_SERVER_TIMEOUT_DEFAULT_VAL))
     {
         vtysh_ovsdb_cli_print(p_msg, "tacacs-server timeout %s", timeout);
+    }
+  }
+
+  auth_type = smap_get(ifrow_tacacs, SYSTEM_AAA_TACACS_AUTH);
+  if (auth_type)
+  {
+    if (!VTYSH_STR_EQ(auth_type, TACACS_SERVER_AUTH_TYPE_DEFAULT))
+    {
+        vtysh_ovsdb_cli_print(p_msg, "tacacs-server auth-type %s", auth_type);
     }
   }
 
@@ -176,11 +186,14 @@ vtysh_display_tacacs_server_table(vtysh_ovsdb_cbmsg *p_msg)
   vtysh_ovsdb_cli_print(p_msg, "!");
   for(idx = 0; idx < count; idx++)
   {
-      /* buff size based on port 11 " port %5d", timeout 11 " timeout %2d"
-       * key 63 " key %58s"*/
+      /*
+       * buff size based on port 11 " port %5d", timeout 11 " timeout %2d"
+       * key 63 " key %58s"  auth_type 15 " auth-type %4s"
+       */
       char buff[128]= {0};
       char *append_buff = buff;
       row = (const struct ovsrec_tacacs_server *)nodes[idx]->data;
+
       if (row->tcp_port != TACACS_SERVER_TCP_PORT_DEFAULT)
          append_buff += sprintf(append_buff, " port %ld", row->tcp_port);
 
@@ -190,7 +203,11 @@ vtysh_display_tacacs_server_table(vtysh_ovsdb_cbmsg *p_msg)
       if (!VTYSH_STR_EQ(row->passkey, TACACS_SERVER_PASSKEY_DEFAULT))
          append_buff += sprintf(append_buff, " key %s", row->passkey);
 
-      vtysh_ovsdb_cli_print(p_msg, "tacacs-server host %s%s", row->ip_address, buff);
+      if (!VTYSH_STR_EQ(row->auth_type, TACACS_SERVER_AUTH_TYPE_DEFAULT))
+         append_buff += sprintf(append_buff, " auth-type %s", row->auth_type);
+
+      vtysh_ovsdb_cli_print(p_msg, "tacacs-server host %s%s",
+                                    row->ip_address, buff);
   }
 
   shash_destroy(&sorted_tacacs_servers);
@@ -251,7 +268,15 @@ vtysh_display_aaa_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
           server_row = (const struct ovsrec_tacacs_server *)nodes[idx]->data;
           if (server_row->group == group_row)
           {
-              vtysh_ovsdb_cli_print(p_msg, "    server %s", server_row->ip_address);
+              if (server_row->tcp_port != TACACS_SERVER_TCP_PORT_DEFAULT)
+              {
+                  vtysh_ovsdb_cli_print(p_msg, "    server %s port %ld",
+                                        server_row->ip_address, server_row->tcp_port);
+              }
+              else
+              {
+                  vtysh_ovsdb_cli_print(p_msg, "    server %s", server_row->ip_address);
+              }
           }
       }
   }

@@ -73,6 +73,7 @@ AAA_TACACS_AUTH = "tacacs_auth"
 AAA_FALLBACK = "fallback"
 OPS_TRUE = "true"
 OPS_FALSE = "false"
+AAA_DEFAULT_GROUP_STATIC = True
 
 AAA_SERVER_GROUP_IS_STATIC = "is_static"
 AAA_SERVER_GROUP_NAME = "group_name"
@@ -225,17 +226,17 @@ def add_default_row():
 
     # create default server groups: local, tacacs+ and radius
     local_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
-    # setattr(local_row, AAA_SERVER_GROUP_IS_STATIC, OPS_TRUE) TODO
+    setattr(local_row, AAA_SERVER_GROUP_IS_STATIC, AAA_DEFAULT_GROUP_STATIC)
     setattr(local_row, AAA_SERVER_GROUP_NAME, AAA_LOCAL)
     setattr(local_row, AAA_SERVER_GROUP_TYPE, AAA_LOCAL)
 
     tacacs_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
-    # setattr(tacacs_row, AAA_SERVER_GROUP_IS_STATIC, OPS_TRUE) TODO
+    setattr(tacacs_row, AAA_SERVER_GROUP_IS_STATIC, AAA_DEFAULT_GROUP_STATIC)
     setattr(tacacs_row, AAA_SERVER_GROUP_NAME, AAA_TACACS_PLUS)
     setattr(tacacs_row, AAA_SERVER_GROUP_TYPE, AAA_TACACS_PLUS)
 
     radius_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
-    # setattr(radius_row, AAA_SERVER_GROUP_IS_STATIC, OPS_TRUE) TODO
+    setattr(radius_row, AAA_SERVER_GROUP_IS_STATIC, AAA_DEFAULT_GROUP_STATIC)
     setattr(radius_row, AAA_SERVER_GROUP_NAME, AAA_RADIUS)
     setattr(radius_row, AAA_SERVER_GROUP_TYPE, AAA_RADIUS)
 

@@ -61,6 +61,8 @@ static int tacacs_set_global_port (const char *port);
 static int tacacs_set_global_timeout (const char *timeout);
 static const struct ovsrec_aaa_server_group*
            get_row_by_server_group_name(const char *name);
+static const struct ovsrec_tacacs_server*
+           get_tacacs_server_by_name_port(const char *server_name, int64_t auth_port);
 static int radius_server_add_host (const char *ipv4);
 static int radius_server_remove_auth_port (const char *ipv4,
                        const char *authport);
@@ -776,6 +778,7 @@ configure_aaa_server_group(aaa_server_group_params_t *server_group_params)
         }
         else
         {
+            const bool is_static_group = AAA_SERVER_GROUP_IS_STATIC_DEFAULT;
             row = ovsrec_aaa_server_group_insert(server_group_txn);
             if (row == NULL)
             {
@@ -787,7 +790,7 @@ configure_aaa_server_group(aaa_server_group_params_t *server_group_params)
             VLOG_DBG("SUCCESS: Inserted a row into AAA Server Group Table\n");
             ovsrec_aaa_server_group_set_group_name(row, server_group_params->group_name);
             ovsrec_aaa_server_group_set_group_type(row, server_group_params->group_type);
-            //ovsrec_aaa_server_group_set_is_static(row, false);//TODO XXX
+            ovsrec_aaa_server_group_set_is_static(row, &is_static_group, 1);
         }
     }
     else
@@ -876,11 +879,12 @@ DEFUN_NO_FORM (cli_aaa_create_tacacs_server_group,
                AAA_GROUP_NAME_HELP_STR);
 
 static const struct ovsrec_tacacs_server*
-get_row_by_server_name(const char *server_name)
+get_tacacs_server_by_name_port(const char *server_name, int64_t auth_port)
 {
     const struct ovsrec_tacacs_server *row = NULL;
     OVSREC_TACACS_SERVER_FOR_EACH(row, idl) {
-        if (!strcmp(row->ip_address, server_name)) {
+        if (!strcmp(row->ip_address, server_name)
+            && (row->tcp_port == auth_port)) {
             return row;
         }
     }
@@ -888,7 +892,8 @@ get_row_by_server_name(const char *server_name)
 }
 
 static int
-configure_aaa_server_group_add_server(aaa_server_group_params_t *server_group_params, char* server_name)
+configure_aaa_server_group_add_server(aaa_server_group_params_t *server_group_params,
+                                      char* server_name, int64_t port)
 {
     const struct ovsrec_aaa_server_group *group_row = NULL;
     struct ovsdb_idl_txn* status_txn = NULL;
@@ -912,7 +917,7 @@ configure_aaa_server_group_add_server(aaa_server_group_params_t *server_group_pa
     {
         const struct ovsrec_tacacs_server *server_row = NULL;
         /* See if specified TACACS+ server exist */
-        server_row = get_row_by_server_name(server_name);
+        server_row = get_tacacs_server_by_name_port(server_name, port);
         if (server_row == NULL)
         {
            /* Server does not exist*/
@@ -933,7 +938,7 @@ configure_aaa_server_group_add_server(aaa_server_group_params_t *server_group_pa
                 {
                    priority = row_iter->priority;
                 }
-                /* update all other server priority by -1*/
+                /* update all other same group server priority by -1*/
                 else if ((server_row->group == row_iter->group) &&
                     (row_iter->priority > server_row->priority))
                 {
@@ -952,10 +957,17 @@ configure_aaa_server_group_add_server(aaa_server_group_params_t *server_group_pa
             int64_t priority = 0;
 
             OVSREC_TACACS_SERVER_FOR_EACH(row_iter, idl) {
+                /* get the new group maximum priority */
                 if ((group_row == row_iter->group) &&
                     (priority <= row_iter->priority))
                 {
                     priority = row_iter->priority;
+                }
+                /* update all other privious group server priority by -1 */
+                else if ((server_row->group == row_iter->group) &&
+                         (server_row->priority < row_iter->priority))
+                {
+                    ovsrec_tacacs_server_set_priority(row_iter, (row_iter->priority - 1));
                 }
             }
             ++priority;
@@ -970,29 +982,97 @@ configure_aaa_server_group_add_server(aaa_server_group_params_t *server_group_pa
 /* CLI to add/remove AAA server to server group  */
 DEFUN (aaa_group_add_server,
        aaa_group_add_server_cmd,
-       "server WORD",
+       "server WORD {port <1-65535>}",
        AAA_SERVER_HELP_STR
-       AAA_SERVER_NAME_HELP_STR)
+       AAA_SERVER_NAME_HELP_STR
+       AUTH_PORT_HELP_STR
+       AUTH_PORT_RANGE_HELP_STR)
 {
+    char *server_name = (char *)argv[0];
+    int64_t port = TACACS_SERVER_TCP_PORT_DEFAULT;
     aaa_server_group_params_t aaa_server_group_params;
     aaa_server_group_params.group_name = (char *)vty->index;
     aaa_server_group_params.no_form = false;
-    char *server_name = (char *)argv[0];
+    if ((argc == 2) && argv[1])
+        port = atoi(argv[1]);
+
     if (vty_flags & CMD_FLAG_NO_CMD)
     {
         aaa_server_group_params.no_form = true;
     }
-    return configure_aaa_server_group_add_server(&aaa_server_group_params, server_name);
+    return configure_aaa_server_group_add_server(&aaa_server_group_params, server_name, port);
 }
 
 DEFUN_NO_FORM (aaa_group_add_server,
                aaa_group_add_server_cmd,
-               "server WORD",
+               "server WORD {port <1-65535>}",
                AAA_SERVER_HELP_STR
-               AAA_SERVER_NAME_HELP_STR);
+               AAA_SERVER_NAME_HELP_STR
+               AUTH_PORT_HELP_STR
+               AUTH_PORT_RANGE_HELP_STR);
 
 /* Specifies the TACACS+ server global configuration*/
-/* Modify TACACS+ server passkey
+/*
+ * Modify TACACS+ server global auth-type
+ * default 'auth-type' is 'pap'
+ */
+static int
+tacacs_set_global_auth_type(const char *auth_type)
+{
+    const struct ovsrec_system *ovs_system = NULL;
+    struct ovsdb_idl_txn *tacacs_txn = NULL;
+    struct smap smap_aaa;
+
+    /* Start of transaction */
+    START_DB_TXN(tacacs_txn);
+
+    ovs_system = ovsrec_system_first(idl);
+
+    if (ovs_system == NULL)
+    {
+        vty_out(vty, "Could not access the System Table\n");
+        ERRONEOUS_DB_TXN(tacacs_txn, "Could not access the System Table");
+    }
+
+    smap_clone(&smap_aaa, &ovs_system->aaa);
+
+    smap_replace(&smap_aaa, SYSTEM_AAA_TACACS_AUTH, auth_type);
+
+    ovsrec_system_set_aaa(ovs_system, &smap_aaa);
+
+    smap_destroy(&smap_aaa);
+
+    /* End of transaction */
+    END_DB_TXN(tacacs_txn);
+}
+
+
+/*
+ * CLI to configure the shared secret key between the TACACS+ client
+ * and the TACACS+ server, default value is 'testing123-1'
+ */
+DEFUN(cli_tacacs_server_set_auth_type,
+      tacacs_server_set_auth_type_cmd,
+      "tacacs-server auth-type ( pap | chap)",
+      TACACS_SERVER_HELP_STR
+      AAA_AUTH_TYPE_HELP_STR
+      AUTH_TYPE_PAP_HELP_STR
+      AUTH_TYPE_CHAP_HELP_STR)
+{
+    if (vty_flags & CMD_FLAG_NO_CMD)
+        return tacacs_set_global_auth_type(TACACS_SERVER_AUTH_TYPE_DEFAULT);
+
+    return tacacs_set_global_auth_type(argv[0]);
+}
+
+DEFUN_NO_FORM(cli_tacacs_server_set_auth_type,
+              tacacs_server_set_auth_type_cmd,
+              "tacacs-server auth-type",
+              TACACS_SERVER_HELP_STR
+              AAA_AUTH_TYPE_HELP_STR);
+
+/*
+ * Modify TACACS+ server global passkey
  * default 'passkey' is 'testing123-1'
  */
 static int
@@ -1032,7 +1112,8 @@ tacacs_set_global_passkey(const char *passkey)
     END_DB_TXN(tacacs_txn);
 }
 
-/* CLI to configure the shared secret key between the TACACS+ client
+/*
+ * CLI to configure the shared secret key between the TACACS+ client
  * and the TACACS+ server, default value is 'testing123-1'
  */
 DEFUN(cli_tacacs_server_set_passkey,
@@ -1054,7 +1135,8 @@ DEFUN_NO_FORM(cli_tacacs_server_set_passkey,
               TACACS_SERVER_HELP_STR
               SHARED_KEY_HELP_STR);
 
-/* Modify TACACS+ server TCP port
+/*
+ * Modify TACACS+ server global TCP port
  * default 'port' is 49
  */
 static int
@@ -1087,7 +1169,8 @@ tacacs_set_global_port(const char *port)
     END_DB_TXN(tacacs_txn);
 }
 
-/* CLI to configure the TCP port number used for exchanging TACACS+
+/*
+ * CLI to configure the TCP port number used for exchanging TACACS+
  * messages between the client and server. Default TCP port number is 49
  */
 DEFUN(cli_tacacs_server_set_port,
@@ -1109,7 +1192,8 @@ DEFUN_NO_FORM (cli_tacacs_server_set_port,
                TACACS_SERVER_HELP_STR
                AUTH_PORT_HELP_STR);
 
-/* Modify TACACS+ server timeout
+/*
+ * Modify TACACS+ server global timeout
  * default 'timeout' is 5
  */
 static int
@@ -1142,7 +1226,8 @@ tacacs_set_global_timeout(const char *timeout)
     END_DB_TXN(tacacs_txn);
 }
 
-/* CLI to configure the timeout interval that the switch waits
+/*
+ * CLI to configure the timeout interval that the switch waits
  * for response from the TACACS+ server before issue a timeout failure.
  * Default timeout value is 5 seconds
  */
@@ -2026,7 +2111,7 @@ const int
 tacacs_server_sanitize_parameters(tacacs_server_params_t *server_params)
 {
 
-    /* Check server_name to see if it exceeds maximum number of characters*/
+    /* Check server_name to see if it exceeds maximum number of characters */
     if (strlen(server_params->server_name) > MAX_CHARS_IN_TACACS_SERVER_NAME) {
         vty_out(vty, "Server name should be less than 58 characters%s", VTY_NEWLINE);
         return CMD_ERR_NOTHING_TODO;
@@ -2053,11 +2138,6 @@ static void
 tacacs_server_replace_parameters(const struct ovsrec_tacacs_server *row,
         tacacs_server_params_t *server_params)
 {
-    if (server_params->auth_port != NULL) {
-        int64_t tcp_port = atoi(server_params->auth_port);
-        ovsrec_tacacs_server_set_tcp_port(row, tcp_port);
-    }
-
     if (server_params->timeout != NULL) {
         int64_t timeout = atoi(server_params->timeout);
         ovsrec_tacacs_server_set_timeout(row, &timeout, 1);
@@ -2066,20 +2146,26 @@ tacacs_server_replace_parameters(const struct ovsrec_tacacs_server *row,
     if (server_params->shared_key != NULL) {
         ovsrec_tacacs_server_set_passkey(row, server_params->shared_key);
     }
+
+    if (server_params->auth_type != NULL) {
+        ovsrec_tacacs_server_set_auth_type(row, server_params->auth_type);
+    }
 }
 
 static void
 tacacs_server_add_parameters(const struct ovsrec_system *ovs,
         const struct ovsrec_tacacs_server *row,
-        tacacs_server_params_t *server_params)
+        tacacs_server_params_t *server_params,
+        const struct ovsrec_aaa_server_group *group)
 {
     int64_t tcp_port = 0, timeout = 0;
     const char *passkey = NULL;
-
+    const char *auth_type = NULL;
     /* Fetch global config values */
     passkey = smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_PASSKEY);
     tcp_port = atoi(smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_TCP_PORT));
     timeout = atoi(smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_TIMEOUT));
+    auth_type = smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_AUTH);
 
     if (server_params->auth_port != NULL) {
         tcp_port = atoi(server_params->auth_port);
@@ -2093,11 +2179,17 @@ tacacs_server_add_parameters(const struct ovsrec_system *ovs,
         passkey = server_params->shared_key;
     }
 
+    if (server_params->auth_type != NULL) {
+        auth_type = server_params->auth_type;
+    }
+
     ovsrec_tacacs_server_set_ip_address(row, server_params->server_name);
     ovsrec_tacacs_server_set_timeout(row, &timeout, 1);
     ovsrec_tacacs_server_set_passkey(row, passkey);
     ovsrec_tacacs_server_set_tcp_port(row, tcp_port);
-    ovsrec_tacacs_server_set_priority(row, ovs->n_tacacs_servers + 1);
+    ovsrec_tacacs_server_set_priority(row, server_params->priority);
+    ovsrec_tacacs_server_set_group(row, group);
+    ovsrec_tacacs_server_set_auth_type(row, auth_type);
 }
 
 /* Add or remove a TACACS+ server */
@@ -2105,7 +2197,6 @@ static int
 configure_tacacs_server_host(tacacs_server_params_t *server_params)
 {
     const struct ovsrec_tacacs_server *row = NULL;
-    const struct ovsrec_tacacs_server *temp_row = NULL;
     const struct ovsrec_tacacs_server **tacacs_info = NULL;
     const struct ovsrec_system *ovs = NULL;
     struct ovsdb_idl_txn *status_txn = NULL;
@@ -2125,11 +2216,11 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
     START_DB_TXN(status_txn);
 
     /* See if specified TACACS+ server already exists */
-    row = get_row_by_server_name(server_params->server_name);
+    row = get_tacacs_server_by_name_port(server_params->server_name, atoi(server_params->auth_port));
     if (row == NULL) {
         if (server_params->no_form) {
             /* Nothing to delete */
-            vty_out(vty, "This server does not exist\n");
+            vty_out(vty, "This server does not exist%s", VTY_NEWLINE);
         }
         else {
             /* Check if maximum allowed TACACS+ servers are already configured */
@@ -2142,15 +2233,31 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
             if (NULL == row) {
                 VLOG_ERR("Could not insert a row into the TACACS Server Table\n");
                 ERRONEOUS_DB_TXN(status_txn, "Could not insert a row into the TACACS Server Table");
-            } else {
+            }
+            else {
                 VLOG_DBG("Inserted a row into the TACACS Server Table successfully\n");
+                const struct ovsrec_aaa_server_group *default_group = NULL;
+                const char *tacacs_group = SYSTEM_AAA_TACACS_PLUS;
+                const struct ovsrec_tacacs_server *row_iter = NULL;
+                int64_t priority = 0;
+                int iter = 0;
+                default_group = get_row_by_server_group_name(tacacs_group);
 
-                tacacs_server_add_parameters(ovs, row, server_params);
+                OVSREC_TACACS_SERVER_FOR_EACH(row_iter, idl) {
+                    if ((default_group == row_iter->group) &&
+                        (row_iter->priority >= priority))
+                    {
+                        priority = row_iter->priority;
+                    }
+                }
+                ++priority;
+                server_params->priority = priority;
+                tacacs_server_add_parameters(ovs, row, server_params, default_group);
 
                 /* Update System table */
                 tacacs_info = xmalloc(sizeof *ovs->tacacs_servers * (ovs->n_tacacs_servers + 1));
-                for (int i = 0; i < ovs->n_tacacs_servers; i++) {
-                    tacacs_info[i] = ovs->tacacs_servers[i];
+                for (iter = 0; iter < ovs->n_tacacs_servers; iter++) {
+                    tacacs_info[iter] = ovs->tacacs_servers[iter];
                 }
                 tacacs_info[ovs->n_tacacs_servers] = row;
                 ovsrec_system_set_tacacs_servers(ovs,
@@ -2165,28 +2272,32 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
             VLOG_DBG("Deleting a row from the Tacacs Server table\n");
 
             int64_t priority = row->priority;
+            const struct ovsrec_aaa_server_group *group =  row->group;
+            const struct ovsrec_tacacs_server *row_iter = NULL;
+            int iter = 0;
+            int count = 0;
+
+            OVSREC_TACACS_SERVER_FOR_EACH(row_iter, idl) {
+                if ((group == row_iter->group) &&
+                    (row_iter->priority > priority))
+                {
+                    ovsrec_tacacs_server_set_priority(row_iter, row_iter->priority - 1);
+                }
+            }
 
             /* Delete the server */
             ovsrec_tacacs_server_delete(row);
 
-            /* Update priority of each server */
-            OVSREC_TACACS_SERVER_FOR_EACH(temp_row, idl) {
-                if (temp_row->priority >= priority) {
-                    ovsrec_tacacs_server_set_priority(temp_row, temp_row->priority - 1);
-                }
-            }
-
             /* Update System table */
             tacacs_info = xmalloc(sizeof *ovs->tacacs_servers * ovs->n_tacacs_servers);
-            int n= 0;
-            for (int i = 0; i < ovs->n_tacacs_servers; i++) {
-                if (ovs->tacacs_servers[i] != row) {
-                    tacacs_info[n++] = ovs->tacacs_servers[i];
+            for (iter = 0; iter < ovs->n_tacacs_servers; iter++) {
+                if (ovs->tacacs_servers[iter] != row) {
+                    tacacs_info[count++] = ovs->tacacs_servers[iter];
                 }
             }
             ovsrec_system_set_tacacs_servers(ovs,
                         (struct ovsrec_tacacs_server **) tacacs_info,
-                        n);
+                        count);
             free(tacacs_info);
         } else {
             /* Update existing server */
@@ -2213,7 +2324,7 @@ show_global_tacacs_config(const struct ovsrec_system *ovs)
     int64_t timeout = 0;
 
     /* Fetch global values */
-    passkey = smap_get(&ovs->aaa,       SYSTEM_AAA_TACACS_PASSKEY);
+    passkey = smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_PASSKEY);
     tcp_port = atoi(smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_TCP_PORT));
     timeout = atoi(smap_get(&ovs->aaa,  SYSTEM_AAA_TACACS_TIMEOUT));
 
@@ -2314,7 +2425,7 @@ DEFUN(cli_show_tacacs_server,
 /* CLI to add tacacs-sever */
 DEFUN (cli_tacacs_server_host,
        tacacs_server_host_cmd,
-       "tacacs-server host WORD {port <1-65535> | timeout <1-60> | key WORD}",
+       "tacacs-server host WORD {port <1-65535> | timeout <1-60> | key WORD | auth-type ( pap | chap)}",
        TACACS_SERVER_HELP_STR
        TACACS_SERVER_HOST_HELP_STR
        TACACS_SERVER_NAME_HELP_STR
@@ -2323,20 +2434,30 @@ DEFUN (cli_tacacs_server_host,
        TIMEOUT_HELP_STR
        TIMEOUT_RANGE_HELP_STR
        SHARED_KEY_HELP_STR
-       SHARED_KEY_VAL_HELP_STR)
+       SHARED_KEY_VAL_HELP_STR
+       AAA_AUTH_TYPE_HELP_STR
+       AUTH_TYPE_PAP_HELP_STR
+       AUTH_TYPE_CHAP_HELP_STR)
 {
+    char* default_port = TACACS_SERVER_TCP_PORT_DEFAULT_VAL;
     tacacs_server_params_t tacacs_server_params;
     tacacs_server_params.server_name = (char *)argv[0];
     tacacs_server_params.auth_port = (char *)argv[1];
     tacacs_server_params.timeout = (char *)argv[2];
     tacacs_server_params.shared_key = (char *)argv[3];
-    tacacs_server_params.no_form = 0;
+    tacacs_server_params.auth_type = (char *)argv[4];
+    tacacs_server_params.no_form = false;
+
+    if (!tacacs_server_params.auth_port)
+    {
+        tacacs_server_params.auth_port = default_port;
+    }
 
     if (vty_flags & CMD_FLAG_NO_CMD) {
-        tacacs_server_params.auth_port = NULL;
         tacacs_server_params.timeout = NULL;
         tacacs_server_params.shared_key = NULL;
-        tacacs_server_params.no_form = 1;
+        tacacs_server_params.auth_type = NULL;
+        tacacs_server_params.no_form = true;
     }
 
     return configure_tacacs_server_host(&tacacs_server_params);
@@ -2345,10 +2466,12 @@ DEFUN (cli_tacacs_server_host,
 /* CLI to remove tacacs-sever */
 DEFUN_NO_FORM (cli_tacacs_server_host,
        tacacs_server_host_cmd,
-       "tacacs-server host WORD",
+       "tacacs-server host WORD {port <1-65535>}",
        TACACS_SERVER_HELP_STR
        TACACS_SERVER_HOST_HELP_STR
-       TACACS_SERVER_NAME_HELP_STR);
+       TACACS_SERVER_NAME_HELP_STR
+       AUTH_PORT_HELP_STR
+       AUTH_PORT_RANGE_HELP_STR);
 
 /* Shows auto provisioning status.*/
 static int
@@ -2665,9 +2788,11 @@ cli_post_init(void)
     install_element(CONFIG_NODE, &tacacs_server_set_passkey_cmd);
     install_element(CONFIG_NODE, &tacacs_server_set_port_cmd);
     install_element(CONFIG_NODE, &tacacs_server_set_timeout_cmd);
+    install_element(CONFIG_NODE, &tacacs_server_set_auth_type_cmd);
     install_element(CONFIG_NODE, &no_tacacs_server_set_passkey_cmd);
     install_element(CONFIG_NODE, &no_tacacs_server_set_port_cmd);
     install_element(CONFIG_NODE, &no_tacacs_server_set_timeout_cmd);
+    install_element(CONFIG_NODE, &no_tacacs_server_set_auth_type_cmd);
     install_element(CONFIG_NODE, &tacacs_server_host_cmd);
     install_element(CONFIG_NODE, &no_tacacs_server_host_cmd);
     install_element(CONFIG_NODE, &radius_server_add_host_cmd);

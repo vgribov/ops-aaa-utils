@@ -33,6 +33,8 @@ typedef struct tacacs_server_params_s {
     char *timeout;          /* Timeout */
     char *shared_key;       /* Shared secret key */
     char *auth_port;        /* Authentication port */
+    char *auth_type;        /* Authentication type pap/chap */
+    int64_t priority;       /* Group priority of server*/
 } tacacs_server_params_t;
 
 
@@ -64,6 +66,8 @@ typedef struct aaa_server_group_params_s {
 #define SYSTEM_AAA_TACACS_PASSKEY              "tacacs_passkey"
 #define SYSTEM_AAA_TACACS_AUTH                 "tacacs_auth"
 #define SYSTEM_AAA_TACACS_AUTHORIZATION_ENABLE "tacacs_authorization_enable"
+#define TACACS_SERVER_AUTH_TYPE_DEFAULT        "pap"
+#define AAA_SERVER_GROUP_IS_STATIC_DEFAULT     false
 
 #define AAA_GROUP_DEFAULT_PRIORITY      -1
 
@@ -99,6 +103,9 @@ typedef struct aaa_server_group_params_s {
 #define TIMEOUT_RANGE_HELP_STR                "Timeout interval 1 to 60 seconds. (Default: 5)\n"
 #define SHARED_KEY_HELP_STR                   "Set shared secret\n"
 #define SHARED_KEY_VAL_HELP_STR               "TACACS+ shared secret. (Default: testing123-1)\n"
+#define AAA_AUTH_TYPE_HELP_STR                "Set authentication type. (Default: pap)\n"
+#define AUTH_TYPE_PAP_HELP_STR                "Set PAP authentication\n"
+#define AUTH_TYPE_CHAP_HELP_STR               "Set CHAP authentication\n"
 #define TACACS_SERVER_HELP_STR                "TACACS+ server configuration\n"
 #define TACACS_SERVER_HOST_HELP_STR           "Specify a TACACS+ server\n"
 #define TACACS_SERVER_NAME_HELP_STR           "TACACS+ server IP address or hostname\n"
