@@ -105,10 +105,11 @@ vtysh_ovsdb_ovstable_parse_tacacs_cfg(const struct smap *ifrow_tacacs, vtysh_ovs
   return e_vtysh_ok;
 }
 
-/* Util functions for tacacs server display*/
-/* qsort comparator function: priority*/
+/* Utility functions for tacacs server display*/
+
+/* qsort comparator function: default_priority*/
 int
-compare_nodes_by_tacacs_server_priority (const void *a, const void *b)
+compare_nodes_by_tacacs_server_default_priority (const void *a, const void *b)
 {
     const struct shash_node *const *node_a = a;
     const struct shash_node *const *node_b = b;
@@ -117,18 +118,37 @@ compare_nodes_by_tacacs_server_priority (const void *a, const void *b)
     const struct ovsrec_tacacs_server *server_b =
                       (const struct ovsrec_tacacs_server *)(*node_b)->data;
 
-    return (server_a->priority - server_b->priority);
+    return (server_a->default_priority - server_b->default_priority);
 }
 
-/* Sorting function for tacacs servers
+
+/* qsort comparator function: group_priority*/
+int
+compare_nodes_by_tacacs_server_group_priority (const void *a, const void *b)
+{
+    const struct shash_node *const *node_a = a;
+    const struct shash_node *const *node_b = b;
+    const struct ovsrec_tacacs_server *server_a =
+                      (const struct ovsrec_tacacs_server *)(*node_a)->data;
+    const struct ovsrec_tacacs_server *server_b =
+                      (const struct ovsrec_tacacs_server *)(*node_b)->data;
+
+    return (server_a->group_priority - server_b->group_priority);
+}
+
+/*
+ * Sorting function for tacacs servers
  * on success, returns sorted tacacs server list.
  */
 const struct shash_node **
-sort_tacacs_server(const struct shash *list)
+sort_tacacs_server(const struct shash *list, bool by_default_priority)
 {
-    if (shash_is_empty(list)) {
+    if (shash_is_empty(list))
+    {
         return NULL;
-    } else {
+    }
+    else
+    {
         const struct shash_node **nodes;
         struct shash_node *node;
         size_t iter = 0;
@@ -141,7 +161,10 @@ sort_tacacs_server(const struct shash *list)
         SHASH_FOR_EACH (node, list) {
             nodes[iter++] = node;
         }
-        qsort(nodes, count, sizeof(*nodes), compare_nodes_by_tacacs_server_priority);
+        if (by_default_priority)
+            qsort(nodes, count, sizeof(*nodes), compare_nodes_by_tacacs_server_default_priority);
+        else
+            qsort(nodes, count, sizeof(*nodes), compare_nodes_by_tacacs_server_group_priority);
         return nodes;
     }
 }
@@ -162,6 +185,7 @@ vtysh_display_tacacs_server_table(vtysh_ovsdb_cbmsg *p_msg)
   const struct shash_node **nodes;
   int count = 0;
   int idx = 0;
+  bool sort_by_default_priority = true;
 
   if (!ovsrec_tacacs_server_first(p_msg->idl))
   {
@@ -175,7 +199,7 @@ vtysh_display_tacacs_server_table(vtysh_ovsdb_cbmsg *p_msg)
       shash_add(&sorted_tacacs_servers, row->ip_address, (void *)row);
   }
 
-  nodes = sort_tacacs_server(&sorted_tacacs_servers);
+  nodes = sort_tacacs_server(&sorted_tacacs_servers, sort_by_default_priority);
   if (nodes == NULL)
   {
      shash_destroy(&sorted_tacacs_servers);
@@ -234,6 +258,7 @@ vtysh_display_aaa_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
   const struct shash_node **nodes;
   int count = 0;
   int idx = 0;
+  bool by_default_priority = false;
 
   if (!ovsrec_aaa_server_group_first(p_msg->idl))
   {
@@ -247,7 +272,7 @@ vtysh_display_aaa_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
       shash_add(&sorted_tacacs_servers, server_row->ip_address, (void *)server_row);
   }
 
-  nodes = sort_tacacs_server(&sorted_tacacs_servers);
+  nodes = sort_tacacs_server(&sorted_tacacs_servers, by_default_priority);
   if (nodes == NULL)
   {
      shash_destroy(&sorted_tacacs_servers);

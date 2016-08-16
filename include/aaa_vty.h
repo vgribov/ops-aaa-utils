@@ -34,7 +34,7 @@ typedef struct tacacs_server_params_s {
     char *shared_key;       /* Shared secret key */
     char *auth_port;        /* Authentication port */
     char *auth_type;        /* Authentication type pap/chap */
-    int64_t priority;       /* Group priority of server*/
+    int64_t priority;       /* default priority of server*/
 } tacacs_server_params_t;
 
 
@@ -68,8 +68,7 @@ typedef struct aaa_server_group_params_s {
 #define SYSTEM_AAA_TACACS_AUTHORIZATION_ENABLE "tacacs_authorization_enable"
 #define TACACS_SERVER_AUTH_TYPE_DEFAULT        "pap"
 #define AAA_SERVER_GROUP_IS_STATIC_DEFAULT     false
-
-#define AAA_GROUP_DEFAULT_PRIORITY      -1
+#define TACACS_SERVER_GROUP_PRIORITY_DEFAULT   0
 
 #define MAX_RADIUS_SERVERS                    64
 #define RADIUS_SERVER_DEFAULT_PASSKEY         "testing123-1"
