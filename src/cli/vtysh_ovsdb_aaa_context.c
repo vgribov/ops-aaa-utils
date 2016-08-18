@@ -273,11 +273,6 @@ vtysh_display_aaa_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
   }
 
   nodes = sort_tacacs_server(&sorted_tacacs_servers, by_default_priority);
-  if (nodes == NULL)
-  {
-     shash_destroy(&sorted_tacacs_servers);
-     return e_vtysh_error;
-  }
   count = shash_count(&sorted_tacacs_servers);
 
   OVSREC_AAA_SERVER_GROUP_FOR_EACH(group_row, p_msg->idl)

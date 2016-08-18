@@ -205,124 +205,67 @@ server_group_exists(const char *name)
     return get_row_by_server_group_name(name) != NULL;
 }
 
-const static int
-validate_aaa_groups(int grp_count, const char **grp_name)
-{
-    int iter1, iter2;
-    /* if local is not given before group keyword */
-    int index = (grp_name[0] == NULL) ? 1 : 0;
-
-    /* Handling the case when only local authentication is added.
-     * First group will be local and second group comes as NULL
-     * in such a scenario. Decrement the grp_count to avoid crash*/
-    if (!index && grp_name[1] == NULL) {
-        grp_count--;
-    }
-
-    /* check no group is given more than once in priority order */
-    for (iter1 = index; iter1 < grp_count; iter1++) {
-        for (iter2 = iter1 + 1; iter2 < grp_count; iter2++) {
-            if (strcmp(grp_name[iter1], grp_name[iter2]) == 0) {
-                vty_out(vty, "Group %s is mentioned more than once%s",
-                        grp_name[iter1], VTY_NEWLINE);
-                return CMD_ERR_NOTHING_TODO;
-            }
-        }
-    }
-
-    /* check if all groups are already defined */
-    for (iter1 = index; iter1 < grp_count; iter1++) {
-        if (!server_group_exists(grp_name[iter1])) {
-                vty_out(vty, "Group %s is not defined%s", grp_name[iter1],
-                        VTY_NEWLINE);
-                return CMD_ERR_NOTHING_TODO;
-        }
-    }
-
-    return CMD_SUCCESS;
-}
-
 const int
-reset_group_priority()
+configure_aaa_server_group_priority(aaa_server_group_prio_params_t *group_prio_params)
 {
-    struct ovsdb_idl_txn *status_txn = NULL;
-
-    START_DB_TXN(status_txn);
-
-    /*XXX  TODO   rework on this */
-    /* set priority of all server groups except local to -1
-     * Local group's priority is set to 0
-     */
-
-    END_DB_TXN(status_txn);
-}
-
-const int
-configure_aaa_authentication(int group_count, const char **group, bool is_no_cmd)
-{
-    struct ovsdb_idl_txn *status_txn = NULL;
+    struct ovsdb_idl_txn *priority_txn = NULL;
     const struct ovsrec_aaa_server_group *group_row = NULL;
-    bool is_local_configured = false;
-    int priority = 1;
-    int retVal;
-    int iter;
-    int index;
-
-    /* Check validity of AAA server-groups */
-    if (!is_no_cmd) {
-        retVal = validate_aaa_groups(group_count, group);
-        if (retVal != CMD_SUCCESS) {
-            return retVal;
-        }
-    }
-
-    /* reset priority of all groups to avoid inconsitent state in db */
-    retVal = reset_group_priority();
-    if (retVal != CMD_SUCCESS) {
-        return retVal;
-    }
-
-    /* No need to go further it is no version of command */
-    if (is_no_cmd) {
-        return CMD_SUCCESS;
-    }
-
+    const struct ovsrec_aaa_server_group_prio *group_prio_default = NULL;
+    int64_t priority = 0;
+    int iter = 0;
+    int64_t *key_list = NULL;
+    struct ovsrec_aaa_server_group **value_list = NULL;
+    int64_t group_count = group_prio_params->group_count;
     /* Start of transaction */
-    START_DB_TXN(status_txn);
+    START_DB_TXN(priority_txn);
 
-    /* if local is not given before group keyword */
-    index = (group[0] == NULL) ? 1 : 0;
+    /* TODO rework code when add login type support for : console, ssh and telnet*/
+    group_prio_default = ovsrec_aaa_server_group_prio_first(idl);
 
-    /* Handling the case when only local authentication is added.
-     * First group will be local and second group comes as NULL
-     * in such a scenario. Decrement the grp_count to avoid crash*/
-    if (!index && group[1] == NULL) {
-        group_count--;
+    if (group_prio_default == NULL)
+    {
+        ERRONEOUS_DB_TXN(priority_txn, "Could not access 'default' entry of AAA_Server_Group_Prio Table");
     }
 
-
-    for (iter = index; iter < group_count; iter++) {
-        group_row = get_row_by_server_group_name(group[iter]);
-        if (group_row == NULL) {
-            ERRONEOUS_DB_TXN(status_txn, "AAA server group does not exist.");
-        }
-
-        /* check to determine if user explicitly configures local */
-        if (strcmp(group[iter], AAA_GROUP_TYPE_LOCAL) == 0) {
-            is_local_configured = true;
-        }
-
-        /* update the group priotity XXX TODO rework needed*/
-        priority++;
-    }
-
-    /* set priority of local to last if user didn't add it to configuration XXX TODO rework needed */
-    if (!is_local_configured) {
+    /* Reset local group priority to 0 for no version of command */
+    if (group_prio_params->no_form)
+    {
+        key_list = xmalloc(sizeof(int64_t));
         group_row = get_row_by_server_group_name(AAA_GROUP_TYPE_LOCAL);
+        if (group_row == NULL)
+        {
+                ERRONEOUS_DB_TXN(priority_txn, "AAA server group does not exist.");
+        }
+        value_list = xmalloc(sizeof(*group_row));
+        key_list[0] = priority;
+        value_list[0] = (struct ovsrec_aaa_server_group *)group_row;
+        group_count = 1;
     }
 
+    else
+    {
+        priority = 1;
+        key_list = xmalloc(sizeof(int64_t) * group_count);
+        value_list = xmalloc(sizeof(*group_row) * group_count);
+        for (iter = 0; iter < group_count; iter++)
+        {
+            group_row = get_row_by_server_group_name(group_prio_params->group_list[iter]);
+            if (group_row == NULL) {
+                ERRONEOUS_DB_TXN(priority_txn, "AAA server group does not exist.");
+            }
+            key_list[iter] = priority;
+            value_list[iter] = (struct ovsrec_aaa_server_group *)group_row;
+            priority ++;
+        }
+    }
+
+    ovsrec_aaa_server_group_prio_set_authentication_group_prios(group_prio_default,
+                                                                key_list, value_list,
+                                                                group_count);
+    free(key_list);
+    free(value_list);
     /* End of transaction. */
-    END_DB_TXN(status_txn);
+    END_DB_TXN(priority_txn);
 }
 
 DEFUN(cli_aaa_set_authentication,
@@ -337,14 +280,33 @@ DEFUN(cli_aaa_set_authentication,
       GROUP_NAME_HELP_STR)
 
 {
-    bool is_no_cmd = false;
+    char **group_list = NULL;
+    int group_count = 0;
+    int keyword_skip = 0;
+    aaa_server_group_prio_params_t group_prio_params;
+
+    if ( !argv[0] || strcmp(argv[0], AAA_GROUP) == 0)
+    {
+       keyword_skip = 1;
+       group_count = argc - keyword_skip;
+    }
+    else if (strcmp(argv[0], AAA_GROUP_TYPE_LOCAL) == 0)
+    {
+       group_count = 1;
+    }
+    group_list = xmalloc(sizeof(char *) * group_count);
+    memcpy(group_list, argv + keyword_skip, sizeof(char *) * group_count);
 
     /* Set flag for no command */
     if (vty_flags & CMD_FLAG_NO_CMD) {
-        is_no_cmd = true;
+        group_prio_params.no_form = true;
     }
 
-    return configure_aaa_authentication(argc, argv, is_no_cmd);
+    group_prio_params.group_count = group_count;
+    group_prio_params.group_list = group_list;
+    group_prio_params.aaa_method = authentication;
+    group_prio_params.login_type = AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT;
+    return configure_aaa_server_group_priority(&group_prio_params);
 }
 
 DEFUN_NO_FORM(cli_aaa_set_authentication,
@@ -799,6 +761,7 @@ configure_aaa_server_group(aaa_server_group_params_t *server_group_params)
         {
             const struct ovsrec_tacacs_server *row_iter = NULL;
             const struct ovsrec_aaa_server_group *default_group = NULL;
+            const struct ovsrec_aaa_server_group_prio *group_prio_list = NULL;
             const char* group_name = row->group_type;
             default_group = get_row_by_server_group_name(group_name);
             VLOG_DBG("Moving servers from server group %s to default", row->group_name);
@@ -811,8 +774,50 @@ configure_aaa_server_group(aaa_server_group_params_t *server_group_params)
                     ovsrec_tacacs_server_set_group(row_iter, default_group);
                 }
             }
-            /* Update server group priority by -1*/
-            /*TODO XXX apply new change AAA_Server_Group_Prio table*/
+
+            /* Update aaa_server_group_prio list*/
+            group_prio_list = ovsrec_aaa_server_group_prio_first(idl);
+            if (group_prio_list == NULL)
+            {
+                ERRONEOUS_DB_TXN(server_group_txn,
+                                  "Could not access 'default' entry of AAA_Server_Group_Prio Table");
+            }
+            else if (group_prio_list->n_authentication_group_prios > 1)
+            {
+                int iter = 0;
+                int skip = 0;
+                int list_count = group_prio_list->n_authentication_group_prios;
+                int64_t *key_list = xmalloc(sizeof(int64_t) * list_count);
+                struct ovsrec_aaa_server_group **value_list =
+                                      xmalloc(sizeof(*row) * list_count);
+                for (iter = 0; iter < list_count; iter++)
+                {
+                   if (row == group_prio_list->value_authentication_group_prios[iter])
+                   {
+                       skip = 1;
+                       continue;
+                   }
+                   if (skip)
+                   {
+                       key_list[iter - skip] =
+                           group_prio_list->key_authentication_group_prios[iter] - 1;
+                       value_list[iter - skip] =
+                           group_prio_list->value_authentication_group_prios[iter];
+                   }
+                   else
+                   {
+                       key_list[iter] = group_prio_list->key_authentication_group_prios[iter];
+                       value_list[iter] = group_prio_list->value_authentication_group_prios[iter];
+                   }
+                }
+
+                ovsrec_aaa_server_group_prio_set_authentication_group_prios(group_prio_list,
+                                                                            key_list, value_list,
+                                                                            list_count - 1);
+                free(key_list);
+                free(value_list);
+            }
+
             VLOG_DBG("Deleting server group %s from AAA Server Group table", row->group_name);
             ovsrec_aaa_server_group_delete(row);
         }
@@ -1007,7 +1012,6 @@ tacacs_set_global_auth_type(const char *auth_type)
 
     if (ovs_system == NULL)
     {
-        vty_out(vty, "Could not access the System Table\n");
         ERRONEOUS_DB_TXN(tacacs_txn, "Could not access the System Table");
     }
 
@@ -1073,7 +1077,6 @@ tacacs_set_global_passkey(const char *passkey)
 
     if (ovs_system == NULL)
     {
-        vty_out(vty, "Could not access the System Table\n");
         ERRONEOUS_DB_TXN(tacacs_txn, "Could not access the System Table");
     }
 
@@ -1130,7 +1133,6 @@ tacacs_set_global_port(const char *port)
 
     if (ovs_system == NULL)
     {
-        vty_out(vty, "Could not access the System Table\n");
         ERRONEOUS_DB_TXN(tacacs_txn, "Could not access the System Table");
     }
 
@@ -1187,7 +1189,6 @@ tacacs_set_global_timeout(const char *timeout)
 
     if (ovs_system == NULL)
     {
-        vty_out(vty, "Could not access the System Table\n");
         ERRONEOUS_DB_TXN(tacacs_txn, "Could not access the System Table");
     }
 
@@ -2691,6 +2692,9 @@ aaa_ovsdb_init(void)
     ovsdb_idl_add_column(idl, &ovsrec_aaa_server_group_col_group_type);
     ovsdb_idl_add_column(idl, &ovsrec_aaa_server_group_col_group_name);
     ovsdb_idl_add_column(idl, &ovsrec_aaa_server_group_col_is_static);
+    ovsdb_idl_add_table(idl, &ovsrec_table_aaa_server_group_prio);
+    ovsdb_idl_add_column(idl, &ovsrec_aaa_server_group_prio_col_session_type);
+    ovsdb_idl_add_column(idl, &ovsrec_aaa_server_group_prio_col_authentication_group_prios);
 
     /* Add Auto Provision Column. */
     ovsdb_idl_add_column(idl, &ovsrec_system_col_auto_provisioning_status);

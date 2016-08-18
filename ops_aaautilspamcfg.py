@@ -61,6 +61,7 @@ SYSTEM_OTHER_CONFIG = "other_config"
 SYSTEM_RADIUS_SERVER_COLUMN = "radius_servers"
 RADIUS_SERVER_TABLE = "Radius_Server"
 AAA_SERVER_GROUP_TABLE = "AAA_Server_Group"
+AAA_SERVER_GROUP_PRIO_TABLE = "AAA_Server_Group_Prio"
 
 SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN = "auto_provisioning_status"
 
@@ -74,6 +75,11 @@ AAA_FALLBACK = "fallback"
 OPS_TRUE = "true"
 OPS_FALSE = "false"
 AAA_DEFAULT_GROUP_STATIC = True
+
+AAA_AUTHENTICATION_GROUP_PRIOS = "authentication_group_prios"
+AAA_SERVER_GROUP_PRIO_SESSION_TYPE = "session_type"
+AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT = "default"
+PRIO_ZERO = 0
 
 AAA_SERVER_GROUP_IS_STATIC = "is_static"
 AAA_SERVER_GROUP_NAME = "group_name"
@@ -195,6 +201,7 @@ def add_default_row():
     global default_row_initialized
 
     data = {}
+    prio_list = {}
     auto_provisioning_data = {}
 
     # Default values for aaa column
@@ -239,6 +246,12 @@ def add_default_row():
     setattr(radius_row, AAA_SERVER_GROUP_IS_STATIC, AAA_DEFAULT_GROUP_STATIC)
     setattr(radius_row, AAA_SERVER_GROUP_NAME, AAA_RADIUS)
     setattr(radius_row, AAA_SERVER_GROUP_TYPE, AAA_RADIUS)
+
+    # create default AAA_Server_Group_Prio table session
+    default_row = txn.insert(idl.tables[AAA_SERVER_GROUP_PRIO_TABLE], new_uuid=None)
+    setattr(default_row, AAA_SERVER_GROUP_PRIO_SESSION_TYPE, AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT)
+    prio_list[PRIO_ZERO] = local_row
+    setattr(default_row, AAA_AUTHENTICATION_GROUP_PRIOS, prio_list)
 
     txn.commit_block()
 
@@ -607,6 +620,9 @@ def main():
                                    [AAA_SERVER_GROUP_IS_STATIC,
                                     AAA_SERVER_GROUP_NAME,
                                     AAA_SERVER_GROUP_TYPE])
+    schema_helper.register_columns(AAA_SERVER_GROUP_PRIO_TABLE,
+                                   [AAA_SERVER_GROUP_PRIO_SESSION_TYPE,
+                                    AAA_AUTHENTICATION_GROUP_PRIOS])
 
     idl = ovs.db.idl.Idl(remote, schema_helper)
 

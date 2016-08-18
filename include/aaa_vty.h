@@ -37,22 +37,35 @@ typedef struct tacacs_server_params_s {
     int64_t priority;       /* default priority of server*/
 } tacacs_server_params_t;
 
-
 typedef struct aaa_server_group_params_s {
     bool no_form;           /* TRUE/FALSE */
-    char *group_type;         /* AAA_GROUP_TYPE_TACACS*/
+    char *group_type;       /* AAA_GROUP_TYPE_TACACS*/
     char *group_name;       /* WORD */
 } aaa_server_group_params_t;
 
+enum aaa_method
+{
+  authentication,
+  authorization
+};
+
+typedef struct aaa_server_group_prio_params_s {
+    bool no_form;               /* TRUS/FALSE*/
+    enum aaa_method aaa_method; /* authentication or authorization*/
+    char **group_list;          /* list of group names*/
+    int group_count;            /* number of groups*/
+    char *login_type;           /* default or consols or ssh or telnet*/
+} aaa_server_group_prio_params_t;
+
 /* Commonly used declarations */
 #define AAA_GROUP_TYPE_LOCAL            "local"
+#define AAA_GROUP                       "group"
 #define SYSTEM_AAA_RADIUS               "radius"
 #define SYSTEM_AAA_TACACS               "tacacs"
 #define SYSTEM_AAA_TACACS_PLUS          "tacacs+"
 #define SYSTEM_AAA_FALLBACK             "fallback"
 #define SYSTEM_AAA_RADIUS_LOCAL         "local"
 #define SYSTEM_AAA_RADIUS_AUTH          "radius_auth"
-#define SYSTEM_AAA_TACACS_AUTH          "tacacs_auth"
 #define RADIUS_CHAP                     "chap"
 #define RADIUS_PAP                      "pap"
 #define TACACS_CHAP                     "chap"
@@ -69,6 +82,7 @@ typedef struct aaa_server_group_params_s {
 #define TACACS_SERVER_AUTH_TYPE_DEFAULT        "pap"
 #define AAA_SERVER_GROUP_IS_STATIC_DEFAULT     false
 #define TACACS_SERVER_GROUP_PRIORITY_DEFAULT   0
+#define AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT "default"
 
 #define MAX_RADIUS_SERVERS                    64
 #define RADIUS_SERVER_DEFAULT_PASSKEY         "testing123-1"
