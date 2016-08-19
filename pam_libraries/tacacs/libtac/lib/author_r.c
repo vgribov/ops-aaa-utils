@@ -204,10 +204,10 @@ int tac_author_read(int fd, struct areply *re) {
 		 pktp points to current argument length */
 		for (unsigned int r = 0; r < tb->arg_cnt && r < TAC_PLUS_MAX_ARGCOUNT;
 				r++) {
-			unsigned char buff[256];
-			unsigned char *sep;
-			unsigned char *value;
-			unsigned char sepchar = '=';
+			char buff[256];
+			char *sep;
+			char *value;
+			char sepchar = '=';
 
 			bcopy(argp, buff, (int) *pktp);
 			buff[(int) *pktp] = '\0';

@@ -124,11 +124,9 @@ int main(int argc, char **argv) {
 #ifndef USE_SYSTEM
 	pid_t pid;
 #endif
-	char *msg;
 	struct areply arep;
 
 	/* options */
-	flag log_wtmp = 1;
 	flag do_author = 0;
 	flag do_command_author = 0;
 	flag do_authen = 0;
@@ -201,9 +199,6 @@ int main(int argc, char **argv) {
 				break;
 			case 'q':
 				quiet = 1;
-				break;
-			case 'w':
-				log_wtmp = 0;
 				break;
 			case 'n':
 				tac_encryption = 0;
@@ -457,7 +452,6 @@ void authenticate(const struct addrinfo *tac_server, const char *tac_secret,
 		const char *user, const char *pass, const char *tty,
 		const char *remote_addr) {
 	int tac_fd;
-	char *msg;
 	int ret;
 	struct areply arep;
 
