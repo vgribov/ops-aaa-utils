@@ -533,25 +533,25 @@ def modify_common_auth_session_file(fallback_value, radius_value,
     # continue to use pam_radius_auth.so module
 
     if radius_xap_value == RADIUS_CHAP:
-        radius_lib_suffix = "chap_auth.so"
+        radius_lib_suffix = "_chap.so"
     else:
-        radius_lib_suffix = "auth.so"
+        radius_lib_suffix = ".so"
 
     local_auth[0] = "auth\t[success=1 default=ignore]\tpam_unix.so nullok\n"
     radius_auth[0] = \
-        "auth\t[success=1 default=ignore]\tpam_radius_"
+        "auth\t[success=1 default=ignore]\t/usr/lib/security/libpam_radius"
     fallback_and_radius_auth[0] = \
-        "auth\t[success=2 authinfo_unavail=ignore default=1]\tpam_radius_"
+        "auth\t[success=2 authinfo_unavail=ignore default=1]\t/usr/lib/security/libpam_radius"
 
     fallback_local_auth[0] =  \
         "auth\t[success=1 default=ignore]\tpam_unix.so\ttry_first_pass\n"
 
     local_auth[1] = "session\trequired\tpam_unix.so\n"
-    radius_auth[1] = "session\trequired\tpam_radius_auth.so\n"
+    radius_auth[1] = "session\trequired\t/usr/lib/security/libpam_radius.so\n"
 
     fallback_and_radius_auth[1] = \
         "session\t[success=done new_authtok_reqd=done authinfo_unavail=ignore \
-        session_err=ignore default=die]\tpam_radius_auth.so\n"
+        session_err=ignore default=die]\t/usr/lib/security/libpam_radius.so\n"
 
     fallback_local_auth[1] = "session\trequired\tpam_unix.so\n"
 
@@ -609,7 +609,7 @@ def update_access_files():
     global idl
 
     passwdText = "pam_unix.so"
-    radiusText = "pam_radius_auth.so"
+    radiusText = "/usr/lib/security/libpam_radius.so"
     commonPasswordText = "pam_unix.so obscure sha512"
     fallback_value = OPS_TRUE
     radius_value = OPS_FALSE

@@ -18,5 +18,6 @@ project ("ops-aaa-utils")
 
 add_subdirectory(pam_libraries/tacacs)
 add_subdirectory(pam_libraries/tacacs/libtac)
+add_subdirectory(pam_libraries/radius)
 add_subdirectory(src/cli)
 add_subdirectory(src/lib)
