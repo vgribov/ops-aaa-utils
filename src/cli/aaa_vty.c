@@ -285,37 +285,39 @@ DEFUN(cli_aaa_set_authentication,
     int keyword_skip = 0;
     aaa_server_group_prio_params_t group_prio_params;
 
-    if ( !argv[0] || strcmp(argv[0], AAA_GROUP) == 0)
+    if ( !argv[0] || VTYSH_STR_EQ(argv[0], AAA_GROUP))
     {
        keyword_skip = 1;
        group_count = argc - keyword_skip;
     }
-    else if (strcmp(argv[0], AAA_GROUP_TYPE_LOCAL) == 0)
+    else if (VTYSH_STR_EQ(argv[0], AAA_GROUP_TYPE_LOCAL))
     {
        group_count = 1;
     }
     group_list = xmalloc(sizeof(char *) * group_count);
     memcpy(group_list, argv + keyword_skip, sizeof(char *) * group_count);
 
-    /* Set flag for no command */
-    if (vty_flags & CMD_FLAG_NO_CMD) {
-        group_prio_params.no_form = true;
-    }
-
+    group_prio_params.no_form = false;
     group_prio_params.group_count = group_count;
     group_prio_params.group_list = group_list;
     group_prio_params.aaa_method = authentication;
     group_prio_params.login_type = AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT;
+
+    if (vty_flags & CMD_FLAG_NO_CMD)
+    {
+        group_prio_params.no_form = true;
+    }
+
     return configure_aaa_server_group_priority(&group_prio_params);
 }
 
 DEFUN_NO_FORM(cli_aaa_set_authentication,
-    aaa_set_authentication_cmd,
-    "aaa authentication login default",
-    AAA_STR
-    AAA_AUTHENTICATION_HELP_STR
-    AAA_LOGIN_HELP_STR
-    AAA_DEFAULT_LINE_HELP_STR);
+              aaa_set_authentication_cmd,
+              "aaa authentication login default",
+              AAA_STR
+              AAA_AUTHENTICATION_HELP_STR
+              AAA_LOGIN_HELP_STR
+              AAA_DEFAULT_LINE_HELP_STR);
 
 /* Set AAA radius authentication encoding to CHAP or PAP
  * On success, returns CMD_SUCCESS. On failure, returns CMD_OVSDB_FAILURE.
