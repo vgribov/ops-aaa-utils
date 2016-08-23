@@ -42,46 +42,14 @@
 static vtysh_ret_val
 vtysh_ovsdb_ovstable_parse_tacacs_cfg(const struct smap *ifrow_aaa, vtysh_ovsdb_cbmsg *p_msg)
 {
-  const char *authorization_enable = NULL;
   const char *tcp_port = NULL;
   const char *timeout = NULL;
   const char *passkey = NULL;
   const char *auth_type = NULL;
-  const char *data = NULL;
 
   if(ifrow_aaa == NULL)
   {
     return e_vtysh_error;
-  }
-
-  data = smap_get(ifrow_aaa, SYSTEM_AAA_TACACS);
-  if (data)
-  {
-      if (!VTYSH_STR_EQ(data, OPS_FALSE_STR))
-      {
-          data = smap_get(ifrow_aaa, SYSTEM_AAA_TACACS_AUTH);
-          if (data && VTYSH_STR_EQ(data, TACACS_PAP))
-          {
-              vtysh_ovsdb_cli_print(p_msg, "aaa authentication login tacacs+");
-          }
-          else if (data && VTYSH_STR_EQ(data, TACACS_CHAP))
-          {
-              vtysh_ovsdb_cli_print(p_msg, "aaa authentication login tacacs+ tacacs-auth chap");
-          }
-      }
-  }
-
-  authorization_enable = smap_get(ifrow_aaa, SYSTEM_TACACS_CONFIG_AUTHOR);
-  if (authorization_enable)
-  {
-    if (!VTYSH_STR_EQ(authorization_enable, TACACS_SERVER_AUTHOR_DEFAULT))
-    {
-        vtysh_ovsdb_cli_print(p_msg,"aaa authorization tacacs+ enable");
-    }
-    else
-    {
-        vtysh_ovsdb_cli_print(p_msg,"no aaa authorization tacacs+ enable");
-    }
   }
 
   passkey = smap_get(ifrow_aaa, SYSTEM_AAA_TACACS_PASSKEY);
@@ -239,8 +207,8 @@ vtysh_display_tacacs_server_table(vtysh_ovsdb_cbmsg *p_msg)
       if (row->tcp_port != TACACS_SERVER_TCP_PORT_DEFAULT)
          append_buff += sprintf(append_buff, " port %ld", row->tcp_port);
 
-      if (*(row->timeout) != TACACS_SERVER_TIMEOUT_DEFAULT)
-         append_buff += sprintf(append_buff, " timeout %ld", *(row->timeout));
+      if (row->timeout != TACACS_SERVER_TIMEOUT_DEFAULT)
+         append_buff += sprintf(append_buff, " timeout %ld", row->timeout);
 
       if (!VTYSH_STR_EQ(row->passkey, TACACS_SERVER_PASSKEY_DEFAULT))
          append_buff += sprintf(append_buff, " key %s", row->passkey);

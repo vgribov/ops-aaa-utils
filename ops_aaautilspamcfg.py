@@ -70,7 +70,7 @@ AAA_RADIUS_AUTH = "radius_auth"
 AAA_LOCAL = "local"
 AAA_FALLBACK = "fallback"
 AAA_TACACS = "tacacs"
-AAA_TACACS_PLUS = "tacacs+"
+AAA_TACACS_PLUS = "tacacs_plus"
 AAA_TACACS_AUTH = "tacacs_auth"
 
 OPS_TRUE = "true"
@@ -416,11 +416,11 @@ def get_server_list(session_type):
                 vlog.info("group_name = %s, group_type = %s\n" % (group.group_name, group.group_type))
 
                 server_table = ""
-                if group.group_type == "tacacs+":
+                if group.group_type == AAA_TACACS_PLUS:
                     server_table = TACACS_SERVER_TABLE
-                elif group.group_type == "radius":
+                elif group.group_type == AAA_RADIUS:
                     server_table = RADIUS_SERVER_TABLE
-                elif group.group_type == "local":
+                elif group.group_type == AAA_LOCAL:
                     server_list.append((0, group.group_type))
 
                 if server_table == RADIUS_SERVER_TABLE or server_table == TACACS_SERVER_TABLE:
@@ -487,10 +487,10 @@ def modify_common_auth_access_file(server_list):
         # TODO - Check the value of "FAIL_THROUGH" & decide on sufficient/requisite
         for server, server_type in server_list[:-1]:
             auth_line = ""
-            if server_type == "local":
+            if server_type == AAA_LOCAL:
                 auth_line = "auth\tsufficient\t" + PAM_LOCAL_MODULE + " nullok\n"
-            elif server_type == "tacacs+":
-                auth_line = "auth\tsufficient\t" + PAM_TACACS_MODULE + "\tdebug server=" + server.ip_address + " secret=" + str(server.passkey[0]) + " login=" + server.auth_type[0] + " timeout=" + str(server.timeout[0]) + "\n"
+            elif server_type == AAA_TACACS_PLUS:
+                auth_line = "auth\tsufficient\t" + PAM_TACACS_MODULE + "\tdebug server=" + server.ip_address + " secret=" + str(server.passkey) + " login=" + server.auth_type + " timeout=" + str(server.timeout) + "\n"
 
             f.write(auth_line)
 
@@ -498,10 +498,10 @@ def modify_common_auth_access_file(server_list):
         server = server_list[-1][0]
         server_type = server_list[-1][1]
         auth_line = ""
-        if server_type == "local":
+        if server_type == AAA_LOCAL:
             auth_line = "auth\t[success=1 default=ignore]\t" + PAM_LOCAL_MODULE + "nullok\n"
-        elif server_type == "tacacs+":
-            auth_line = "auth\t[success=1 default=ignore]\t" + PAM_TACACS_MODULE + "\tdebug server=" + server.ip_address + " secret=" + str(server.passkey[0]) + " login=" + server.auth_type[0] + " timeout=" + str(server.timeout[0]) + "\n"
+        elif server_type == AAA_TACACS_PLUS:
+            auth_line = "auth\t[success=1 default=ignore]\t" + PAM_TACACS_MODULE + "\tdebug server=" + server.ip_address + " secret=" + str(server.passkey) + " login=" + server.auth_type + " timeout=" + str(server.timeout) + "\n"
 
         f.write(auth_line)
 

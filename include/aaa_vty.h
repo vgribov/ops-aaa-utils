@@ -58,11 +58,12 @@ typedef struct aaa_server_group_prio_params_s {
 } aaa_server_group_prio_params_t;
 
 /* Commonly used declarations */
+#define AAA_TABLE_WIDTH                 96
 #define AAA_GROUP                       "group"
 #define SYSTEM_AAA_LOCAL                "local"
 #define SYSTEM_AAA_RADIUS               "radius"
 #define SYSTEM_AAA_TACACS               "tacacs"
-#define SYSTEM_AAA_TACACS_PLUS          "tacacs+"
+#define SYSTEM_AAA_TACACS_PLUS          "tacacs_plus"
 #define SYSTEM_AAA_FALLBACK             "fallback"
 #define SYSTEM_AAA_RADIUS_LOCAL         "local"
 #define SYSTEM_AAA_RADIUS_AUTH          "radius_auth"
@@ -90,7 +91,7 @@ typedef struct aaa_server_group_prio_params_s {
 #define RADIUS_SERVER_DEFAULT_RETRIES         1
 #define RADIUS_SERVER_DEFAULT_TIMEOUT         5
 
-#define MAX_CHARS_IN_TACACS_SERVER_NAME       58
+#define MAX_CHARS_IN_TACACS_SERVER_NAME       45
 #define MAX_LENGTH_TACACS_PASSKEY             64
 #define MAX_CHARS_IN_SERVER_GROUP_NAME        32
 
