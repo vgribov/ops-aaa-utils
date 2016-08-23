@@ -301,7 +301,7 @@ vtysh_display_aaa_server_group_priority(vtysh_ovsdb_cbmsg *p_msg)
   else
   {
      group_row = group_prio_list->value_authentication_group_prios[0];
-     if (!VTYSH_STR_EQ(group_row->group_name,AAA_GROUP_TYPE_LOCAL))
+     if (!VTYSH_STR_EQ(group_row->group_name,SYSTEM_AAA_LOCAL))
      {
          vtysh_ovsdb_cli_print(p_msg, "aaa authentication login default group %s", group_row->group_name);
      }
@@ -351,8 +351,12 @@ vtysh_display_aaa_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
   OVSREC_AAA_SERVER_GROUP_FOR_EACH(group_row, p_msg->idl)
   {
       const char* name = group_row->group_name;
-      if (strcmp(name, AAA_GROUP_TYPE_LOCAL) == 0)
+      if ((strcmp(name, SYSTEM_AAA_LOCAL) == 0) ||
+          (strcmp(name, SYSTEM_AAA_RADIUS) == 0) ||
+          (strcmp(name, SYSTEM_AAA_TACACS_PLUS) == 0))
+      {
           continue;
+      }
       vtysh_ovsdb_cli_print(p_msg, "!");
       vtysh_ovsdb_cli_print(p_msg, "aaa group server %s %s", group_row->group_type, name);
 

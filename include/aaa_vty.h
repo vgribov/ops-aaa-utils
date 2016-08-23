@@ -58,8 +58,8 @@ typedef struct aaa_server_group_prio_params_s {
 } aaa_server_group_prio_params_t;
 
 /* Commonly used declarations */
-#define AAA_GROUP_TYPE_LOCAL            "local"
 #define AAA_GROUP                       "group"
+#define SYSTEM_AAA_LOCAL                "local"
 #define SYSTEM_AAA_RADIUS               "radius"
 #define SYSTEM_AAA_TACACS               "tacacs"
 #define SYSTEM_AAA_TACACS_PLUS          "tacacs+"

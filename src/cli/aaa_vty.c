@@ -231,7 +231,7 @@ configure_aaa_server_group_priority(aaa_server_group_prio_params_t *group_prio_p
     if (group_prio_params->no_form)
     {
         key_list = xmalloc(sizeof(int64_t));
-        group_row = get_row_by_server_group_name(AAA_GROUP_TYPE_LOCAL);
+        group_row = get_row_by_server_group_name(SYSTEM_AAA_LOCAL);
         if (group_row == NULL)
         {
                 ERRONEOUS_DB_TXN(priority_txn, "AAA server group does not exist.");
@@ -285,17 +285,20 @@ DEFUN(cli_aaa_set_authentication,
     int keyword_skip = 0;
     aaa_server_group_prio_params_t group_prio_params;
 
-    if ( !argv[0] || VTYSH_STR_EQ(argv[0], AAA_GROUP))
+    if (argc >= 1)
     {
-       keyword_skip = 1;
-       group_count = argc - keyword_skip;
+        if ( !argv[0] || VTYSH_STR_EQ(argv[0], AAA_GROUP))
+        {
+           keyword_skip = 1;
+           group_count = argc - keyword_skip;
+        }
+        else if (VTYSH_STR_EQ(argv[0], SYSTEM_AAA_LOCAL))
+        {
+           group_count = 1;
+        }
+        group_list = xmalloc(sizeof(char *) * group_count);
+        memcpy(group_list, argv + keyword_skip, sizeof(char *) * group_count);
     }
-    else if (VTYSH_STR_EQ(argv[0], AAA_GROUP_TYPE_LOCAL))
-    {
-       group_count = 1;
-    }
-    group_list = xmalloc(sizeof(char *) * group_count);
-    memcpy(group_list, argv + keyword_skip, sizeof(char *) * group_count);
 
     group_prio_params.no_form = false;
     group_prio_params.group_count = group_count;
@@ -698,7 +701,7 @@ aaa_server_group_sanitize_parameters(aaa_server_group_params_t *server_group_par
    /*Prevent user from configure default group*/
    if ((strcmp(server_group_params->group_name, SYSTEM_AAA_RADIUS) == 0) ||
        (strcmp(server_group_params->group_name, SYSTEM_AAA_TACACS_PLUS) == 0) ||
-       (strcmp(server_group_params->group_name, AAA_GROUP_TYPE_LOCAL) == 0))
+       (strcmp(server_group_params->group_name, SYSTEM_AAA_LOCAL) == 0))
    {
         vty_out(vty, "Invalid server group name%s", VTY_NEWLINE);
         return CMD_ERR_NOTHING_TODO;
