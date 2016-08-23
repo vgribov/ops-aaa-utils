@@ -60,30 +60,34 @@ SYSTEM_AAA_COLUMN = "aaa"
 SYSTEM_OTHER_CONFIG = "other_config"
 SYSTEM_RADIUS_SERVER_COLUMN = "radius_servers"
 RADIUS_SERVER_TABLE = "Radius_Server"
-AAA_SERVER_GROUP_TABLE = "AAA_Server_Group"
-AAA_SERVER_GROUP_PRIO_TABLE = "AAA_Server_Group_Prio"
+SYSTEM_TACACS_SERVER_COLUMN = "tacacs_servers"
+TACACS_SERVER_TABLE = "Tacacs_Server"
 
 SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN = "auto_provisioning_status"
 
 AAA_RADIUS = "radius"
 AAA_RADIUS_AUTH = "radius_auth"
+AAA_LOCAL = "local"
+AAA_FALLBACK = "fallback"
 AAA_TACACS = "tacacs"
 AAA_TACACS_PLUS = "tacacs+"
-AAA_LOCAL = "local"
 AAA_TACACS_AUTH = "tacacs_auth"
-AAA_FALLBACK = "fallback"
+
 OPS_TRUE = "true"
 OPS_FALSE = "false"
-AAA_DEFAULT_GROUP_STATIC = True
 
-AAA_AUTHENTICATION_GROUP_PRIOS = "authentication_group_prios"
-AAA_SERVER_GROUP_PRIO_SESSION_TYPE = "session_type"
-AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT = "default"
-PRIO_ZERO = 0
-
+AAA_SERVER_GROUP_TABLE = "AAA_Server_Group"
 AAA_SERVER_GROUP_IS_STATIC = "is_static"
 AAA_SERVER_GROUP_NAME = "group_name"
 AAA_SERVER_GROUP_TYPE = "group_type"
+AAA_DEFAULT_GROUP_STATIC = True
+
+AAA_SERVER_GROUP_PRIO_TABLE = "AAA_Server_Group_Prio"
+AAA_SERVER_GROUP_PRIO_SESSION_TYPE = "session_type"
+AAA_AUTHENTICATION_GROUP_PRIOS = "authentication_group_prios"
+AAA_AUTHORIZATION_GROUP_PRIOS = "authorization_group_prios"
+AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT = "default"
+PRIO_ZERO = 0
 
 RADIUS_SERVER_IPADDRESS = "ip_address"
 RADIUS_SERVER_PORT = "udp_port"
@@ -91,15 +95,32 @@ RADIUS_SERVER_PASSKEY = "passkey"
 RADIUS_SERVER_TIMEOUT = "timeout"
 RADIUS_SERVER_RETRIES = "retries"
 RADIUS_SEREVR_PRIORITY = "priority"
+RADIUS_PAP = "pap"
+RADIUS_CHAP = "chap"
 
-TACACS_SERVER_PORT = "tacacs_tcp_port"
-TACACS_SERVER_PASSKEY = "tacacs_passkey"
-TACACS_SERVER_TIMEOUT = "tacacs_timeout"
-TACACS_SERVER_AUTH = "tacacs_auth"
-
+#TACACS+ Defaults
 TACACS_SERVER_TCP_PORT_DEFAULT = "49"
 TACACS_SERVER_PASSKEY_DEFAULT = "testing123-1"
 TACACS_SERVER_TIMEOUT_DEFAULT = "5"
+
+#TACACS+ Globals - from aaa column in System Table
+GBL_TACACS_SERVER_PORT = "tacacs_tcp_port"
+GBL_TACACS_SERVER_PASSKEY = "tacacs_passkey"
+GBL_TACACS_SERVER_TIMEOUT = "tacacs_timeout"
+GBL_TACACS_SERVER_AUTH_TYPE = "tacacs_auth"
+
+#TACACS+ Server Columns
+TACACS_SERVER_IPADDRESS = "ip_address"
+TACACS_SERVER_PORT = "tcp_port"
+TACACS_SERVER_PASSKEY = "passkey"
+TACACS_SERVER_TIMEOUT = "timeout"
+TACACS_SERVER_AUTH_TYPE = "auth_type"
+TACACS_SERVER_GROUP = "group"
+TACACS_SERVER_GROUP_PRIO = "group_priority"
+TACACS_SERVER_DEFAULT_PRIO = "default_priority"
+
+TACACS_PAP = "pap"
+TACACS_CHAP = "chap"
 
 SSH_PASSKEY_AUTHENTICATION_ENABLE = "ssh_passkeyauthentication_enable"
 SSH_PUBLICKEY_AUTHENTICATION_ENABLE = "ssh_publickeyauthentication_enable"
@@ -111,12 +132,6 @@ SFTP_SERVER_CONFIG = "sftp_server_enable"
 
 PERFORMED = "performed"
 URL = "url"
-
-RADIUS_PAP = "pap"
-RADIUS_CHAP = "chap"
-
-TACACS_PAP = "pap"
-TACACS_CHAP = "chap"
 
 #---------------- unixctl_exit --------------------------
 
@@ -213,10 +228,10 @@ def add_default_row():
     data[SSH_PASSKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
     data[SSH_PUBLICKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
     # Default values for tacacs
-    data[TACACS_SERVER_PORT] = TACACS_SERVER_TCP_PORT_DEFAULT
-    data[TACACS_SERVER_PASSKEY] = TACACS_SERVER_PASSKEY_DEFAULT
-    data[TACACS_SERVER_TIMEOUT] = TACACS_SERVER_TIMEOUT_DEFAULT
-    data[TACACS_SERVER_AUTH] = TACACS_PAP
+    data[GBL_TACACS_SERVER_PORT] = TACACS_SERVER_TCP_PORT_DEFAULT
+    data[GBL_TACACS_SERVER_PASSKEY] = TACACS_SERVER_PASSKEY_DEFAULT
+    data[GBL_TACACS_SERVER_TIMEOUT] = TACACS_SERVER_TIMEOUT_DEFAULT
+    data[GBL_TACACS_SERVER_AUTH_TYPE] = TACACS_PAP
 
     # Default values for auto provisioning status column
     auto_provisioning_data[PERFORMED] = "False"
@@ -616,13 +631,23 @@ def main():
                                     RADIUS_SERVER_TIMEOUT,
                                     RADIUS_SERVER_RETRIES,
                                     RADIUS_SEREVR_PRIORITY])
+    schema_helper.register_columns(TACACS_SERVER_TABLE,
+                                   [TACACS_SERVER_IPADDRESS,
+                                    TACACS_SERVER_PORT,
+                                    TACACS_SERVER_PASSKEY,
+                                    TACACS_SERVER_TIMEOUT,
+                                    TACACS_SERVER_AUTH_TYPE,
+                                    TACACS_SERVER_GROUP,
+                                    TACACS_SERVER_GROUP_PRIO,
+                                    TACACS_SERVER_DEFAULT_PRIO])
     schema_helper.register_columns(AAA_SERVER_GROUP_TABLE,
                                    [AAA_SERVER_GROUP_IS_STATIC,
                                     AAA_SERVER_GROUP_NAME,
                                     AAA_SERVER_GROUP_TYPE])
     schema_helper.register_columns(AAA_SERVER_GROUP_PRIO_TABLE,
                                    [AAA_SERVER_GROUP_PRIO_SESSION_TYPE,
-                                    AAA_AUTHENTICATION_GROUP_PRIOS])
+                                    AAA_AUTHENTICATION_GROUP_PRIOS,
+                                    AAA_AUTHORIZATION_GROUP_PRIOS])
 
     idl = ovs.db.idl.Idl(remote, schema_helper)
 
