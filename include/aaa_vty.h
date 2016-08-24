@@ -28,13 +28,13 @@
 
 /* Structure definitions */
 typedef struct tacacs_server_params_s {
-    bool no_form;           /* TRUE/FALSE */
-    char *server_name;      /* FQDN or IP Address */
-    char *timeout;          /* Timeout */
-    char *shared_key;       /* Shared secret key */
-    char *auth_port;        /* Authentication port */
-    char *auth_type;        /* Authentication type pap/chap */
-    int64_t priority;       /* default priority of server*/
+    bool no_form;                 /* TRUE/FALSE */
+    const char *server_name;      /* FQDN or IP Address */
+    const char *timeout;          /* Timeout */
+    const char *shared_key;       /* Shared secret key */
+    const char *auth_port;        /* Authentication port */
+    const char *auth_type;        /* Authentication type pap/chap */
+    int64_t priority;             /* default priority of server*/
 } tacacs_server_params_t;
 
 typedef struct aaa_server_group_params_s {

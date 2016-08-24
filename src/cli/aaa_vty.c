@@ -2136,44 +2136,46 @@ tacacs_server_replace_parameters(const struct ovsrec_tacacs_server *row,
 }
 
 static void
-tacacs_server_add_parameters(const struct ovsrec_system *ovs,
-        const struct ovsrec_tacacs_server *row,
-        tacacs_server_params_t *server_params,
-        const struct ovsrec_aaa_server_group *group)
+tacacs_server_fetch_parameters(const struct ovsrec_system *ovs,
+                               tacacs_server_params_t *server_params)
 {
-    int64_t tcp_port = 0, timeout = 0;
-    const char *passkey = NULL;
-    const char *auth_type = NULL;
     /* Fetch global config values */
-    passkey = smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_PASSKEY);
-    tcp_port = atoi(smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_TCP_PORT));
-    timeout = atoi(smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_TIMEOUT));
-    auth_type = smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_AUTH);
-
-    if (server_params->auth_port != NULL) {
-        tcp_port = atoi(server_params->auth_port);
+    if (server_params->auth_port == NULL)
+    {
+        server_params->auth_port = smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_TCP_PORT);
     }
 
-    if (server_params->timeout != NULL) {
-        timeout = atoi(server_params->timeout);
+    if (server_params->timeout == NULL)
+    {
+        server_params->timeout = smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_TIMEOUT);
     }
 
-    if (server_params->shared_key != NULL) {
-        passkey = server_params->shared_key;
+    if (server_params->shared_key == NULL)
+    {
+        server_params->shared_key =  smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_PASSKEY);
     }
 
-    if (server_params->auth_type != NULL) {
-        auth_type = server_params->auth_type;
+    if (server_params->auth_type == NULL)
+    {
+        server_params->auth_type = smap_get(&ovs->aaa, SYSTEM_AAA_TACACS_AUTH);
     }
+}
+
+static void
+tacacs_server_add_parameters(const struct ovsrec_tacacs_server *row,
+                             tacacs_server_params_t *server_params,
+                             const struct ovsrec_aaa_server_group *group)
+{
+    int64_t timeout = atoi(server_params->timeout);
 
     ovsrec_tacacs_server_set_ip_address(row, server_params->server_name);
     ovsrec_tacacs_server_set_timeout(row, &timeout, 1);
-    ovsrec_tacacs_server_set_passkey(row, passkey);
-    ovsrec_tacacs_server_set_tcp_port(row, tcp_port);
+    ovsrec_tacacs_server_set_passkey(row, server_params->shared_key);
+    ovsrec_tacacs_server_set_tcp_port(row, atoi(server_params->auth_port));
     ovsrec_tacacs_server_set_default_priority(row, server_params->priority);
     ovsrec_tacacs_server_set_group_priority(row, TACACS_SERVER_GROUP_PRIORITY_DEFAULT);
     ovsrec_tacacs_server_set_group(row, group);
-    ovsrec_tacacs_server_set_auth_type(row, auth_type);
+    ovsrec_tacacs_server_set_auth_type(row, server_params->auth_type);
 }
 
 /* Add or remove a TACACS+ server */
@@ -2195,6 +2197,9 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
     if (ovs == NULL) {
         ABORT_DB_TXN(status_txn, "Unable to fetch System table row");
     }
+
+    /* Fetch global default tacacs-server parameter if not provided */
+    tacacs_server_fetch_parameters(ovs, server_params);
 
     /* Start of transaction */
     START_DB_TXN(status_txn);
@@ -2236,7 +2241,7 @@ configure_tacacs_server_host(tacacs_server_params_t *server_params)
                 }
                 ++priority;
                 server_params->priority = priority;
-                tacacs_server_add_parameters(ovs, row, server_params, default_group);
+                tacacs_server_add_parameters(row, server_params, default_group);
 
                 /* Update System table */
                 tacacs_info = xmalloc(sizeof *ovs->tacacs_servers * (ovs->n_tacacs_servers + 1));
@@ -2397,7 +2402,7 @@ DEFUN(cli_show_tacacs_server,
 /* CLI to add tacacs-sever */
 DEFUN (cli_tacacs_server_host,
        tacacs_server_host_cmd,
-       "tacacs-server host WORD {port <1-65535> | timeout <1-60> | key WORD | auth-type ( pap | chap)}",
+       "tacacs-server host WORD {port <1-65535> | timeout <1-60> | key WORD | auth-type (pap | chap)}",
        TACACS_SERVER_HELP_STR
        TACACS_SERVER_HOST_HELP_STR
        TACACS_SERVER_NAME_HELP_STR
@@ -2411,25 +2416,20 @@ DEFUN (cli_tacacs_server_host,
        AUTH_TYPE_PAP_HELP_STR
        AUTH_TYPE_CHAP_HELP_STR)
 {
-    char* default_port = TACACS_SERVER_TCP_PORT_DEFAULT_VAL;
-    tacacs_server_params_t tacacs_server_params;
-    tacacs_server_params.server_name = (char *)argv[0];
-    tacacs_server_params.auth_port = (char *)argv[1];
-    tacacs_server_params.timeout = (char *)argv[2];
-    tacacs_server_params.shared_key = (char *)argv[3];
-    tacacs_server_params.auth_type = (char *)argv[4];
-    tacacs_server_params.no_form = false;
+    tacacs_server_params_t tacacs_server_params = {0};
 
-    if (!tacacs_server_params.auth_port)
+    if (vty_flags & CMD_FLAG_NO_CMD)
     {
-        tacacs_server_params.auth_port = default_port;
-    }
-
-    if (vty_flags & CMD_FLAG_NO_CMD) {
-        tacacs_server_params.timeout = NULL;
-        tacacs_server_params.shared_key = NULL;
-        tacacs_server_params.auth_type = NULL;
         tacacs_server_params.no_form = true;
+    }
+    else
+    {
+        tacacs_server_params.server_name = argv[0];
+        tacacs_server_params.auth_port = argv[1];
+        tacacs_server_params.timeout = argv[2];
+        tacacs_server_params.shared_key = argv[3];
+        tacacs_server_params.auth_type = argv[4];
+        tacacs_server_params.no_form = false;
     }
 
     return configure_tacacs_server_host(&tacacs_server_params);
