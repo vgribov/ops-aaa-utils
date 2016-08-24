@@ -745,7 +745,7 @@ configure_aaa_server_group(aaa_server_group_params_t *server_group_params)
         }
         else
         {
-            const bool is_static_group = AAA_SERVER_GROUP_IS_STATIC_DEFAULT;
+            bool is_static_group = AAA_SERVER_GROUP_IS_STATIC_DEFAULT;
             row = ovsrec_aaa_server_group_insert(server_group_txn);
             if (row == NULL)
             {
@@ -757,7 +757,7 @@ configure_aaa_server_group(aaa_server_group_params_t *server_group_params)
             VLOG_DBG("SUCCESS: Inserted a row into AAA Server Group Table\n");
             ovsrec_aaa_server_group_set_group_name(row, server_group_params->group_name);
             ovsrec_aaa_server_group_set_group_type(row, server_group_params->group_type);
-            ovsrec_aaa_server_group_set_is_static(row, &is_static_group, 1);
+            ovsrec_aaa_server_group_set_is_static(row, is_static_group);
         }
     }
     else
