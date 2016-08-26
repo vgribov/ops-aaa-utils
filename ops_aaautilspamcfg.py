@@ -488,7 +488,7 @@ def modify_common_auth_access_file(server_list):
         for server, server_type in server_list[:-1]:
             auth_line = ""
             if server_type == "local":
-                auth_line = "auth\tsufficient\t" + PAM_LOCAL_MODULE + "nullok\n"
+                auth_line = "auth\tsufficient\t" + PAM_LOCAL_MODULE + " nullok\n"
             elif server_type == "tacacs+":
                 auth_line = "auth\tsufficient\t" + PAM_TACACS_MODULE + "\tdebug server=" + server.ip_address + " secret=" + str(server.passkey[0]) + " login=" + server.auth_type[0] + " timeout=" + str(server.timeout[0]) + "\n"
 
