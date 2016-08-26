@@ -122,6 +122,9 @@ TACACS_SERVER_DEFAULT_PRIO = "default_priority"
 TACACS_PAP = "pap"
 TACACS_CHAP = "chap"
 
+PAM_TACACS_MODULE = "/usr/lib/security/libpam_tacplus.so"
+PAM_LOCAL_MODULE = "pam_unix.so"
+
 SSH_PASSKEY_AUTHENTICATION_ENABLE = "ssh_passkeyauthentication_enable"
 SSH_PUBLICKEY_AUTHENTICATION_ENABLE = "ssh_publickeyauthentication_enable"
 BANNER = "banner"
@@ -394,6 +397,116 @@ def update_ssh_config_file():
         contents = "".join(contents)
         f.write(contents)
 
+# ----------------------- get_server_list -------------------
+def get_server_list(session_type):
+
+    server_list = []
+    for ovs_rec in idl.tables[AAA_SERVER_GROUP_PRIO_TABLE].rows.itervalues():
+        if ovs_rec.session_type != session_type:
+            continue
+
+        size = len(ovs_rec.authentication_group_prios)
+        if size == 1 and ovs_rec.authentication_group_prios.keys()[0] == PRIO_ZERO:
+            vlog.info("Default local authentication configured\n")
+        else:
+            for prio, group in sorted(ovs_rec.authentication_group_prios.iteritems()):
+                if group is None:
+                    continue
+
+                vlog.info("group_name = %s, group_type = %s\n" % (group.group_name, group.group_type))
+
+                server_table = ""
+                if group.group_type == "tacacs+":
+                    server_table = TACACS_SERVER_TABLE
+                elif group.group_type == "radius":
+                    server_table = RADIUS_SERVER_TABLE
+                elif group.group_type == "local":
+                    server_list.append((0, group.group_type))
+
+                if server_table == RADIUS_SERVER_TABLE or server_table == TACACS_SERVER_TABLE:
+                    group_server_dict = {}
+                    for server in idl.tables[server_table].rows.itervalues():
+                        vlog.info("Server %s group = %s group_prio = %s default_prio = %s\n" %
+                                   (server.ip_address, server.group[0].group_name, server.group_priority, server.default_priority))
+
+                        if server.group[0] == group:
+                            if (server.group_priority == PRIO_ZERO):
+                                group_server_dict[server.default_priority] = server
+                            else:
+                                group_server_dict[server.group_priority] = server
+
+                    vlog.info("group_server_dict = %s\n" % (group_server_dict))
+
+                    for server_prio, server in sorted(group_server_dict.iteritems()):
+                        server_list.append((server, group.group_type))
+
+    return server_list
+
+# ----------------------- modify_common_auth_access_file -------------------
+def modify_common_auth_access_file(server_list):
+    '''
+    modify common-auth-access file, based on RADIUS, TACACS+ and local
+    values set in the DB
+    '''
+    vlog.info("server_list = %s\n" % server_list)
+    if not server_list:
+        vlog.info("server_list is empty. Returning")
+        # TODO: For now we are returning here as no group-sequence is configured
+        # This is to enable RADIUS-only testing (by not over-writing the
+        # common-auth-access file
+        # What we should be doing is to configure the local authentication
+        return
+
+    file_header = "# THIS IS AN AUTO-GENERATED FILE\n" \
+                  "#\n" \
+                  "# /etc/pam.d/common-auth- authentication settings common to all services\n" \
+                  "# This file is included from other service-specific PAM config files,\n" \
+                  "# and should contain a list of the authentication modules that define\n" \
+                  "# the central authentication scheme for use on the system\n" \
+                  "# (e.g., /etc/shadow, LDAP, Kerberos, etc.). The default is to use the\n" \
+                  "# traditional Unix authentication mechanisms.\n" \
+                  "#\n" \
+                  "# here are the per-package modules (the \"Primary\" block)\n"
+
+    file_footer = "#\n" \
+                  "# here's the fallback if no module succeeds\n" \
+                  "auth    requisite                       pam_deny.so\n" \
+                  "# prime the stack with a positive return value if there isn't one already;\n" \
+                  "# this avoids us returning an error just because nothing sets a success code\n" \
+                  "# since the modules above will each just jump around\n" \
+                  "auth    required                        pam_permit.so\n" \
+                  "# and here are more per-package modules (the \"Additional\" block)\n"
+
+    common_auth_access_filename = PAM_ETC_CONFIG_DIR + "common-auth-access"
+    with open(common_auth_access_filename, "w") as f:
+
+        # Write the file header
+        f.write(file_header)
+
+        # Now write the server list to the config file
+        # TODO - Check the value of "FAIL_THROUGH" & decide on sufficient/requisite
+        for server, server_type in server_list[:-1]:
+            auth_line = ""
+            if server_type == "local":
+                auth_line = "auth\tsufficient\t" + PAM_LOCAL_MODULE + "nullok\n"
+            elif server_type == "tacacs+":
+                auth_line = "auth\tsufficient\t" + PAM_TACACS_MODULE + "\tdebug server=" + server.ip_address + " secret=" + str(server.passkey[0]) + " login=" + server.auth_type[0] + " timeout=" + str(server.timeout[0]) + "\n"
+
+            f.write(auth_line)
+
+        # Print the last element
+        server = server_list[-1][0]
+        server_type = server_list[-1][1]
+        auth_line = ""
+        if server_type == "local":
+            auth_line = "auth\t[success=1 default=ignore]\t" + PAM_LOCAL_MODULE + "nullok\n"
+        elif server_type == "tacacs+":
+            auth_line = "auth\t[success=1 default=ignore]\t" + PAM_TACACS_MODULE + "\tdebug server=" + server.ip_address + " secret=" + str(server.passkey[0]) + " login=" + server.auth_type[0] + " timeout=" + str(server.timeout[0]) + "\n"
+
+        f.write(auth_line)
+
+        # Write the file footer
+        f.write(file_footer)
 
 # ----------------------- modify_common_auth_file -------------------
 def modify_common_auth_session_file(fallback_value, radius_value,
@@ -570,8 +683,15 @@ def aaa_util_reconfigure():
     update_access_files()
     update_ssh_config_file()
 
-    return
+    # TODO: For now we're calling the functionality to configure
+    # TACACS+ PAM config files after all RADIUS config is done
+    # This way we can still test RADIUS by not configuring TACACS+
+    # To unconfigure TACACS+ for now, just use -
+    # no aaa authentication login default
+    server_list = get_server_list("default")
+    modify_common_auth_access_file(server_list)
 
+    return
 
 #----------------- aaa_run() -----------------------
 def aaa_util_run():
