@@ -2372,7 +2372,7 @@ show_tacacs_server_entry(const struct ovsrec_tacacs_server *row, tacacs_server_p
     }
     if (VTYSH_STR_EQ(row->group->group_name, SYSTEM_AAA_TACACS_PLUS))
     {
-        vty_out(vty, "%-25s: %s (default)%s", "Server-Group", row->group->group_name, VTY_NEWLINE);
+        vty_out(vty, "%-25s: %s%s", "Server-Group (default)", row->group->group_name, VTY_NEWLINE);
         vty_out(vty, "%-25s: %ld%s", "Default-Priority", row->default_priority, VTY_NEWLINE);
     }
     else

@@ -28,19 +28,28 @@ from pdb import set_trace
 DEFAULT_TACACS_TIMEOUT = "5"
 DEFAULT_TACACS_AUTH_PORT = "49"
 DEFAULT_TACACS_PASSKEY = "testing123-1"
+DEFAULT_TACACS_AUTH_TYPE = "pap"
+DEFAULT_TACACS_GROUP = "tacacs_plus"
+COUNT_TACACS_SERVER = 0;
+
+def increment_tacacs_server():
+    global COUNT_TACACS_SERVER
+    COUNT_TACACS_SERVER = COUNT_TACACS_SERVER + 1
 
 
 def get_tacacs_server_details(lines, server_name):
-    lines = [line.strip().replace("\t","") for line in lines]
+    lines = [line.strip().replace(' ', '') for line in lines]
 
     ''' collect all the TACACS+ server details '''
-    server_line_index = lines.index("Server name: " + server_name)
-    server_info = lines[server_line_index : server_line_index + 4]
+    server_line_index = lines.index("Server-Name:" + server_name)
+    server_info = lines[server_line_index : server_line_index + 7]
 
     ''' collect TACACS+ server parameters
-        in format (name, port, key, timeout)
+        in format (name, port, key, timeout, auth-type, server-group, default-priority)
     '''
-    params = [param.split(": ")[-1] for param in server_info]
+    params = [param.split(":")[-1] for param in server_info]
+    if params[0] in server_name:
+        params[0] = server_name
     print (params)
     return tuple(params)
 
@@ -50,16 +59,22 @@ def tacacs_add_server_no_options(dut, step):
     dut("configure terminal")
     dut("tacacs-server host 1.1.1.1")
     dut("end")
+    increment_tacacs_server()
     dump = dut("show tacacs-server detail")
     lines = dump.splitlines()
     count = 0
 
     server_params = ("1.1.1.1", DEFAULT_TACACS_AUTH_PORT,
-            DEFAULT_TACACS_PASSKEY, DEFAULT_TACACS_TIMEOUT)
+                      DEFAULT_TACACS_PASSKEY, DEFAULT_TACACS_TIMEOUT,
+                      DEFAULT_TACACS_AUTH_TYPE, DEFAULT_TACACS_GROUP, str(COUNT_TACACS_SERVER))
+    print(server_params)
+
     if server_params == get_tacacs_server_details(lines, "1.1.1.1"):
         step('\n### server (with no options) present in command - '
                  'passed ###')
         count = count + 1
+    assert count == 1,\
+            '\n### server (with no options) addition test failed ###'
 
     ''' now check the running config '''
     dump = dut("show running-config")
@@ -82,12 +97,14 @@ def tacacs_add_server_with_valid_passkey(dut, step):
     dut("configure terminal")
     dut("tacacs-server host 1.1.1.2 key test-key")
     dut("end")
+    increment_tacacs_server()
     dump = dut("show tacacs-server detail")
     lines = dump.splitlines()
     count = 0
 
     server_params = ("1.1.1.2", DEFAULT_TACACS_AUTH_PORT,
-            "test-key", DEFAULT_TACACS_TIMEOUT)
+                     "test-key", DEFAULT_TACACS_TIMEOUT,
+                     DEFAULT_TACACS_AUTH_TYPE, DEFAULT_TACACS_GROUP, str(COUNT_TACACS_SERVER))
     if server_params == get_tacacs_server_details(lines, "1.1.1.2"):
         step('\n### server (with valid passkey) present as per show cli - '
                  'passed ###')
@@ -114,12 +131,14 @@ def tacacs_add_server_with_valid_timeout(dut, step):
     dut("configure terminal")
     dut("tacacs-server host 1.1.1.3 timeout 25")
     dut("end")
+    increment_tacacs_server()
     dump = dut("show tacacs-server detail")
     lines = dump.splitlines()
     count = 0
 
     server_params = ("1.1.1.3", DEFAULT_TACACS_AUTH_PORT,
-            DEFAULT_TACACS_PASSKEY, "25")
+                      DEFAULT_TACACS_PASSKEY, "25",
+                      DEFAULT_TACACS_AUTH_TYPE, DEFAULT_TACACS_GROUP, str(COUNT_TACACS_SERVER))
     if server_params == get_tacacs_server_details(lines, "1.1.1.3"):
         step('\n### server (with valid timeout) present as per show cli - '
                  'passed ###')
@@ -146,14 +165,16 @@ def tacacs_add_server_with_valid_auth_port(dut, step):
     dut("configure terminal")
     dut("tacacs-server host 1.1.1.4 port 45")
     dut("end")
+    increment_tacacs_server()
     dump = dut("show tacacs-server detail")
     lines = dump.splitlines()
     count = 0
 
-    server_params = ("1.1.1.4", "45", DEFAULT_TACACS_PASSKEY,
-            DEFAULT_TACACS_TIMEOUT)
+    server_params = ("1.1.1.4", "45",
+                      DEFAULT_TACACS_PASSKEY, DEFAULT_TACACS_TIMEOUT,
+                      DEFAULT_TACACS_AUTH_TYPE, DEFAULT_TACACS_GROUP, str(COUNT_TACACS_SERVER))
     if server_params == get_tacacs_server_details(lines, "1.1.1.4"):
-        step('\n### server (with valid auth port) present as per show cl1i - '
+        step('\n### server (with valid auth port) present as per show cli - '
                  'passed ###')
         count = count + 1
 
@@ -172,17 +193,52 @@ def tacacs_add_server_with_valid_auth_port(dut, step):
     step('\n### server (with valid auth port) addition test passed ###')
     step('\n### === server (with valid auth port) addition test end === ###\n')
 
-def tacacs_add_server_all_options(dut, step):
-    step('\n### === server (with all options) addition test start === ###')
+def tacacs_add_server_with_valid_auth_type(dut, step):
+    step('\n### === server (with valid auth-type) addition test start === ###')
     dut("configure terminal")
-    dut("tacacs-server host 1.1.1.5 key sample-key port 46 timeout 20")
+    dut("tacacs-server host 1.1.1.5 auth-type chap")
     dut("end")
+    increment_tacacs_server()
     dump = dut("show tacacs-server detail")
     lines = dump.splitlines()
     count = 0
 
-    server_params = ("1.1.1.5", "46", "sample-key", "20")
+    server_params = ("1.1.1.5", DEFAULT_TACACS_AUTH_PORT,
+                      DEFAULT_TACACS_PASSKEY, DEFAULT_TACACS_TIMEOUT,
+                      "chap", DEFAULT_TACACS_GROUP, str(COUNT_TACACS_SERVER))
     if server_params == get_tacacs_server_details(lines, "1.1.1.5"):
+        step('\n### server (with valid auth-type) present as per show cli - '
+                 'passed ###')
+        count = count + 1
+
+    ''' now check the running config '''
+    dump = dut("show running-config")
+    lines = dump.splitlines()
+    for line in lines:
+        if ("tacacs-server host 1.1.1.5 auth-type chap" in line):
+            step('\n### server (with valid auth-type) present in running config - '
+                 'passed ###')
+            count = count + 1
+
+    assert count == 2,\
+            '\n### server (with valid auth-type) addition test failed ###'
+
+    step('\n### server (with valid auth-type) addition test passed ###')
+    step('\n### === server (with valid auth-type) addition test end === ###\n')
+
+def tacacs_add_server_all_options(dut, step):
+    step('\n### === server (with all options) addition test start === ###')
+    dut("configure terminal")
+    dut("tacacs-server host 1.1.1.6 key sample-key port 46 timeout 20 auth-type chap")
+    dut("end")
+    increment_tacacs_server()
+    dump = dut("show tacacs-server detail")
+    lines = dump.splitlines()
+    count = 0
+
+    server_params = ("1.1.1.6", "46", "sample-key", "20",
+                     "chap", DEFAULT_TACACS_GROUP, str(COUNT_TACACS_SERVER))
+    if server_params == get_tacacs_server_details(lines, "1.1.1.6"):
         step('\n### server (with all options) present as per show cli - passed ###')
         count = count + 1
 
@@ -190,7 +246,7 @@ def tacacs_add_server_all_options(dut, step):
     dump = dut("show running-config")
     lines = dump.splitlines()
     for line in lines:
-        if ("tacacs-server host 1.1.1.5 port 46 timeout 20 key sample-key" in line):
+        if ("tacacs-server host 1.1.1.6 port 46 timeout 20 key sample-key auth-type chap" in line):
             step('\n### server (with all options) present in running config -'
                  ' passed ###')
             count = count + 1
@@ -201,6 +257,36 @@ def tacacs_add_server_all_options(dut, step):
     step('\n### server (with all options) addition test passed ###')
     step('\n### === server (with all options) addition test end === ###\n')
 
+def tacacs_add_ipv6_server_all_options(dut, step):
+    step('\n### === server (with all options) addition test start === ###')
+    dut("configure terminal")
+    dut("tacacs-server host 2001:0db8:85a3:0000:0000:8a2e:0370:7334 key sample-key port 47 timeout 20 auth-type chap")
+    dut("end")
+    increment_tacacs_server()
+    dump = dut("show tacacs-server detail")
+    lines = dump.splitlines()
+    count = 0
+
+    server_params = ("2001:0db8:85a3:0000:0000:8a2e:0370:7334", "47", "sample-key", "20",
+                     "chap", DEFAULT_TACACS_GROUP, str(COUNT_TACACS_SERVER))
+    if server_params == get_tacacs_server_details(lines, "2001:0db8:85a3:0000:0000:8a2e:0370:7334"):
+        step('\n### server (with all options) present as per show cli - passed ###')
+        count = count + 1
+
+    ''' now check the running config '''
+    dump = dut("show running-config")
+    lines = dump.splitlines()
+    for line in lines:
+        if ("tacacs-server host 2001:0db8:85a3:0000:0000:8a2e:0370:7334 port 47 timeout 20 key sample-key auth-type chap" in line):
+            step('\n### server (with all options) present in running config -'
+                 ' passed ###')
+            count = count + 1
+
+    assert count == 2,\
+            '\n### server (with all options) addition test failed ###'
+
+    step('\n### server (with all options) addition test passed ###')
+    step('\n### === server (with all options) addition test end === ###\n')
 
 def tacacs_add_server_with_invalid_server_name(dut, step):
     step('\n### === server (with invalid server name) addition test start '
@@ -372,11 +458,14 @@ def tacacs_add_server_with_fqdn(dut, step):
     dut("configure terminal")
     dut("tacacs-server host abc.789.com")
     dut("end")
+    increment_tacacs_server()
     dump = dut("show tacacs-server detail")
     lines = dump.splitlines()
     count = 0
 
-    server_params = ("abc.789.com", "121", "global-key", "55")
+    server_params = ("abc.789.com", DEFAULT_TACACS_AUTH_PORT,
+                      DEFAULT_TACACS_PASSKEY, DEFAULT_TACACS_TIMEOUT,
+                      DEFAULT_TACACS_AUTH_TYPE, DEFAULT_TACACS_GROUP, str(COUNT_TACACS_SERVER))
     if server_params == get_tacacs_server_details(lines, "abc.789.com"):
         step('\n### server (with fqdn) present as per show cli - passed '
                  '###')
@@ -405,8 +494,8 @@ def tacacs_add_server_with_long_server_name(dut, step):
     count = 0
 
     ''' long server name '''
-    lines = dut("tacacs-server host vabcdefghijklmnopqrstuvwxyzeabcdefghijklmnopqrstuvwxyzrabcdefghijklmnopqrstuvwxy")
-    if "Server name should be less than 58 characters" in lines:
+    lines = dut("tacacs-server host vabcdefghijklmnopqrstuvwxyzeabcdefghijklmnopqr")
+    if "Server name should be less than 45 characters" in lines:
         count += 1
     assert count == 1,\
             '\n###  server (with max chars with server name) addition test failed'\
@@ -417,13 +506,13 @@ def tacacs_add_server_with_long_server_name(dut, step):
     dump = dut("show tacacs-server detail")
     lines = dump.splitlines()
     for line in lines:
-        if ("vabcdefghijklmnopqrstuvwxyzeabcdefghijklmnopqrstuvwxyzrabcdefghijklmnopqrstuvwxy" in line):
+        if ("vabcdefghijklmnopqrstuvwxyzeabcdefghijklmnopqr" in line):
             count = count + 1
 
     dump = dut("show running-config")
     lines = dump.splitlines()
     for line in lines:
-        if ("vabcdefghijklmnopqrstuvwxyzeabcdefghijklmnopqrstuvwxyzrabcdefghijklmnopqrstuvwxy" in line):
+        if ("vabcdefghijklmnopqrstuvwxyzeabcdefghijklmnopqr" in line):
             count = count + 1
 
     assert count == 1,\
@@ -439,8 +528,9 @@ def tacacs_add_more_than_64_servers(dut, step):
     step('\n### === addition of more than 64 servers test start === ###')
 
     dut("configure terminal")
-    for i in range(1, 65):
+    for i in range(8, 65):
         dut("tacacs-server host 1.1.1." + str(i))
+        increment_tacacs_server()
 
     dump = dut("tacacs-server host 1.1.1.65")
     assert "Exceeded maximum TACACS+ servers support" in dump,\
@@ -534,23 +624,28 @@ def tacacs_set_global_tacacs_config(dut, step):
     dut("configure terminal")
     dut("tacacs-server key global-key")
     dut("tacacs-server timeout 55")
-    dut("tacacs-server port 121")
+    dut("tacacs-server auth-type chap")
     dut("end")
     dump = dut("show tacacs-server detail")
     lines = dump.splitlines()
     count = 0
+    global DEFAULT_TACACS_TIMEOUT, DEFAULT_TACACS_PASSKEY, DEFAULT_TACACS_AUTH_TYPE
+    DEFAULT_TACACS_TIMEOUT = "55"
+    DEFAULT_TACACS_PASSKEY = "global-key"
+    DEFAULT_TACACS_AUTH_TYPE = "chap"
+
     for line in lines:
-        if ("Shared secret: global-key" in line or "Auth port: 121" in line or
-                "Timeout: 55" in line):
-               count = count + 1
+        if ("Shared-Secret: global-key" in line or "Auth-Type: chap" in line or
+             "Timeout: 55" in line or ""):
+            count = count + 1
 
     ''' now check the running config '''
     dump = dut("show running-config")
     lines = dump.splitlines()
     for line in lines:
         if ("tacacs-server key global-key" in line or
-                "tacacs-server port 121" in line or
-                "tacacs-server timeout 55" in line):
+             "tacacs-server timeout 55" in line or
+             "tacacs-server auth-type chap" in line):
             count = count + 1
 
     assert count == 6,\
@@ -574,7 +669,11 @@ def test_ct_tacacs_config(topology, step):
 
     tacacs_add_server_with_valid_auth_port(ops1, step)
 
+    tacacs_add_server_with_valid_auth_type(ops1, step)
+
     tacacs_add_server_all_options(ops1, step)
+
+    tacacs_add_ipv6_server_all_options(ops1, step)
 
     tacacs_add_server_with_invalid_server_name(ops1, step)
 

@@ -79,6 +79,21 @@ This server is present in the `show tacacs-server detail` command output.
 #### Test fail criteria
 This server is absent from the `show tacacs-server detail` command output.
 
+## Test addition of TACACS+ server (with auth-type option)
+### Setup
+#### Topology diagram
+```ditaa
+[s1]
+```
+### Description
+Add a TACACS+ server using an IPv4 address and the auth-type option.
+
+### Test result criteria
+#### Test pass criteria
+This server is present in the `show tacacs-server detail` command output.
+#### Test fail criteria
+This server is absent from the `show tacacs-server detail` command output.
+
 ## Test addition of TACACS+ server (with all valid options)
 ### Setup
 #### Topology diagram
@@ -87,6 +102,21 @@ This server is absent from the `show tacacs-server detail` command output.
 ```
 ### Description
 Add a TACACS+ server using an IPv4 address and all options with valid values. 
+
+### Test result criteria
+#### Test pass criteria
+This server is present in the `show tacacs-server detail` command output.
+#### Test fail criteria
+This server is absent from the `show tacacs-server detail` command output.
+
+## Test addition of TACACS+ server (with all valid options, IPv6 as server name)
+### Setup
+#### Topology diagram
+```ditaa
+[s1]
+```
+### Description
+Add a TACACS+ server using an IPv6 address and all options with valid values.
 
 ### Test result criteria
 #### Test pass criteria
@@ -161,7 +191,7 @@ This server is present in the `show tacacs-server detail` command output and dis
 [s1]
 ```
 ### Description
-Add a TACACS+ using a long server name.
+Add a TACACS+ using a long server name (exceed maximum length 45).
 
 ### Test result criteria
 #### Test pass criteria
