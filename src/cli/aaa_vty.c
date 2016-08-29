@@ -2093,7 +2093,6 @@ tacacs_is_valid_server_name(const char *server_name)
 const int
 tacacs_server_sanitize_parameters(tacacs_server_params_t *server_params)
 {
-
     /* Check server_name to see if it exceeds maximum number of characters */
     if (strlen(server_params->server_name) > MAX_CHARS_IN_TACACS_SERVER_NAME) {
         vty_out(vty, "Server name should be less than 58 characters%s", VTY_NEWLINE);
@@ -2421,6 +2420,8 @@ DEFUN (cli_tacacs_server_host,
     if (vty_flags & CMD_FLAG_NO_CMD)
     {
         tacacs_server_params.no_form = true;
+        tacacs_server_params.server_name = argv[0];
+        tacacs_server_params.auth_port = argv[1];
     }
     else
     {
