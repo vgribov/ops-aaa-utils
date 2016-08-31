@@ -68,6 +68,7 @@ SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN = "auto_provisioning_status"
 AAA_RADIUS = "radius"
 AAA_RADIUS_AUTH = "radius_auth"
 AAA_LOCAL = "local"
+AAA_NONE = "none"
 AAA_FALLBACK = "fallback"
 AAA_TACACS = "tacacs"
 AAA_TACACS_PLUS = "tacacs_plus"
@@ -250,6 +251,11 @@ def add_default_row():
             auto_provisioning_data)
 
     # create default server groups: local, tacacs+ and radius
+    none_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
+    setattr(none_row, AAA_SERVER_GROUP_IS_STATIC, AAA_DEFAULT_GROUP_STATIC)
+    setattr(none_row, AAA_SERVER_GROUP_NAME, AAA_NONE)
+    setattr(none_row, AAA_SERVER_GROUP_TYPE, AAA_NONE)
+
     local_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
     setattr(local_row, AAA_SERVER_GROUP_IS_STATIC, AAA_DEFAULT_GROUP_STATIC)
     setattr(local_row, AAA_SERVER_GROUP_NAME, AAA_LOCAL)
@@ -270,6 +276,8 @@ def add_default_row():
     setattr(default_row, AAA_SERVER_GROUP_PRIO_SESSION_TYPE, AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT)
     prio_list[PRIO_ZERO] = local_row
     setattr(default_row, AAA_AUTHENTICATION_GROUP_PRIOS, prio_list)
+    prio_list[PRIO_ZERO] = none_row
+    setattr(default_row, AAA_AUTHORIZATION_GROUP_PRIOS, prio_list)
 
     txn.commit_block()
 
