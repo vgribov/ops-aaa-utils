@@ -66,10 +66,6 @@ void authenticate(const struct addrinfo *tac_server, const char *tac_secret,
 		const char *remote_addr);
 void timeout_handler(int signum);
 
-#define	EXIT_OK		0
-#define	EXIT_FAIL	1	/* AAA failure (or server error) */
-#define	EXIT_ERR	2	/* local error */
-
 #define USE_SYSTEM	1
 
 /* globals */
@@ -121,6 +117,7 @@ int main(int argc, char **argv) {
 	short int task_id = 0;
 	char buf[40];
 	int ret;
+        int cmd_author_status;
 #ifndef USE_SYSTEM
 	pid_t pid;
 #endif
@@ -273,46 +270,30 @@ int main(int argc, char **argv) {
 		authenticate(tac_server, tac_secret, user, pass, tty, remote_addr);
 
 	if (do_author) {
-		/* authorize user */
-		struct tac_attrib *attr = NULL;
-		tac_add_attrib(&attr, "service", service);
+                if (!do_command_author && protocol == NULL) {
+                    printf("error: protocol is required for authorization\n");
+                    exit(EXIT_ERR);
+                }
 
-    if (!do_command_author && protocol == NULL) {
-      printf("error: protocol is required for authorization\n");
-      exit(EXIT_ERR);
-    } else {
-      tac_add_attrib(&attr, "protocol", protocol);
-    }
-
-    if (do_command_author && command == NULL) {
-      printf("error: command is required for authorization\n");
-      exit(EXIT_ERR);
-    } else {
-      tac_add_attrib(&attr, "cmd", command);
-    }
-
-		tac_fd = tac_connect_single(tac_server, tac_secret, NULL, 60);
-		if (tac_fd < 0) {
-			if (!quiet)
-				printf("Error connecting to TACACS+ server: %m\n");
-			exit(EXIT_ERR);
-		}
-
-		tac_author_send(tac_fd, user, tty, remote_addr, attr);
-
-		tac_author_read(tac_fd, &arep);
-		if (arep.status != AUTHOR_STATUS_PASS_ADD
-				&& arep.status != AUTHOR_STATUS_PASS_REPL) {
-			if (!quiet)
-				printf("Authorization FAILED: %s\n", arep.msg);
-			exit(EXIT_FAIL);
-		} else {
-			if (!quiet)
-				printf("Authorization OK: %s\n", arep.msg);
-		}
-
-		tac_free_attrib(&attr);
-	}
+                if (do_command_author && command == NULL) {
+                    printf("error: command is required for authorization\n");
+                    exit(EXIT_ERR);
+                }
+                cmd_author_status = tac_cmd_author(tac_server_name,
+                                                   tac_secret,
+                                                   user,
+                                                   tty,
+                                                   remote_addr,
+                                                   service,
+                                                   protocol,
+                                                   command,
+                                                   TACC_CONN_TIMEOUT,
+                                                   quiet,
+                                                   NULL,
+                                                   NULL,
+                                                   NULL);
+                exit(cmd_author_status);
+        }
 
 	/* we no longer need the password in our address space */
 	bzero(pass, strlen(pass));

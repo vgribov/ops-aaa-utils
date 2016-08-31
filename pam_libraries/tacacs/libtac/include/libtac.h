@@ -37,6 +37,7 @@ extern "C" {
 #include <netdb.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <stdbool.h>
 #ifdef __linux__
 #include <sys/cdefs.h>
 #else
@@ -61,6 +62,26 @@ extern "C" {
 extern int logmsg __P((int, const char*, ...));
 #endif
 
+#define TACC_CONN_TIMEOUT 60
+
+#define PRINT(...)            printf(__VA_ARGS__)
+#define VLOG_INFORMATION(...) VLOG_INFO(__VA_ARGS__)
+#define VLOG_DEBUG(...)       VLOG_DBG(__VA_ARGS__)
+#define VLOG_ERROR(...)       VLOG_ERR(__VA_ARGS__)
+
+#define LOG(quiet, severity, ...) \
+    if (!quiet) { \
+        PRINT(__VA_ARGS__); \
+    } else { \
+        if (severity == VLL_INFO) { \
+            VLOG_INFO(__VA_ARGS__); \
+        } else if (severity == VLL_DBG) { \
+            VLOG_DBG(__VA_ARGS__); \
+        } else { \
+            VLOG_ERR(__VA_ARGS__); \
+        } \
+    }
+
 /* u_int32_t support for sun */
 #ifdef sun
 typedef unsigned int u_int32_t;
@@ -79,6 +100,13 @@ struct areply {
 	int flags :8;
 	int seq_no :8;
 };
+
+#define EXIT_OK         0  /* Authorized */
+#define EXIT_FAIL       1  /* Authorization was denied */
+#define EXIT_ADDR_ERR   2  /* Error when resolving TACACS server address */
+#define EXIT_CONN_ERR   3  /* Connection to TACACS server failed */
+#define EXIT_SEND_ERR   4  /* Error when sending authorization request */
+#define EXIT_ERR        5  /* local error */
 
 #ifndef TAC_PLUS_MAXSERVERS
 #define TAC_PLUS_MAXSERVERS 8
@@ -161,6 +189,14 @@ int tac_author_send(int, const char *, char *, char *, struct tac_attrib *);
 int tac_author_read(int, struct areply *);
 void tac_add_attrib_pair(struct tac_attrib **, char *, char, char *);
 int tac_read_wait(int, int, int, int *);
+int tac_cmd_author(const char *tac_server_name, const char *tac_secret,
+                   const char *user, char * tty, char *remote_addr,
+                   char *service, char *protocol, char *command,
+                   int timeout, bool quiet, const char *source_ip,
+                   const char *src_namespace, const char *dst_namespace );
+char * get_ip_port_tuple(struct sockaddr *sa, char *ip,
+                         unsigned short *port, size_t maxlen,
+                         bool quiet);
 
 /* magic.c */
 u_int32_t magic(void);

@@ -35,6 +35,9 @@ include(FindPkgConfig)
 
 add_definitions(-DSYSCONFDIR="${CMAKE_INSTALL_SYSCONFDIR}")
 
+# Rules to locate needed libraries
+pkg_check_modules(OVSCOMMON REQUIRED libovscommon)
+
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Werror -DFTR_PROXY_ARP -DFTR_LOCAL_PROXY_ARP -DHAVE_LIBCRYPTO -DHAVE_OPENSSL_MD5_H")
 
 include_directories(
@@ -43,12 +46,14 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/pam_libraries/tacacs/libtac/include
   ${CMAKE_SOURCE_DIR}/pam_libraries/tacacs/libtac/lib
   ${PROJECT_SOURCE_DIR}
+  ${OVSCOMMON_INCLUDE_DIRS}
   )
 
 # PAM libraries source files
 set (SOURCES_LIB_PAM_TACACS
   ../pam_tacplus.c
   ../support.c
+  ../author_utils.c
   lib/attrib.c
   lib/crypt.c
   lib/acct_s.c
@@ -71,7 +76,7 @@ set (SOURCES_LIB_PAM_TACACS
 
 add_library (${LIBPAM_TACPLUS} SHARED ${SOURCES_LIB_PAM_TACACS})
 
-target_link_libraries(${LIBPAM_TACPLUS}
+target_link_libraries(${LIBPAM_TACPLUS} ${OVSCOMMON_LIBRARIES}
   util crypt pthread readline audit opsutils crypto pam pam_misc )
 
 install(TARGETS ${LIBPAM_TACPLUS}
