@@ -121,9 +121,26 @@ int _pam_account(pam_handle_t *pamh, int argc, const char **argv, int type,
 	char *typemsg;
 	int status = PAM_SESSION_ERR;
 	int srv_i, tac_fd;
+	const char *auth_status;
 
 	typemsg = tac_acct_flag2str(type);
 	ctrl = _pam_parse(argc, argv);
+
+	if (ctrl & PAM_TAC_BYPASS_ACCT) {
+		/*
+		 * session management is not supported yet, return SUCCESS
+		 * if authentication was successful with Tacacs
+		 */
+		if ((auth_status = pam_getenv(pamh, "auth_status")) == NULL) {
+			syslog(LOG_INFO, "%s: unable to get PAM env"
+			    " auth_status", __FUNCTION__);
+			return PAM_IGNORE;
+		} else {
+			syslog(LOG_INFO, "%s: got PAM env, auth_status = %s",
+			    __FUNCTION__, auth_status);
+			return PAM_SUCCESS;
+		}
+	}
 
 	if (ctrl & PAM_TAC_DEBUG) {
 		syslog(LOG_DEBUG, "%s: [%s] called (pam_tacplus v%u.%u.%u)",
@@ -505,6 +522,18 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		pass = NULL;
 	}
 
+	/*
+	 * set the environment variable if authentication is successful
+	 * this will be used by accounting and session modules
+	 */
+	if (status == PAM_SUCCESS) {
+		if ((pam_putenv(pamh, "auth_status=success")) != PAM_SUCCESS) {
+			syslog(LOG_ERR, "%s: error setting PAM environment",
+			    __FUNCTION__);
+			return PAM_SERVICE_ERR;
+		}
+	}
+
 	return status;
 } /* pam_sm_authenticate */
 
@@ -536,6 +565,7 @@ int pam_sm_acct_mgmt(pam_handle_t * pamh, int flags, int argc,
 	struct areply arep;
 	struct tac_attrib *attr = NULL;
 	int tac_fd;
+        const char *auth_status;
 
 	user = tty = r_addr = NULL;
 	memset(&arep, 0, sizeof(arep));
@@ -546,6 +576,22 @@ int pam_sm_acct_mgmt(pam_handle_t * pamh, int flags, int argc,
 	 we have to pass it via command line argument until a better
 	 solution is found ;) */
 	ctrl = _pam_parse(argc, argv);
+
+	if (ctrl & PAM_TAC_BYPASS_ACCT) {
+		/*
+		 * accounting is not supported yet, return SUCCESS
+		 * if authentication was successful with Tacacs
+		 */
+		if ((auth_status = pam_getenv(pamh, "auth_status")) == NULL) {
+			syslog(LOG_INFO, "%s: unable to get PAM env"
+			    " auth_status", __FUNCTION__);
+			return PAM_IGNORE;
+		} else {
+			syslog(LOG_INFO, "%s: got PAM env, auth_status = %s",
+			    __FUNCTION__, auth_status);
+			return PAM_SUCCESS;
+		}
+	}
 
 	if (ctrl & PAM_TAC_DEBUG)
 		syslog(LOG_DEBUG, "%s: called (pam_tacplus v%u.%u.%u)", __FUNCTION__,
