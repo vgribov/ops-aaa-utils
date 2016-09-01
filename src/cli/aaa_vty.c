@@ -553,67 +553,6 @@ DEFUN(cli_aaa_show_aaa_authenctication,
     return aaa_show_aaa_authenctication();
 }
 
-/* Enable AAA TACACS+ authorization
- * By default disabled */
-static int
-aaa_enable_tacacs_authorization(bool no_form)
-{
-    const struct ovsrec_system *ovs_system = NULL;
-    struct ovsdb_idl_txn *tacacs_txn = NULL;
-    struct smap smap_aaa;
-
-    /* Start of transaction */
-    START_DB_TXN(tacacs_txn);
-
-    ovs_system = ovsrec_system_first(idl);
-
-    if (ovs_system == NULL)
-    {
-        vty_out(vty, "Could not access the System Table\n");
-        ERRONEOUS_DB_TXN(tacacs_txn, "Could not access the System Table");
-    }
-
-    smap_clone(&smap_aaa, &ovs_system->aaa);
-
-    if (!no_form) {
-        smap_replace((struct smap *)&smap_aaa, SYSTEM_TACACS_CONFIG_AUTHOR, TACACS_AUTHOR_TRUE_STR);
-    } else {
-        smap_replace((struct smap *)&smap_aaa, SYSTEM_TACACS_CONFIG_AUTHOR, TACACS_AUTHOR_FALSE_STR);
-    }
-
-    ovsrec_system_set_aaa(ovs_system, &smap_aaa);
-
-    smap_destroy(&smap_aaa);
-
-    /* End of transaction */
-    END_DB_TXN(tacacs_txn);
-}
-
-/* CLI to set AAA TACACS+ authorization  */
-DEFUN (cli_aaa_enable_tacacs_authorization,
-      aaa_enable_tacacs_authorization_cmd,
-      "aaa authorization tacacs+ enable",
-      AAA_STR
-      AAA_USER_AUTHOR_STR
-      AAA_USER_AUTHOR_TYPE_STR
-      TACACS_ENABLE_AUTHOR_STR)
-{
-    return aaa_enable_tacacs_authorization(false);
-}
-
-/* CLI to unset AAA TACACS+ authorization */
-DEFUN (cli_aaa_no_enable_tacacs_authorization,
-      aaa_no_enable_tacacs_authorization_cmd,
-      "no aaa authorization tacacs+ enable",
-      NO_STR
-      AAA_STR
-      AAA_USER_AUTHOR_STR
-      AAA_USER_AUTHOR_TYPE_STR
-      TACACS_ENABLE_AUTHOR_STR)
-{
-    return aaa_enable_tacacs_authorization(true);
-}
-
 static int
 show_aaa_server_groups(const char* group_type)
 {
@@ -2922,8 +2861,6 @@ cli_post_init(void)
     install_element(CONFIG_NODE, &aaa_set_authentication_cmd);
     install_element(CONFIG_NODE, &no_aaa_set_authentication_cmd);
     install_element(CONFIG_NODE, &aaa_set_radius_authentication_cmd);
-    install_element(CONFIG_NODE, &aaa_enable_tacacs_authorization_cmd);
-    install_element(CONFIG_NODE, &aaa_no_enable_tacacs_authorization_cmd);
     install_element(CONFIG_NODE, &aaa_remove_fallback_cmd);
     install_element(CONFIG_NODE, &aaa_no_remove_fallback_cmd);
     install_element(CONFIG_NODE, &aaa_create_tacacs_server_group_cmd);
