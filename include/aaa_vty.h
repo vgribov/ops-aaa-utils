@@ -65,6 +65,7 @@ typedef struct aaa_server_group_prio_params_s {
 #define SYSTEM_AAA_TACACS               "tacacs"
 #define SYSTEM_AAA_TACACS_PLUS          "tacacs_plus"
 #define SYSTEM_AAA_FALLBACK             "fallback"
+#define SYSTEM_AAA_FAIL_THROUGH         "fail_through"
 #define SYSTEM_AAA_RADIUS_LOCAL         "local"
 #define SYSTEM_AAA_RADIUS_AUTH          "radius_auth"
 #define RADIUS_CHAP                     "chap"
@@ -131,7 +132,7 @@ typedef struct aaa_server_group_prio_params_s {
 #define GROUP_NAME_HELP_STR                   "Group Name or family name (Valid family names: tacacs+, radius, and local)\n"
 #define SHOW_TACACS_SERVER_HELP_STR           "Show TACACS+ server configuration\n"
 #define SHOW_DETAILS_HELP_STR                 "Detailed information about TACACS+ servers\n"
-
+#define AAA_ALLOW_FAIL_THROUGH_HELP_STR       "Allow AAA fail-through\n"
 #define AAA_USER_AUTHOR_STR                   "User authorization\n"
 #define AAA_USER_AUTHOR_TYPE_STR              "Authorization type\n"
 #define TACACS_ENABLE_AUTHOR_STR              "Enable TACACS+ authorization\n"

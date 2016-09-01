@@ -70,6 +70,7 @@ AAA_RADIUS_AUTH = "radius_auth"
 AAA_LOCAL = "local"
 AAA_NONE = "none"
 AAA_FALLBACK = "fallback"
+AAA_FAIL_THROUGH = "fail_through"
 AAA_TACACS = "tacacs"
 AAA_TACACS_PLUS = "tacacs_plus"
 AAA_TACACS_AUTH = "tacacs_auth"
@@ -225,6 +226,7 @@ def add_default_row():
 
     # Default values for aaa column
     data[AAA_FALLBACK] = OPS_TRUE
+    data[AAA_FAIL_THROUGH] = OPS_FALSE
     data[AAA_RADIUS] = OPS_FALSE
     data[AAA_RADIUS_AUTH] = RADIUS_PAP
     data[AAA_TACACS] = OPS_FALSE
@@ -459,6 +461,7 @@ def modify_common_auth_access_file(server_list):
     vlog.info("server_list = %s\n" % server_list)
     if not server_list:
         vlog.info("server_list is empty. Returning")
+
         # TODO: For now we are returning here as no group-sequence is configured
         # This is to enable RADIUS-only testing (by not over-writing the
         # common-auth-access file

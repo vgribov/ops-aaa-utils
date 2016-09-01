@@ -460,6 +460,62 @@ DEFUN(cli_aaa_no_remove_fallback,
     return aaa_fallback_option(OPS_FALSE_STR);
 }
 
+const static int
+set_aaa_fail_through(bool allow_fail_through)
+{
+    const struct ovsrec_system *row = NULL;
+    struct ovsdb_idl_txn *status_txn = NULL;
+    struct smap smap_aaa;
+
+    /* Start of transaction */
+    START_DB_TXN(status_txn);
+
+    row = ovsrec_system_first(idl);
+
+    if (row == NULL)
+    {
+        ERRONEOUS_DB_TXN(status_txn, "Could not access the System Table");
+    }
+
+    smap_clone(&smap_aaa, &row->aaa);
+
+    smap_replace(&smap_aaa, SYSTEM_AAA_FAIL_THROUGH,
+                 allow_fail_through ? OPS_TRUE_STR : OPS_FALSE_STR);
+
+    ovsrec_system_set_aaa(row, &smap_aaa);
+
+    smap_destroy(&smap_aaa);
+
+    /* End of transaction */
+    END_DB_TXN(status_txn);
+}
+
+/* CLI to enable fail-through */
+DEFUN(cli_aaa_allow_fail_through,
+      aaa_allow_fail_through_cmd,
+      "aaa authentication allow-fail-through",
+      AAA_STR
+      AAA_AUTHENTICATION_HELP_STR
+      AAA_ALLOW_FAIL_THROUGH_HELP_STR)
+{
+    bool allow_fail_through = true;
+
+    if (CMD_FLAG_NO_CMD & vty_flags) {
+        allow_fail_through = false;
+    }
+
+    return set_aaa_fail_through(allow_fail_through);
+}
+
+/* CLI to disable fail-through  */
+DEFUN_NO_FORM (cli_aaa_allow_fail_through,
+               aaa_allow_fail_through_cmd,
+               "aaa authentication allow-fail-through",
+               AAA_STR
+               AAA_AUTHENTICATION_HELP_STR
+               AAA_ALLOW_FAIL_THROUGH_HELP_STR);
+
+
 /* Displays AAA Authentication configuration.
  * Shows status of the local authentication [Enabled/Disabled]
  * Shows status of the Radius authentication [Enabled/Disabled]
@@ -2863,6 +2919,8 @@ cli_post_init(void)
     install_element(CONFIG_NODE, &aaa_set_radius_authentication_cmd);
     install_element(CONFIG_NODE, &aaa_remove_fallback_cmd);
     install_element(CONFIG_NODE, &aaa_no_remove_fallback_cmd);
+    install_element(CONFIG_NODE, &aaa_allow_fail_through_cmd);
+    install_element(CONFIG_NODE, &no_aaa_allow_fail_through_cmd);
     install_element(CONFIG_NODE, &aaa_create_tacacs_server_group_cmd);
     install_element(CONFIG_NODE, &no_aaa_create_tacacs_server_group_cmd);
     install_element(AAA_SERVER_GROUP_NODE, &aaa_group_add_server_cmd);
