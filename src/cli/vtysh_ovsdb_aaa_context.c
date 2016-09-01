@@ -42,7 +42,6 @@
 static vtysh_ret_val
 vtysh_ovsdb_ovstable_parse_tacacs_cfg(const struct smap *ifrow_aaa, vtysh_ovsdb_cbmsg *p_msg)
 {
-  const char *tcp_port = NULL;
   const char *timeout = NULL;
   const char *passkey = NULL;
   const char *auth_type = NULL;
@@ -58,15 +57,6 @@ vtysh_ovsdb_ovstable_parse_tacacs_cfg(const struct smap *ifrow_aaa, vtysh_ovsdb_
     if (!VTYSH_STR_EQ(passkey, TACACS_SERVER_PASSKEY_DEFAULT))
     {
         vtysh_ovsdb_cli_print(p_msg, "tacacs-server key %s", passkey);
-    }
-  }
-
-  tcp_port = smap_get(ifrow_aaa, SYSTEM_AAA_TACACS_TCP_PORT);
-  if (tcp_port)
-  {
-    if (!VTYSH_STR_EQ(tcp_port, TACACS_SERVER_TCP_PORT_DEFAULT_VAL))
-    {
-        vtysh_ovsdb_cli_print(p_msg, "tacacs-server port %s", tcp_port);
     }
   }
 
@@ -204,16 +194,16 @@ vtysh_display_tacacs_server_table(vtysh_ovsdb_cbmsg *p_msg)
       char *append_buff = buff;
       row = (const struct ovsrec_tacacs_server *)nodes[idx]->data;
 
-      if (row->tcp_port != TACACS_SERVER_TCP_PORT_DEFAULT)
+      if (row->tcp_port && row->tcp_port != TACACS_SERVER_TCP_PORT_DEFAULT)
          append_buff += sprintf(append_buff, " port %ld", row->tcp_port);
 
-      if (row->timeout != TACACS_SERVER_TIMEOUT_DEFAULT)
-         append_buff += sprintf(append_buff, " timeout %ld", row->timeout);
+      if (row->timeout)
+         append_buff += sprintf(append_buff, " timeout %ld", *(row->timeout));
 
-      if (!VTYSH_STR_EQ(row->passkey, TACACS_SERVER_PASSKEY_DEFAULT))
+      if (row->passkey)
          append_buff += sprintf(append_buff, " key %s", row->passkey);
 
-      if (!VTYSH_STR_EQ(row->auth_type, TACACS_SERVER_AUTH_TYPE_DEFAULT))
+      if (row->auth_type)
          append_buff += sprintf(append_buff, " auth-type %s", row->auth_type);
 
       vtysh_ovsdb_cli_print(p_msg, "tacacs-server host %s%s",
@@ -326,7 +316,7 @@ vtysh_display_aaa_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
           continue;
       }
       vtysh_ovsdb_cli_print(p_msg, "!");
-      vtysh_ovsdb_cli_print(p_msg, "aaa group server %s %s", group_row->group_type, name);
+      vtysh_ovsdb_cli_print(p_msg, "aaa group server tacacs+ %s", name);
 
       for(idx = 0; idx < count; idx++)
       {
