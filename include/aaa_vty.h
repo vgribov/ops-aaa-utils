@@ -66,6 +66,7 @@ typedef struct aaa_server_group_prio_params_s {
 #define SYSTEM_AAA_TACACS_PLUS          "tacacs_plus"
 #define SYSTEM_AAA_FALLBACK             "fallback"
 #define SYSTEM_AAA_FAIL_THROUGH         "fail_through"
+#define SYSTEM_AAA_FAIL_THROUGH_DEFAULT "false"
 #define SYSTEM_AAA_RADIUS_LOCAL         "local"
 #define SYSTEM_AAA_RADIUS_AUTH          "radius_auth"
 #define RADIUS_CHAP                     "chap"

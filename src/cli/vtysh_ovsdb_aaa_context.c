@@ -273,6 +273,38 @@ vtysh_display_aaa_server_group_priority(vtysh_ovsdb_cbmsg *p_msg)
 }
 
 /*-----------------------------------------------------------------------------
+| Function : vtysh_display_aaa_fail_through_status
+| Responsibility : display AAA fail-through status
+| scope : static
+| Parameters :
+|    ifrow_aaa : aaa column object pointer
+|    pmsg : callback arguments from show running config handler
+| Return : e_vtysh_error, e_vtysh_ok
+-----------------------------------------------------------------------------*/
+static vtysh_ret_val
+vtysh_display_aaa_fail_through_status(const struct smap *ifrow_aaa, vtysh_ovsdb_cbmsg *p_msg)
+{
+  const char *fail_through = NULL;
+
+  if(ifrow_aaa == NULL)
+  {
+    return e_vtysh_error;
+  }
+
+  fail_through = smap_get(ifrow_aaa, SYSTEM_AAA_FAIL_THROUGH);
+  if (fail_through)
+  {
+    if (!VTYSH_STR_EQ(fail_through, SYSTEM_AAA_FAIL_THROUGH_DEFAULT))
+    {
+        vtysh_ovsdb_cli_print(p_msg, "aaa authentication allow-fail-through");
+    }
+  }
+
+  return e_vtysh_ok;
+}
+
+
+/*-----------------------------------------------------------------------------
 | Function : vtysh_display_aaa_server_group_table
 | Responsibility : display AAA Server Group table
 | scope : static
@@ -363,8 +395,16 @@ vtysh_config_context_aaa_clientcallback(void *p_private)
        /* Generate CLI for aaa column */
        vtysh_ovsdb_ovstable_parse_tacacs_cfg(&vswrow->aaa, p_msg);
     }
+
     /* Generate CLI for the Tacacs_Server Table*/
     vtysh_display_tacacs_server_table(p_msg);
+
+    if (vswrow)
+    {
+        /* Generate CLI for fail-through */
+        vtysh_display_aaa_fail_through_status(&vswrow->aaa, p_msg);
+    }
+
     /* Generate CLI for the AAA_Server_Group Table*/
     vtysh_display_aaa_server_group_table(p_msg);
     /* Generate CLI for the AAA_Server_Group_Prio Table*/

@@ -538,6 +538,17 @@ aaa_show_aaa_authenctication()
 
     vty_out(vty, "AAA Authentication:%s", VTY_NEWLINE);
 
+    /* Display fail-through status */
+    if (!strcmp(smap_get(&row->aaa, SYSTEM_AAA_FAIL_THROUGH), OPS_TRUE_STR))
+    {
+        vty_out(vty, "  Fail-through\t\t\t\t: %s%s", "Enabled", VTY_NEWLINE);
+    }
+    else
+    {
+        vty_out(vty, "  Fail-through\t\t\t\t: %s%s", "Disabled", VTY_NEWLINE);
+    }
+
+    /* Display fallback to local status */
     if (!strcmp(smap_get(&row->aaa, SYSTEM_AAA_FALLBACK), OPS_TRUE_STR))
     {
         vty_out(vty, "  Fallback to local authentication\t: %s%s",
