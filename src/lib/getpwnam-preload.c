@@ -35,13 +35,10 @@
 #define str(s) #s
 
 typedef struct passwd *(*getpwnam_type)(const char *name);
-static const char *last_pw_name = NULL;
 
 struct passwd *getpwnam(const char *name) {
     struct passwd *pw;
     getpwnam_type orig_getpwnam;
-
-    free((void *) last_pw_name);
 
     /* TODO: remove the debugs */
     syslog(LOG_ERR, "Tacacs_Dev: entering %s for user %s, TEMPLATE_USER = %s ",
@@ -55,10 +52,6 @@ struct passwd *getpwnam(const char *name) {
 
         /* TODO: rename it to appropriate user */
         pw = orig_getpwnam(xstr(TEMPLATE_USER));
-        if (pw != NULL) {
-            pw->pw_name = strdup(name);
-            last_pw_name = pw->pw_name;
-        }
     }
 
     return pw;

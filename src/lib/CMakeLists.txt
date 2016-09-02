@@ -19,7 +19,7 @@ project ("aaa_utils_lib")
 set (INCL_DIR ${CMAKE_SOURCE_DIR}/include)
 set (LIBAAA_UTILS_LIB aaa_utils_lib)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DTEMPLATE_USER=\"admin\" -std=gnu99 -Wall -Werror")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DTEMPLATE_USER=\"netop\" -std=gnu99 -Wall -Werror")
 
 
 add_definitions(-DHAVE_CONFIG_H -DHAVE_SOCKLEN_T)
