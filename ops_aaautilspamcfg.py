@@ -138,6 +138,10 @@ SFTP_SERVER_CONFIG = "sftp_server_enable"
 PERFORMED = "performed"
 URL = "url"
 
+global_tacacs_passkey = TACACS_SERVER_PASSKEY_DEFAULT
+global_tacacs_timeout = TACACS_SERVER_TIMEOUT_DEFAULT
+global_tacacs_auth = TACACS_PAP
+
 #---------------- unixctl_exit --------------------------
 
 
@@ -234,7 +238,6 @@ def add_default_row():
     data[SSH_PASSKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
     data[SSH_PUBLICKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
     # Default values for tacacs
-    data[GBL_TACACS_SERVER_PORT] = TACACS_SERVER_TCP_PORT_DEFAULT
     data[GBL_TACACS_SERVER_PASSKEY] = TACACS_SERVER_PASSKEY_DEFAULT
     data[GBL_TACACS_SERVER_TIMEOUT] = TACACS_SERVER_TIMEOUT_DEFAULT
     data[GBL_TACACS_SERVER_AUTH_TYPE] = TACACS_PAP
@@ -411,6 +414,21 @@ def update_ssh_config_file():
 def get_server_list(session_type):
 
     server_list = []
+
+    global_tacacs_passkey = TACACS_SERVER_PASSKEY_DEFAULT
+    global_tacacs_timeout = TACACS_SERVER_TIMEOUT_DEFAULT
+    global_tacacs_auth = TACACS_PAP
+
+    for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
+        if ovs_rec.aaa and ovs_rec.aaa is not None:
+            for key, value in ovs_rec.aaa.iteritems():
+                if key == GBL_TACACS_SERVER_TIMEOUT:
+                    global_tacacs_timeout = value
+                if key == GBL_TACACS_SERVER_AUTH_TYPE:
+                    global_tacacs_auth = value
+                if key == GBL_TACACS_SERVER_PASSKEY:
+                    global_tacacs_passkey = value
+
     for ovs_rec in idl.tables[AAA_SERVER_GROUP_PRIO_TABLE].rows.itervalues():
         if ovs_rec.session_type != session_type:
             continue
@@ -501,7 +519,20 @@ def modify_common_auth_access_file(server_list):
             if server_type == AAA_LOCAL:
                 auth_line = "auth\tsufficient\t" + PAM_LOCAL_MODULE + " nullok\n"
             elif server_type == AAA_TACACS_PLUS:
-                auth_line = "auth\tsufficient\t" + PAM_TACACS_MODULE + "\tdebug server=" + server.ip_address + " secret=" + str(server.passkey) + " login=" + server.auth_type + " timeout=" + str(server.timeout) + "\n"
+                ip_address = server.ip_address
+                if len(server.timeout) == 0:
+                    timeout = global_tacacs_timeout
+                else:
+                    timeout = server.timeout[0]
+                if len(server.auth_type) == 0:
+                    auth_type = global_tacacs_auth
+                else:
+                    auth_type = server.auth_type[0]
+                if len(server.passkey) == 0:
+                    passkey = global_tacacs_passkey
+                else:
+                    passkey = server.passkey[0]
+                auth_line = "auth\tsufficient\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + "\n"
 
             f.write(auth_line)
 
@@ -512,7 +543,20 @@ def modify_common_auth_access_file(server_list):
         if server_type == AAA_LOCAL:
             auth_line = "auth\t[success=1 default=ignore]\t" + PAM_LOCAL_MODULE + "nullok\n"
         elif server_type == AAA_TACACS_PLUS:
-            auth_line = "auth\t[success=1 default=ignore]\t" + PAM_TACACS_MODULE + "\tdebug server=" + server.ip_address + " secret=" + str(server.passkey) + " login=" + server.auth_type + " timeout=" + str(server.timeout) + "\n"
+            ip_address = server.ip_address
+            if len(server.timeout) == 0:
+                timeout = global_tacacs_timeout
+            else:
+                timeout = server.timeout[0]
+            if len(server.auth_type) == 0:
+                auth_type = global_tacacs_auth
+            else:
+                auth_type = server.auth_type[0]
+            if len(server.passkey) == 0:
+                passkey = global_tacacs_passkey
+            else:
+                passkey = server.passkey[0]
+            auth_line = "auth\t[success=1 default=ignore]\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + "\n"
 
         f.write(auth_line)
 
