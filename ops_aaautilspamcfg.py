@@ -71,6 +71,7 @@ AAA_LOCAL = "local"
 AAA_NONE = "none"
 AAA_FALLBACK = "fallback"
 AAA_FAIL_THROUGH = "fail_through"
+AAA_FAIL_THROUGH_ENABLED = False
 AAA_TACACS = "tacacs"
 AAA_TACACS_PLUS = "tacacs_plus"
 AAA_TACACS_AUTH = "tacacs_auth"
@@ -166,7 +167,6 @@ def db_get_system_status(data):
                 return True
 
     return False
-
 
 #------------------ system_is_configured() ----------------
 def system_is_configured():
@@ -429,6 +429,13 @@ def get_server_list(session_type):
                     global_tacacs_auth = value
                 if key == GBL_TACACS_SERVER_PASSKEY:
                     global_tacacs_passkey = value
+                if key == AAA_FAIL_THROUGH:
+                    global AAA_FAIL_THROUGH_ENABLED
+
+                    if value == AAA_TRUE_FLAG:
+                        AAA_FAIL_THROUGH_ENABLED = True
+                    else:
+                        AAA_FAIL_THROUGH_ENABLED = False
 
     for ovs_rec in idl.tables[AAA_SERVER_GROUP_PRIO_TABLE].rows.itervalues():
         if ovs_rec.session_type != session_type:
@@ -510,11 +517,14 @@ def modify_common_auth_access_file(server_list):
         f.write(file_header)
 
         # Now write the server list to the config file
-        # TODO - Check the value of "FAIL_THROUGH" & decide on sufficient/requisite
+        PAM_CONTROL_VALUE = "requisite"
+        if AAA_FAIL_THROUGH_ENABLED:
+            PAM_CONTROL_VALUE = "sufficient"
+
         for server, server_type in server_list[:-1]:
             auth_line = ""
             if server_type == AAA_LOCAL:
-                auth_line = "auth\tsufficient\t" + PAM_LOCAL_MODULE + " nullok\n"
+                auth_line = "auth\t" + PAM_CONTROL_VALUE + "\t" + PAM_LOCAL_MODULE + " nullok\n"
             elif server_type == AAA_TACACS_PLUS:
                 ip_address = server.ip_address
                 if len(server.timeout) == 0:
@@ -529,7 +539,7 @@ def modify_common_auth_access_file(server_list):
                     passkey = global_tacacs_passkey
                 else:
                     passkey = server.passkey[0]
-                auth_line = "auth\tsufficient\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + "\n"
+                auth_line = "auth\t" + PAM_CONTROL_VALUE + "\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + "\n"
 
             f.write(auth_line)
 

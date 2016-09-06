@@ -20,9 +20,6 @@
 OpenSwitch Test for switchd related configurations.
 """
 
-# from pytest import set_trace
-# from time import sleep
-
 TOPOLOGY = """
 # +-------+
 # |  ops1 |
@@ -301,6 +298,49 @@ def noradiusretries(dut):
     assert 'Retries\t\t: 1' in out, \
         'Test to remove radius server Retries and reset to default: Failed'
 
+def enable_fail_through(dut):
+    dut('configure terminal')
+    dut('aaa authentication allow-fail-through')
+    dut('end')
+    out = dut('show running-config')
+    lines = out.splitlines()
+    count = 0
+    for line in lines:
+        if "aaa authentication allow-fail-through" in line:
+            count = count + 1
+
+    out = dut('show aaa authentication')
+    lines = out.splitlines()
+    for line in lines:
+        if "Fail-through\t\t\t\t: Enabled" in line:
+            count = count + 1
+
+    assert count == 2, \
+            'Test to enable fail-through : Failed'
+
+def disable_fail_through(dut):
+    dut('configure terminal')
+    dut('no aaa authentication allow-fail-through')
+    dut('end')
+    out = dut('show aaa authentication')
+    lines = out.splitlines()
+
+    count = 0
+    for line in lines:
+        if "Fail-through\t\t\t\t: Disabled" in line:
+            count = count + 1
+
+    assert count == 1, \
+            'Test to disable fail-through : Failed'
+
+    count = 0
+    out = dut('show running-config')
+    lines = out.splitlines()
+    for line in lines:
+        if "aaa authentication allow-fail-through" in line:
+            count = count + 1
+    assert count == 0, \
+            'Test to disable fail-through : Failed'
 
 def test_vtysh_ct_aaa(topology, step):
     ops1 = topology.get('ops1')
@@ -311,6 +351,12 @@ def test_vtysh_ct_aaa(topology, step):
 
     step('Test to disable SSH password authentication')
     disablepasskeyauth(ops1)
+
+    step('Test to enable fail-through')
+    enable_fail_through(ops1)
+
+    step('Test to disable fail-through')
+    disable_fail_through(ops1)
 
     step('Test to enable SSH public key authentication')
     enablepublickeyauth(ops1)
