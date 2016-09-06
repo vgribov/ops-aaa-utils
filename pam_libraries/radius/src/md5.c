@@ -141,7 +141,7 @@ void MD5Final(unsigned char digest[16], struct MD5Context *ctx)
 	count = (ctx->bits[0] >> 3) & 0x3F;
 
 	/* Set the first char of padding to 0x80. This is safe since there is always at least one byte free */
-	p = ctx->in + count;
+	p = (unsigned char *) ctx->in + count;
 	*p++ = 0x80;
 
 	/* Bytes of padding needed to make 64 bytes */

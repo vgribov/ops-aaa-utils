@@ -42,7 +42,8 @@
 struct MD5Context {
 	uint32_t buf[4];
 	uint32_t bits[2];
-	unsigned char in[64];
+	//unsigned char in[64];
+  uin32_t in[64];
 };
 
 void MD5Init(struct MD5Context *);
