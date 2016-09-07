@@ -137,8 +137,6 @@ typedef struct aaa_server_group_prio_params_s {
 #define AAA_USER_AUTHOR_STR                   "User authorization\n"
 #define AAA_USER_AUTHOR_TYPE_STR              "Authorization type\n"
 #define TACACS_ENABLE_AUTHOR_STR              "Enable TACACS+ authorization\n"
-#define TACACS_AUTHOR_TRUE_STR                "true"
-#define TACACS_AUTHOR_FALSE_STR               "false"
 void cli_pre_init(void);
 void cli_post_init(void);
 #endif /* _AAA_VTY_H */
