@@ -75,8 +75,8 @@ AAA_TACACS = "tacacs"
 AAA_TACACS_PLUS = "tacacs_plus"
 AAA_TACACS_AUTH = "tacacs_auth"
 
-OPS_TRUE = "true"
-OPS_FALSE = "false"
+AAA_TRUE_FLAG = "true"
+AAA_FALSE_FLAG = "false"
 
 AAA_SERVER_GROUP_TABLE = "AAA_Server_Group"
 AAA_SERVER_GROUP_IS_STATIC = "is_static"
@@ -229,11 +229,11 @@ def add_default_row():
     auto_provisioning_data = {}
 
     # Default values for aaa column
-    data[AAA_FALLBACK] = OPS_TRUE
-    data[AAA_FAIL_THROUGH] = OPS_FALSE
-    data[AAA_RADIUS] = OPS_FALSE
+    data[AAA_FALLBACK] = AAA_TRUE_FLAG
+    data[AAA_FAIL_THROUGH] = AAA_FALSE_FLAG
+    data[AAA_RADIUS] = AAA_FALSE_FLAG
     data[AAA_RADIUS_AUTH] = RADIUS_PAP
-    data[AAA_TACACS] = OPS_FALSE
+    data[AAA_TACACS] = AAA_FALSE_FLAG
     data[AAA_TACACS_AUTH] = TACACS_PAP
     data[SSH_PASSKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
     data[SSH_PUBLICKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
@@ -624,26 +624,26 @@ def modify_common_auth_session_file(fallback_value, radius_value,
                 del contents[index]
                 break
 
-        if radius_value == OPS_FALSE:
+        if radius_value == AAA_FALSE_FLAG:
             contents.insert(index, local_auth[count])
 
-        if radius_value == OPS_TRUE and fallback_value == OPS_FALSE  \
+        if radius_value == AAA_TRUE_FLAG and fallback_value == AAA_FALSE_FLAG  \
            and count == 0:
             contents.insert(index, radius_auth[count] + radius_lib_suffix +
                             "\tretry=" + radius_retries + "\n")
 
-        if radius_value == OPS_TRUE and fallback_value == OPS_FALSE and  \
+        if radius_value == AAA_TRUE_FLAG and fallback_value == AAA_FALSE_FLAG and  \
            count == 1:
             contents.insert(index, radius_auth[count])
 
-        if radius_value == OPS_TRUE and fallback_value == OPS_TRUE and \
+        if radius_value == AAA_TRUE_FLAG and fallback_value == AAA_TRUE_FLAG and \
            count == 0:
             contents.insert(index, fallback_local_auth[count])
             contents.insert(index, fallback_and_radius_auth[count] +
                             radius_lib_suffix + "\tretry=" +
                             radius_retries + "\n")
 
-        if radius_value == OPS_TRUE and fallback_value == OPS_TRUE \
+        if radius_value == AAA_TRUE_FLAG and fallback_value == AAA_TRUE_FLAG \
            and count == 1:
             contents.insert(index, fallback_local_auth[count])
             contents.insert(index, fallback_and_radius_auth[count])
@@ -666,8 +666,8 @@ def update_access_files():
     passwdText = "pam_unix.so"
     radiusText = "/usr/lib/security/libpam_radius.so"
     commonPasswordText = "pam_unix.so obscure sha512"
-    fallback_value = OPS_TRUE
-    radius_value = OPS_FALSE
+    fallback_value = AAA_TRUE_FLAG
+    radius_value = AAA_FALSE_FLAG
     radius_auth_value = RADIUS_PAP
     # Hardcoded file path
     filename = [PAM_ETC_CONFIG_DIR + "common-password-access",
@@ -683,7 +683,7 @@ def update_access_files():
                     fallback_value = value
                 if key == AAA_RADIUS:
                     radius_value = value
-                    if value == OPS_TRUE:
+                    if value == AAA_TRUE_FLAG:
                         my_auth = "radius"
                     else:
                         my_auth = "passwd"

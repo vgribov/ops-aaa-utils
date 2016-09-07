@@ -35,7 +35,7 @@ OVS_SCHEMA = '/usr/share/openvswitch/vswitch.ovsschema'
 type_startup_config = "startup"
 
 SYSTEM_TABLE = "System"
-OPS_TRUE = "True"
+AAA_TRUE_FLAG = "True"
 PERFORMED = "performed"
 URL = "url"
 AUTOPROVISION_SCRIPT = '/var/tmp/autoprovision'
@@ -215,7 +215,7 @@ def main():
 
     if os.path.exists(AUTOPROVISION_STATUS_FILE):
         vlog.info("Autoprovisioning already completed")
-        update_autoprovision_status(OPS_TRUE, argv[1])
+        update_autoprovision_status(AAA_TRUE_FLAG, argv[1])
         idl.close()
         return
 
@@ -245,9 +245,9 @@ def main():
                 idl.close()
                 return
 
-            update_autoprovision_status(OPS_TRUE, argv[1])
+            update_autoprovision_status(AAA_TRUE_FLAG, argv[1])
             vlog.info("Autoprovision status: performed = %s URL =  %s"
-                      % (OPS_TRUE, argv[1]))
+                      % (AAA_TRUE_FLAG, argv[1]))
         else:
             vlog.err("Error, executing autoprovision script returned error %d"
                      % ret)

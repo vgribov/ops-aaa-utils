@@ -114,19 +114,19 @@ aaa_set_global_status(const char *status, bool no_flag)
     /* handle no command: reset aaa authentication to local */
     if (no_flag)
     {
-        smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_FALSE_STR);
+        smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, AAA_FALSE_FLAG_STR);
         smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
     }
     else
     {
         if (strcmp(SYSTEM_AAA_RADIUS, status) == 0)
         {
-            smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_TRUE_STR);
+            smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, AAA_TRUE_FLAG_STR);
             smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
         }
         else if (strcmp(SYSTEM_AAA_RADIUS_LOCAL, status) == 0)
         {
-            smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_FALSE_STR);
+            smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, AAA_FALSE_FLAG_STR);
             smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
         }
     }
@@ -339,12 +339,12 @@ static int aaa_set_radius_authentication(const char *auth)
 
     if (strcmp(RADIUS_CHAP, auth) == 0)
     {
-        smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_TRUE_STR);
+        smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, AAA_TRUE_FLAG_STR);
         smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_CHAP);
     }
     else if (strcmp(RADIUS_PAP, auth) == 0)
     {
-        smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, OPS_TRUE_STR);
+        smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS, AAA_TRUE_FLAG_STR);
         smap_replace(&smap_aaa, SYSTEM_AAA_RADIUS_AUTH, RADIUS_PAP);
     }
 
@@ -408,13 +408,13 @@ aaa_fallback_option(const char *value)
 
     smap_clone(&smap_aaa, &row->aaa);
 
-    if ((strcmp(value, OPS_TRUE_STR) == 0))
+    if ((strcmp(value, AAA_TRUE_FLAG_STR) == 0))
     {
-        smap_replace(&smap_aaa, SYSTEM_AAA_FALLBACK, OPS_TRUE_STR);
+        smap_replace(&smap_aaa, SYSTEM_AAA_FALLBACK, AAA_TRUE_FLAG_STR);
     }
     else
     {
-        smap_replace(&smap_aaa, SYSTEM_AAA_FALLBACK, OPS_FALSE_STR);
+        smap_replace(&smap_aaa, SYSTEM_AAA_FALLBACK, AAA_FALSE_FLAG_STR);
     }
 
     ovsrec_system_set_aaa(row, &smap_aaa);
@@ -443,7 +443,7 @@ DEFUN(cli_aaa_remove_fallback,
         "Fallback authentication\n"
         "Radius server unreachable\n" "Local authentication (Default)")
 {
-    return aaa_fallback_option(OPS_TRUE_STR);
+    return aaa_fallback_option(AAA_TRUE_FLAG_STR);
 }
 
 /* CLI to disable fallback to local authentication. */
@@ -457,7 +457,7 @@ DEFUN(cli_aaa_no_remove_fallback,
         "Fallback authentication\n"
         "Radius server unreachable\n" "Local authentication (Default)")
 {
-    return aaa_fallback_option(OPS_FALSE_STR);
+    return aaa_fallback_option(AAA_FALSE_FLAG_STR);
 }
 
 const static int
@@ -480,7 +480,7 @@ set_aaa_fail_through(bool allow_fail_through)
     smap_clone(&smap_aaa, &row->aaa);
 
     smap_replace(&smap_aaa, SYSTEM_AAA_FAIL_THROUGH,
-                 allow_fail_through ? OPS_TRUE_STR : OPS_FALSE_STR);
+                 allow_fail_through ? AAA_TRUE_FLAG_STR : AAA_FALSE_FLAG_STR);
 
     ovsrec_system_set_aaa(row, &smap_aaa);
 
@@ -539,7 +539,7 @@ aaa_show_aaa_authenctication()
     vty_out(vty, "AAA Authentication:%s", VTY_NEWLINE);
 
     /* Display fail-through status */
-    if (!strcmp(smap_get(&row->aaa, SYSTEM_AAA_FAIL_THROUGH), OPS_TRUE_STR))
+    if (!strcmp(smap_get(&row->aaa, SYSTEM_AAA_FAIL_THROUGH), AAA_TRUE_FLAG_STR))
     {
         vty_out(vty, "  Fail-through\t\t\t\t: %s%s", "Enabled", VTY_NEWLINE);
     }
@@ -549,7 +549,7 @@ aaa_show_aaa_authenctication()
     }
 
     /* Display fallback to local status */
-    if (!strcmp(smap_get(&row->aaa, SYSTEM_AAA_FALLBACK), OPS_TRUE_STR))
+    if (!strcmp(smap_get(&row->aaa, SYSTEM_AAA_FALLBACK), AAA_TRUE_FLAG_STR))
     {
         vty_out(vty, "  Fallback to local authentication\t: %s%s",
                 "Enabled", VTY_NEWLINE);

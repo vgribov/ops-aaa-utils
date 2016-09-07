@@ -73,8 +73,8 @@ typedef struct aaa_server_group_prio_params_s {
 #define RADIUS_PAP                      "pap"
 #define TACACS_CHAP                     "chap"
 #define TACACS_PAP                      "pap"
-#define OPS_TRUE_STR                        "true"
-#define OPS_FALSE_STR                       "false"
+#define AAA_TRUE_FLAG_STR                        "true"
+#define AAA_FALSE_FLAG_STR                       "false"
 
 /* TODO relocate to schema/openswitch-idl.h */
 #define SYSTEM_AAA_TACACS_TIMEOUT              "tacacs_timeout"
