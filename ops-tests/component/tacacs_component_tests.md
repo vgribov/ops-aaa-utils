@@ -275,3 +275,83 @@ Modified timeout value for TACACS+ server under consideration is reflected in `s
 #### Test Fail Criteria
 If the updated timeout is not correctly reflected then the test would fail.
 
+## Test creation of TACACS+ server group
+### Setup
+#### Topology diagram
+```ditaa
+[s1]
+```
+### Description
+- Create two TACACS+ server group sg1 sg2
+
+### Test result criteria
+#### Test pass criteria
+The two newly created TACACS+ server groups are present in `show running-config` comand output.
+#### Test Fail Criteria
+The two TACACS+ server groups are absent from the `show running-config` command output.
+
+## Test assigment of TACACS+ server to server group
+### Setup
+#### Topology diagram
+```ditaa
+[s1]
+```
+### Description
+- Assign four previously created TACACS+ servers to TACACS+ server group sg1
+
+### Test result criteria
+#### Test pass criteria
+The four TACACS+ servers present in server group table as newly assigned sg1 group member in `show aaa server-group` comand output.
+#### Test Fail Criteria
+The four TACACS+ servers present in server group table as default tacacs_plus group memmber in the `show aaa server-group` command output.
+
+## Test assigment of previously assigned TACACS+ server to a new server group
+### Setup
+#### Topology diagram
+```ditaa
+[s1]
+```
+### Description
+- Assign TACACS+ server group sg1 group member to server group sg2
+
+### Test result criteria
+#### Test pass criteria
+Error message `TACACS+ server already assigned to a group!` returned.
+The TACACS+ server present in server group table as mebmber of its original group sg1 in `show aaa server-group` comand output.
+
+#### Test Fail Criteria
+The TACACS+ server present in server group table as newly assigned sg2 group member in `show aaa server-group` comand output.
+
+## Test removal of TACACS+ server from TACACS+ server group
+### Setup
+#### Topology diagram
+```ditaa
+[s1]
+```
+### Description
+- Remove a previously assigned TACACS+ server from its server group
+
+### Test result criteria
+#### Test pass criteria
+The removed TACACS+ server present in server group table as default tacacs_plus group member in `show aaa server-group` comand output.
+
+#### Test Fail Criteria
+The removed TACACS+ server present in server group table as member of its original group in `show aaa server-group` command output
+
+## Test removal of TACACS+ server group
+### Setup
+#### Topology diagram
+```ditaa
+[s1]
+```
+### Description
+- Remove TACACS+ server group sg1
+
+### Test result criteria
+#### Test pass criteria
+The removed TACACS+ server group sg1 is absent from the `show running-config` command output.
+The group member of removed TACACS+ server group sg1 present in server group table as default tacacs_plus group member in `show aaa server-group` comand output.
+
+#### Test Fail Criteria
+The removed TACACS+ server group sg1 present in the `show running-config` command output.
+The group member of removed TACACS+ server group sg1 present in server group table as member of sg1 group in `show aaa server-group` comand output.

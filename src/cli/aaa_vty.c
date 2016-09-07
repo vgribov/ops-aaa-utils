@@ -669,7 +669,7 @@ show_aaa_server_groups(const char* group_type)
     OVSREC_AAA_SERVER_GROUP_FOR_EACH(group_row, idl)
     {
         bool empty_group = true;
-        if (group_type && !VTYSH_STR_EQ(group_type, group_row->group_type))
+        if (!VTYSH_STR_EQ(group_row->group_type, SYSTEM_AAA_TACACS_PLUS))
         {
             continue;
         }
