@@ -435,13 +435,13 @@ def get_server_list(session_type):
 
         size = len(ovs_rec.authentication_group_prios)
         if size == 1 and ovs_rec.authentication_group_prios.keys()[0] == PRIO_ZERO:
-            vlog.info("Default local authentication configured\n")
+            vlog.info("AAA: Default local authentication configured\n")
         else:
             for prio, group in sorted(ovs_rec.authentication_group_prios.iteritems()):
                 if group is None:
                     continue
 
-                vlog.info("group_name = %s, group_type = %s\n" % (group.group_name, group.group_type))
+                vlog.info("AAA: group_name = %s, group_type = %s\n" % (group.group_name, group.group_type))
 
                 server_table = ""
                 if group.group_type == AAA_TACACS_PLUS:
@@ -454,7 +454,7 @@ def get_server_list(session_type):
                 if server_table == RADIUS_SERVER_TABLE or server_table == TACACS_SERVER_TABLE:
                     group_server_dict = {}
                     for server in idl.tables[server_table].rows.itervalues():
-                        vlog.info("Server %s group = %s group_prio = %s default_prio = %s\n" %
+                        vlog.info("AAA: Server %s group = %s group_prio = %s default_prio = %s\n" %
                                    (server.ip_address, server.group[0].group_name, server.group_priority, server.default_priority))
 
                         if server.group[0] == group:
@@ -463,7 +463,7 @@ def get_server_list(session_type):
                             else:
                                 group_server_dict[server.group_priority] = server
 
-                    vlog.info("group_server_dict = %s\n" % (group_server_dict))
+                    vlog.info("AAA: group_server_dict = %s\n" % (group_server_dict))
 
                     for server_prio, server in sorted(group_server_dict.iteritems()):
                         server_list.append((server, group.group_type))
@@ -476,15 +476,11 @@ def modify_common_auth_access_file(server_list):
     modify common-auth-access file, based on RADIUS, TACACS+ and local
     values set in the DB
     '''
-    vlog.info("server_list = %s\n" % server_list)
+    vlog.info("AAA: server_list = %s\n" % server_list)
     if not server_list:
-        vlog.info("server_list is empty. Returning")
+        vlog.info("AAA: server_list is empty. Adding default local")
 
-        # TODO: For now we are returning here as no group-sequence is configured
-        # This is to enable RADIUS-only testing (by not over-writing the
-        # common-auth-access file
-        # What we should be doing is to configure the local authentication
-        return
+        server_list.append((0, AAA_LOCAL))
 
     file_header = "# THIS IS AN AUTO-GENERATED FILE\n" \
                   "#\n" \
@@ -541,7 +537,7 @@ def modify_common_auth_access_file(server_list):
         server_type = server_list[-1][1]
         auth_line = ""
         if server_type == AAA_LOCAL:
-            auth_line = "auth\t[success=1 default=ignore]\t" + PAM_LOCAL_MODULE + "nullok\n"
+            auth_line = "auth\t[success=1 default=ignore]\t" + PAM_LOCAL_MODULE + " nullok\n"
         elif server_type == AAA_TACACS_PLUS:
             ip_address = server.ip_address
             if len(server.timeout) == 0:
