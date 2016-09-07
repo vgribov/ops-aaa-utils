@@ -218,15 +218,15 @@ vtysh_display_tacacs_server_table(vtysh_ovsdb_cbmsg *p_msg)
 
 
 /*-----------------------------------------------------------------------------
-| Function : vtysh_display_aaa_server_group_priority
-| Responsibility : display tacacs server group_priority
+| Function : vtysh_display_aaa_server_group_priority_authentication
+| Responsibility : display tacacs server group_priority for tacacs authentication
 | scope : static
 | Parameters :
 |    pmsg : callback arguments from show running config handler|
 | Return : vtysh_ret_val, e_vtysh_ok
 -----------------------------------------------------------------------------*/
 static vtysh_ret_val
-vtysh_display_aaa_server_group_priority(vtysh_ovsdb_cbmsg *p_msg)
+vtysh_display_aaa_server_group_priority_authentication(vtysh_ovsdb_cbmsg *p_msg)
 {
   int count = 0;
   const struct ovsrec_aaa_server_group *group_row = NULL;
@@ -305,6 +305,56 @@ vtysh_display_aaa_fail_through_status(const struct smap *ifrow_aaa, vtysh_ovsdb_
 
 
 /*-----------------------------------------------------------------------------
+| Function : vtysh_display_aaa_server_group_priority_authorization
+| Responsibility : display tacacs server group_priority for tacacs authorization
+| scope : static
+| Parameters :
+|    pmsg : callback arguments from show running config handler|
+| Return : vtysh_ret_val, e_vtysh_ok
+-----------------------------------------------------------------------------*/
+static vtysh_ret_val
+vtysh_display_aaa_server_group_priority_authorization(vtysh_ovsdb_cbmsg *p_msg)
+{
+  int count = 0;
+  const struct ovsrec_aaa_server_group *group_row = NULL;
+  const struct ovsrec_aaa_server_group_prio *group_prio_list = NULL;
+
+  group_prio_list = ovsrec_aaa_server_group_prio_first(p_msg->idl);
+
+  count = group_prio_list->n_authorization_group_prios;
+
+  if (count > 1)
+  {
+     char buff[BUFSIZE]= {0};
+     char *append_buff = buff;
+     int offset = 0;
+     int iter = 0;
+     for(iter = 0; iter < count; iter ++)
+     {
+         group_row = group_prio_list->value_authorization_group_prios[iter];
+
+         offset += snprintf(append_buff + offset, BUFSIZE - offset, " %s", group_row->group_name);
+     }
+
+     vtysh_ovsdb_cli_print(p_msg, "aaa authorization commands default group%s", buff);
+  }
+  else
+  {
+     group_row = group_prio_list->value_authorization_group_prios[0];
+     if (!VTYSH_STR_EQ(group_row->group_name,SYSTEM_AAA_NONE))
+     {
+         vtysh_ovsdb_cli_print(p_msg, "aaa authorization commands default group %s", group_row->group_name);
+     }
+     else if(group_prio_list->key_authorization_group_prios[0] != 0)
+     {
+         vtysh_ovsdb_cli_print(p_msg, "aaa authorization commands default none");
+     }
+  }
+
+  return e_vtysh_ok;
+}
+
+/*-----------------------------------------------------------------------------
 | Function : vtysh_display_aaa_server_group_table
 | Responsibility : display AAA Server Group table
 | scope : static
@@ -342,6 +392,7 @@ vtysh_display_aaa_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
   {
       const char* name = group_row->group_name;
       if ((strcmp(name, SYSTEM_AAA_LOCAL) == 0) ||
+          (strcmp(name, SYSTEM_AAA_NONE) == 0) ||
           (strcmp(name, SYSTEM_AAA_RADIUS) == 0) ||
           (strcmp(name, SYSTEM_AAA_TACACS_PLUS) == 0))
       {
@@ -407,8 +458,11 @@ vtysh_config_context_aaa_clientcallback(void *p_private)
 
     /* Generate CLI for the AAA_Server_Group Table*/
     vtysh_display_aaa_server_group_table(p_msg);
-    /* Generate CLI for the AAA_Server_Group_Prio Table*/
-    vtysh_display_aaa_server_group_priority(p_msg);
+    /* Generate CLI for the AAA_Server_Group_Prio Table for authentication*/
+    vtysh_display_aaa_server_group_priority_authentication(p_msg);
+    /* Generate CLI for the AAA_Server_Group_Prio Table for authorization*/
+    vtysh_display_aaa_server_group_priority_authorization(p_msg);
+
 
     return e_vtysh_ok;
 }

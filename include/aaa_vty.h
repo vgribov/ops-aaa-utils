@@ -61,6 +61,7 @@ typedef struct aaa_server_group_prio_params_s {
 #define AAA_TABLE_WIDTH                 96
 #define AAA_GROUP                       "group"
 #define SYSTEM_AAA_LOCAL                "local"
+#define SYSTEM_AAA_NONE                 "none"
 #define SYSTEM_AAA_RADIUS               "radius"
 #define SYSTEM_AAA_TACACS               "tacacs"
 #define SYSTEM_AAA_TACACS_PLUS          "tacacs_plus"
@@ -136,6 +137,8 @@ typedef struct aaa_server_group_prio_params_s {
 #define AAA_ALLOW_FAIL_THROUGH_HELP_STR       "Allow AAA fail-through\n"
 #define AAA_USER_AUTHOR_STR                   "User authorization\n"
 #define AAA_USER_AUTHOR_TYPE_STR              "Authorization type\n"
+#define AAA_NONE_AUTHOR_HELP_STR              "No authorization\n"
+#define AAA_COMMAND_AUTHOR_STR                "Command authorization\n"
 #define TACACS_ENABLE_AUTHOR_STR              "Enable TACACS+ authorization\n"
 void cli_pre_init(void);
 void cli_post_init(void);

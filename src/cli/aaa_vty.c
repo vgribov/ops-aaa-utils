@@ -218,7 +218,15 @@ configure_aaa_server_group_priority(aaa_server_group_prio_params_t *group_prio_p
     if (group_prio_params->no_form)
     {
         key_list = xmalloc(sizeof(int64_t));
-        group_row = get_row_by_server_group_name(SYSTEM_AAA_LOCAL);
+        if (group_prio_params->aaa_method == authentication)
+        {
+            group_row = get_row_by_server_group_name(SYSTEM_AAA_LOCAL);
+        }
+        else if (group_prio_params->aaa_method == authorization)
+        {
+            group_row = get_row_by_server_group_name(SYSTEM_AAA_NONE);
+        }
+
         if (group_row == NULL)
         {
                 ERRONEOUS_DB_TXN(priority_txn, "AAA server group does not exist.");
@@ -246,9 +254,19 @@ configure_aaa_server_group_priority(aaa_server_group_prio_params_t *group_prio_p
         }
     }
 
-    ovsrec_aaa_server_group_prio_set_authentication_group_prios(group_prio_default,
+    if (group_prio_params->aaa_method == authentication)
+    {
+        ovsrec_aaa_server_group_prio_set_authentication_group_prios(group_prio_default,
                                                                 key_list, value_list,
                                                                 group_count);
+    }
+    else
+    {
+        ovsrec_aaa_server_group_prio_set_authorization_group_prios(group_prio_default,
+                                                                key_list, value_list,
+                                                                group_count);
+    }
+
     free(key_list);
     free(value_list);
     /* End of transaction. */
@@ -272,8 +290,20 @@ DEFUN(cli_aaa_set_authentication,
     int keyword_skip = 0;
     aaa_server_group_prio_params_t group_prio_params;
 
+    /*
+     * because of current args implementation,
+     * we have to check this condition manually
+     */
+    if ( argv[0] == NULL && argv[1] == NULL )
+    {
+        vty_out (vty, "%% Command incomplete.%s", VTY_NEWLINE);
+        return CMD_ERR_NOTHING_TODO;
+    }
+
+    /* we need this check to take care of the no form */
     if (argc >= 1)
     {
+        /* check if the first argv is group or local and set group count*/
         if ( !argv[0] || VTYSH_STR_EQ(argv[0], AAA_GROUP))
         {
            keyword_skip = 1;
@@ -619,6 +649,94 @@ DEFUN(cli_aaa_show_aaa_authenctication,
 {
     return aaa_show_aaa_authenctication();
 }
+
+DEFUN(cli_aaa_set_authorization,
+      aaa_set_authorization_cmd,
+      "aaa authorization commands default {none | group .WORD}",
+      AAA_STR
+      AAA_USER_AUTHOR_STR
+      AAA_COMMAND_AUTHOR_STR
+      AAA_DEFAULT_LINE_HELP_STR
+      AAA_NONE_AUTHOR_HELP_STR
+      GROUP_HELP_STR
+      GROUP_NAME_HELP_STR)
+
+{
+    char **group_list = NULL;
+    int group_count = 0;
+    int grp_keyword_index = 1;
+    aaa_server_group_prio_params_t group_prio_params;
+    memset(&group_prio_params, 0, sizeof(group_prio_params));
+
+    /* Taking care of the no form of the command*/
+    if (vty_flags & CMD_FLAG_NO_CMD)
+    {
+        group_prio_params.no_form = true;
+        if (argc >= 1)
+        {
+            vty_out (vty, "Unexpected arguments provided.%s", VTY_NEWLINE);
+            return CMD_ERR_NOTHING_TODO;
+        }
+    }
+    else
+    {
+        if ( argv[0] == NULL && argv[1] == NULL )
+        {
+            // This is the case when user has issued 'aaa author commands default'
+            vty_out (vty, "%% Command incomplete.%s", VTY_NEWLINE);
+            return CMD_ERR_NOTHING_TODO;
+        }
+        else if (argv[0] != NULL && VTYSH_STR_EQ(argv[0], SYSTEM_AAA_NONE))
+        {
+            if (argv[1] != NULL)
+            {
+               // This is the case when user has issued 'aaa author commands default none group g1 g2'
+               // if there are additional args ie argc > 1 then throw error
+               vty_out (vty, "%% Misconfiguration detected.%s", VTY_NEWLINE);
+               return CMD_ERR_NOTHING_TODO;
+            }
+            // This is the case when user has issued 'aaa author commands default none'
+            group_count = 1;
+            group_list = malloc(sizeof(char *));
+            if (group_list == NULL)
+            {
+                VLOG_ERR("Malloc failed.");
+                return CMD_ERR_NOTHING_TODO;
+            }
+            memcpy(group_list, argv, sizeof(char *));
+        }
+        else
+        {
+            // This is the case when user has issued 'aaa author commands default group g1 g2 none'
+            group_count = argc - grp_keyword_index;/* we need only the group count without group keyword */
+            group_list = malloc(sizeof(char *) * group_count);
+            if (group_list == NULL)
+            {
+                VLOG_ERR("Malloc failed.");
+                return CMD_ERR_NOTHING_TODO;
+            }
+            memcpy(group_list, argv + grp_keyword_index, sizeof(char *) * group_count);
+        }
+
+        /* set parameters for the structure */
+        group_prio_params.no_form = false;
+        group_prio_params.group_count = group_count;
+        group_prio_params.group_list = group_list;
+    }
+
+    group_prio_params.aaa_method = authorization;
+    group_prio_params.login_type = AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT;
+
+    return configure_aaa_server_group_priority(&group_prio_params);
+}
+
+DEFUN_NO_FORM(cli_aaa_set_authorization,
+              aaa_set_authorization_cmd,
+              "aaa authorization commands default",
+              AAA_STR
+              AAA_USER_AUTHOR_STR
+              AAA_COMMAND_AUTHOR_STR
+              AAA_DEFAULT_LINE_HELP_STR);
 
 static int
 show_aaa_server_groups(const char* group_type)
@@ -2855,6 +2973,7 @@ aaa_ovsdb_init(void)
     ovsdb_idl_add_table(idl, &ovsrec_table_aaa_server_group_prio);
     ovsdb_idl_add_column(idl, &ovsrec_aaa_server_group_prio_col_session_type);
     ovsdb_idl_add_column(idl, &ovsrec_aaa_server_group_prio_col_authentication_group_prios);
+    ovsdb_idl_add_column(idl, &ovsrec_aaa_server_group_prio_col_authorization_group_prios);
 
     /* Add Auto Provision Column. */
     ovsdb_idl_add_column(idl, &ovsrec_system_col_auto_provisioning_status);
@@ -2906,6 +3025,8 @@ cli_post_init(void)
     install_element(CONFIG_NODE, &no_aaa_set_global_status_cmd);
     install_element(CONFIG_NODE, &aaa_set_authentication_cmd);
     install_element(CONFIG_NODE, &no_aaa_set_authentication_cmd);
+    install_element(CONFIG_NODE, &aaa_set_authorization_cmd);
+    install_element(CONFIG_NODE, &no_aaa_set_authorization_cmd);
     install_element(CONFIG_NODE, &aaa_set_radius_authentication_cmd);
     install_element(CONFIG_NODE, &aaa_remove_fallback_cmd);
     install_element(CONFIG_NODE, &aaa_no_remove_fallback_cmd);

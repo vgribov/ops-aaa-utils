@@ -225,7 +225,8 @@ def add_default_row():
     global default_row_initialized
 
     data = {}
-    prio_list = {}
+    prio_list_authentication = {}
+    prio_list_authorization = {}
     auto_provisioning_data = {}
 
     # Default values for aaa column
@@ -279,10 +280,10 @@ def add_default_row():
     # create default AAA_Server_Group_Prio table session
     default_row = txn.insert(idl.tables[AAA_SERVER_GROUP_PRIO_TABLE], new_uuid=None)
     setattr(default_row, AAA_SERVER_GROUP_PRIO_SESSION_TYPE, AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT)
-    prio_list[PRIO_ZERO] = local_row
-    setattr(default_row, AAA_AUTHENTICATION_GROUP_PRIOS, prio_list)
-    prio_list[PRIO_ZERO] = none_row
-    setattr(default_row, AAA_AUTHORIZATION_GROUP_PRIOS, prio_list)
+    prio_list_authorization[PRIO_ZERO] = none_row
+    setattr(default_row, AAA_AUTHORIZATION_GROUP_PRIOS, prio_list_authorization)
+    prio_list_authentication[PRIO_ZERO] = local_row
+    setattr(default_row, AAA_AUTHENTICATION_GROUP_PRIOS, prio_list_authentication)
 
     txn.commit_block()
 
