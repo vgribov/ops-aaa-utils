@@ -47,7 +47,6 @@ vlog.init("/var/log/messages")
 
 # ------------------ wait_for_config_complete() ----------------
 
-
 def wait_for_config_complete(idl):
 
     system_is_configured = 0
@@ -247,10 +246,10 @@ def main():
 
             update_autoprovision_status(OPS_TRUE, argv[1])
             vlog.info("Autoprovision status: performed = %s URL =  %s"
-                      % (OPS_TRUE, argv[1]))
+                  % (OPS_TRUE, argv[1]))
         else:
             vlog.err("Error, executing autoprovision script returned error %d"
-                     % ret)
+                  % ret)
 
     idl.close()
 

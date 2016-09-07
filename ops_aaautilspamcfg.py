@@ -251,6 +251,8 @@ def update_server_file():
 
     radius_passkey = 0
 
+    radius_passkey = 0
+
     return
 
 

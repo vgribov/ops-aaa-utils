@@ -15,6 +15,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from pytest import mark
+
 from time import sleep
 from re import escape
 
@@ -312,6 +314,7 @@ def sftp_fail_cases(s1, s2):
     print("Verify invalid destination path test - SUCCESS")
 
 
+@mark.gate
 def test_sftp_ft(topology, step):
     ops1 = topology.get("ops1")
     ops2 = topology.get("ops2")

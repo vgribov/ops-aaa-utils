@@ -332,6 +332,7 @@ def loginsshradiuswithfallback(step):
                                " when server is not reachable"
 
 
+@mark.gate
 @mark.platform_incompatible(['ostl'])
 def test_aaa_ft_authentication(topology, step):
     global switches, hosts
