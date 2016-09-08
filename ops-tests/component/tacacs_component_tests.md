@@ -318,7 +318,6 @@ The four TACACS+ servers present in server group table as default tacacs_plus gr
 #### Test pass criteria
 Error message `TACACS+ server already assigned to a group!` returned.
 The TACACS+ server present in server group table as mebmber of its original group sg1 in `show aaa server-group` comand output.
-
 #### Test Fail Criteria
 The TACACS+ server present in server group table as newly assigned sg2 group member in `show aaa server-group` comand output.
 
@@ -334,9 +333,8 @@ The TACACS+ server present in server group table as newly assigned sg2 group mem
 ### Test result criteria
 #### Test pass criteria
 The removed TACACS+ server present in server group table as default tacacs_plus group member in `show aaa server-group` comand output.
-
 #### Test Fail Criteria
-The removed TACACS+ server present in server group table as member of its original group in `show aaa server-group` command output
+The removed TACACS+ server present in server group table as member of its original group in `show aaa server-group` command output.
 
 ## Test removal of TACACS+ server group
 ### Setup
@@ -351,7 +349,57 @@ The removed TACACS+ server present in server group table as member of its origin
 #### Test pass criteria
 The removed TACACS+ server group sg1 is absent from the `show running-config` command output.
 The group member of removed TACACS+ server group sg1 present in server group table as default tacacs_plus group member in `show aaa server-group` comand output.
-
 #### Test Fail Criteria
 The removed TACACS+ server group sg1 present in the `show running-config` command output.
 The group member of removed TACACS+ server group sg1 present in server group table as member of sg1 group in `show aaa server-group` comand output.
+
+## Test configure AAA authentication server group priority
+### Setup
+#### Topology diagram
+```ditaa
+[s1]
+```
+### Description
+- Configure AAA authentication server group priority
+
+### Test result criteria
+#### Test pass criteria
+The configured AAA authentication server group priority list present in `show running-config` command output.
+The configured AAA authentication server group priority information present in `show aaa authentication` command output(table).
+#### Test Fail Criteria
+The configured AAA authentication server group priority list is absent from `show running-config` command output.
+The default AAA authentication server group priority information (default local) present in `show aaa authentication` command output(table).
+
+## Test remove AAA authentication server group priority configuration
+### Setup
+#### Topology diagram
+```ditaa
+[s1]
+```
+### Description
+- Remove AAA authentication server group priority configuration
+
+### Test result criteria
+#### Test pass criteria
+The removed AAA authentication server group priority list is absent from `show running-config` command output.
+The default AAA authentication server group priority information (default local) present in `show aaa authentication` command output(table).
+#### Test Fail Criteria
+The removed AAA authentication server group priority list present in `show running-config` command output.
+The removed AAA authentication server group priority information present in `show aaa authentication` command output(table).
+
+## Test configure AAA authentication local
+### Setup
+#### Topology diagram
+```ditaa
+[s1]
+```
+### Description
+- Configure AAA authentication local
+
+### Test result criteria
+#### Test pass criteria
+The configured AAA authentication local present in `show running-config` command output.
+The AAA authentication local information (configured local) present in `show aaa authentication` command output(table).
+#### Test Fail Criteria
+The configured AAA authentication local is absent from `show running-config` command output.
+The default AAA authentication server group priority information (default local) present in `show aaa authentication` command output(table).

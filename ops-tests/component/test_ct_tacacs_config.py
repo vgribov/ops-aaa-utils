@@ -30,9 +30,11 @@ DEFAULT_TACACS_AUTH_PORT = "49"
 DEFAULT_TACACS_PASSKEY = "testing123-1"
 DEFAULT_TACACS_AUTH_TYPE = "pap"
 DEFAULT_TACACS_GROUP = "tacacs_plus"
-COUNT_TACACS_SERVER = 0;
-COUNT_SG1_SERVER = 0;
-COUNT_SG2_SERVER = 0;
+COUNT_TACACS_SERVER = 0
+COUNT_SG1_SERVER = 0
+COUNT_SG2_SERVER = 0
+CHECK_SUCCESS = 1
+CHECK_FAILED = -1
 
 def increment_tacacs_server():
     global COUNT_TACACS_SERVER
@@ -74,6 +76,20 @@ def get_tacacs_server_group_rows(lines, sg_name):
     print(groups)
     return groups
 
+def check_tacacs_server_group_priority_list(lines, group_list):
+    lines = [line.strip().replace(' ', '') for line in lines]
+    group_num = len(group_list)
+    count = 0
+    ''' collect all the TACACS+ server details for specified server group_name '''
+    for line in lines:
+        server_group = group_list[count]
+        if server_group[0] in line:
+            params = line.split("|")
+            if server_group == tuple(params):
+                count = count + 1
+    if count == group_num:
+        return CHECK_SUCCESS
+    return CHECK_FAILED
 
 def tacacs_add_server_no_options(dut, step):
     step('\n### === server (with no options) addition test start === ###')
@@ -837,6 +853,82 @@ def tacacs_remove_server_group(dut, step):
     step('\n### remove tacacs+ server group sg1 test passed ###')
     step('\n### === remove tacacs+ server group sg1 test end === ###\n')
 
+def set_aaa_authentication_groups(dut, step):
+    step('\n### === set aaa authentication groups test start === ###')
+    dut("configure terminal")
+    dut("aaa authentication login default group sg2 tacacs_plus local")
+    dut("end")
+    dump = dut("show aaa authentication")
+    lines = dump.splitlines()
+    count = 0
+
+    group_list = [('sg2', '1'), ('tacacs_plus', '2'), ('local', '3')]
+
+    count = count + check_tacacs_server_group_priority_list(lines, group_list)
+
+    ''' now check the running config '''
+    dump = dut("show running-config")
+    lines = dump.splitlines()
+    for line in lines:
+        if ("aaa authentication login default group sg2 tacacs_plus local" in line):
+            count = count + 1
+    assert count == 2,\
+            '\n### set aaa authentication groups test failed ###'
+
+    step('\n### set aaa authentication groups test passed ###')
+    step('\n### === set aaa authentication groups test end === ###\n')
+
+def unset_aaa_authentication_groups(dut, step):
+    step('\n### === unset aaa authentication groups test start === ###')
+    dut("configure terminal")
+    dut("no aaa authentication login default")
+    dut("end")
+    dump = dut("show aaa authentication")
+    lines = dump.splitlines()
+    count = 0
+
+    group_list = [('local', '0')]
+
+    count = count + check_tacacs_server_group_priority_list(lines, group_list)
+
+    ''' now check the running config '''
+    dump = dut("show running-config")
+    lines = dump.splitlines()
+    for line in lines:
+        if ("aaa authentication login default" in line):
+            count = count - 1
+    assert count == 1,\
+            '\n### unset aaa authentication groups test failed ###'
+
+    step('\n### unset aaa authentication groups test passed ###')
+    step('\n### === unset aaa authentication groups test end === ###\n')
+
+def set_aaa_authentication_local(dut, step):
+    step('\n### === set aaa authentication local test start === ###')
+    dut("configure terminal")
+    dut("aaa authentication login default local")
+    dut("end")
+    dump = dut("show aaa authentication")
+    lines = dump.splitlines()
+    count = 0
+
+    group_list = [('local', '1')]
+
+    count = count + check_tacacs_server_group_priority_list(lines, group_list)
+
+    ''' now check the running config '''
+    dump = dut("show running-config")
+    lines = dump.splitlines()
+    for line in lines:
+        if ("aaa authentication login default local" in line):
+            count = count + 1
+    assert count == 2,\
+            '\n### set aaa authentication local test failed ###'
+
+    step('\n### set aaa authentication local test passed ###')
+    step('\n### === set aaa authentication local test end === ###\n')
+
+
 def test_ct_tacacs_config(topology, step):
     ops1 = topology.get("ops1")
     assert ops1 is not None
@@ -885,3 +977,9 @@ def test_ct_tacacs_config(topology, step):
     tacacs_remove_server_from_server_group(ops1, step)
 
     tacacs_remove_server_group(ops1, step)
+
+    set_aaa_authentication_groups(ops1, step)
+
+    unset_aaa_authentication_groups(ops1, step)
+
+    set_aaa_authentication_local(ops1, step)

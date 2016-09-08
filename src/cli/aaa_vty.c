@@ -230,7 +230,7 @@ configure_aaa_server_group_priority(aaa_server_group_prio_params_t *group_prio_p
 
         if (group_row == NULL)
         {
-                ERRONEOUS_DB_TXN(priority_txn, "AAA server group does not exist.");
+            ERRONEOUS_DB_TXN(priority_txn, "AAA server group does not exist.");
         }
         value_list = xmalloc(sizeof(*group_row));
         key_list[0] = priority;
@@ -246,8 +246,14 @@ configure_aaa_server_group_priority(aaa_server_group_prio_params_t *group_prio_p
         for (iter = 0; iter < group_count; iter++)
         {
             group_row = get_row_by_server_group_name(group_prio_params->group_list[iter]);
-            if (group_row == NULL) {
+            if (group_row == NULL)
+            {
                 ERRONEOUS_DB_TXN(priority_txn, "AAA server group does not exist.");
+            }
+            /* TODO remove this check after RADIUS development complete */
+            else if (VTYSH_STR_EQ(group_row->group_type, SYSTEM_AAA_RADIUS))
+            {
+                ERRONEOUS_DB_TXN(priority_txn, "RADIUS server group not supported yet.");
             }
             key_list[iter] = priority;
             value_list[iter] = (struct ovsrec_aaa_server_group *)group_row;
@@ -934,15 +940,6 @@ aaa_server_group_sanitize_parameters(aaa_server_group_params_t *server_group_par
         return CMD_ERR_NOTHING_TODO;
    }
 
-   /*Prevent user from configure default group*/
-   if ((strcmp(server_group_params->group_name, SYSTEM_AAA_RADIUS) == 0) ||
-       (strcmp(server_group_params->group_name, SYSTEM_AAA_TACACS_PLUS) == 0) ||
-       (strcmp(server_group_params->group_name, SYSTEM_AAA_LOCAL) == 0))
-   {
-        vty_out(vty, "Invalid server group name%s", VTY_NEWLINE);
-        return CMD_ERR_NOTHING_TODO;
-   }
-
    if ((strcmp(server_group_params->group_type, SYSTEM_AAA_RADIUS) != 0) &&
        (strcmp(server_group_params->group_type, SYSTEM_AAA_TACACS_PLUS) != 0))
    {
@@ -998,7 +995,11 @@ configure_aaa_server_group(aaa_server_group_params_t *server_group_params)
     }
     else
     {
-        if (server_group_params->no_form)
+        if (row->is_static)
+        {
+            ERRONEOUS_DB_TXN(server_group_txn, "Could not modify default server group!");
+        }
+        else if (server_group_params->no_form)
         {
             const struct ovsrec_tacacs_server *row_iter = NULL;
             const struct ovsrec_aaa_server_group *default_group = NULL;
@@ -1085,7 +1086,7 @@ DEFUN (cli_aaa_create_tacacs_server_group,
 
     if (strcmp("radius", argv[0]) == 0)
     {
-        vty_out(vty, "Radius server group not supported yet%s", VTY_NEWLINE);
+        vty_out(vty, "RADIUS server group not supported yet%s", VTY_NEWLINE);
         return CMD_ERR_NOTHING_TODO;
     }
     else
