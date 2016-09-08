@@ -56,6 +56,7 @@ static int aaa_set_global_status (const char *status, bool no_flag);
 static int aaa_set_radius_authentication(const char *auth);
 static int aaa_fallback_option (const char *value);
 static int aaa_show_aaa_authentication ();
+static int aaa_show_aaa_authorization ();
 static int tacacs_set_global_auth_type(const char *auth_type);
 static int tacacs_set_global_passkey (const char *passkey);
 static int tacacs_set_global_timeout (const char *timeout);
@@ -64,6 +65,7 @@ static const struct ovsrec_aaa_server_group*
 static const struct ovsrec_tacacs_server*
            get_tacacs_server_by_name_port(const char *server_name, int64_t auth_port);
 static int show_aaa_authentication_priority_group();
+static int show_aaa_authorization_priority_group();
 static int radius_server_add_host (const char *ipv4);
 static int radius_server_remove_auth_port (const char *ipv4,
                        const char *authport);
@@ -639,7 +641,6 @@ show_aaa_authentication_priority_group()
 
     return CMD_SUCCESS;
 }
-
 /* CLI to show authentication mechanism configured in DB. */
 DEFUN(cli_aaa_show_aaa_authentication,
         aaa_show_aaa_authentication_cmd,
@@ -648,6 +649,64 @@ DEFUN(cli_aaa_show_aaa_authentication,
         "Show authentication options\n" "Show aaa authentication information\n")
 {
     return aaa_show_aaa_authentication();
+}
+
+static int
+show_aaa_authorization_priority_group()
+{
+    int count = 0;
+    const struct ovsrec_aaa_server_group *group_row = NULL;
+    const struct ovsrec_aaa_server_group_prio *group_prio_list = NULL;
+
+    group_prio_list = ovsrec_aaa_server_group_prio_first(idl);
+
+    if (!group_prio_list)
+    {
+      return CMD_SUCCESS;
+    }
+
+    count = group_prio_list->n_authorization_group_prios;
+
+    if (count > 1)
+    {
+        int idx = 0;
+        char row_separator[AAA_TABLE_WIDTH + 1] = {};
+        int64_t priority = 0;
+
+        if (!ovsrec_aaa_server_group_first(idl))
+        {
+            return CMD_SUCCESS;
+        }
+
+        /* Create row seperator string*/
+        for(idx = 0; idx < AAA_TABLE_WIDTH; idx++)
+            row_separator[idx] = '-';
+        row_separator[AAA_TABLE_WIDTH] = '\0';
+
+        vty_out(vty, "%sDefault command Authorization for All Channels:%s", VTY_NEWLINE, VTY_NEWLINE);
+        vty_out(vty, "%s%s", row_separator, VTY_NEWLINE);
+        vty_out(vty, "%-32s | %-14s%s", "GROUP NAME", "GROUP PRIORITY", VTY_NEWLINE);
+        vty_out(vty, "%s%s", row_separator, VTY_NEWLINE);
+        for(idx = 0; idx < count; idx ++)
+        {
+            priority = group_prio_list->key_authorization_group_prios[idx];
+            group_row = group_prio_list->value_authorization_group_prios[idx];
+            vty_out(vty, "%-32s | %-14ld%s", group_row->group_name, priority, VTY_NEWLINE);
+        }
+    }
+
+    return CMD_SUCCESS;
+}
+
+
+/* CLI to show authorization mechanism configured in DB. */
+DEFUN(cli_aaa_show_aaa_authorization,
+        aaa_show_aaa_authorization_cmd,
+        "show aaa authorization",
+        SHOW_STR
+        "Show authorization options\n" "Show aaa authorization information\n")
+{
+    return aaa_show_aaa_authorization();
 }
 
 DEFUN(cli_aaa_set_authorization,
