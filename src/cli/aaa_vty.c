@@ -56,7 +56,6 @@ static int aaa_set_global_status (const char *status, bool no_flag);
 static int aaa_set_radius_authentication(const char *auth);
 static int aaa_fallback_option (const char *value);
 static int aaa_show_aaa_authentication ();
-static int aaa_show_aaa_authorization ();
 static int tacacs_set_global_auth_type(const char *auth_type);
 static int tacacs_set_global_passkey (const char *passkey);
 static int tacacs_set_global_timeout (const char *timeout);
@@ -281,7 +280,7 @@ DEFUN(cli_aaa_set_authentication,
       AAA_STR
       AAA_AUTHENTICATION_HELP_STR
       AAA_LOGIN_HELP_STR
-      AAA_DEFAULT_LINE_HELP_STR
+      AAA_DEFAULT_AUTHEN_LINE_HELP_STR
       AAA_LOCAL_AUTHENTICATION_HELP_STR
       GROUP_HELP_STR
       GROUP_NAME_HELP_STR)
@@ -339,7 +338,7 @@ DEFUN_NO_FORM(cli_aaa_set_authentication,
               AAA_STR
               AAA_AUTHENTICATION_HELP_STR
               AAA_LOGIN_HELP_STR
-              AAA_DEFAULT_LINE_HELP_STR);
+              AAA_DEFAULT_AUTHEN_LINE_HELP_STR);
 
 /* Set AAA radius authentication encoding to CHAP or PAP
  * On success, returns CMD_SUCCESS. On failure, returns CMD_OVSDB_FAILURE.
@@ -611,7 +610,7 @@ show_aaa_authentication_priority_group()
 
     count = group_prio_list->n_authentication_group_prios;
 
-    if (count > 1)
+    if (count > 0)
     {
         int idx = 0;
         char row_separator[AAA_TABLE_WIDTH + 1] = {};
@@ -706,7 +705,7 @@ DEFUN(cli_aaa_show_aaa_authorization,
         SHOW_STR
         "Show authorization options\n" "Show aaa authorization information\n")
 {
-    return aaa_show_aaa_authorization();
+    return show_aaa_authorization_priority_group();
 }
 
 DEFUN(cli_aaa_set_authorization,
@@ -715,7 +714,7 @@ DEFUN(cli_aaa_set_authorization,
       AAA_STR
       AAA_USER_AUTHOR_STR
       AAA_COMMAND_AUTHOR_STR
-      AAA_DEFAULT_LINE_HELP_STR
+      AAA_DEFAULT_AUTHOR_LINE_HELP_STR
       AAA_NONE_AUTHOR_HELP_STR
       GROUP_HELP_STR
       GROUP_NAME_HELP_STR)
@@ -795,7 +794,7 @@ DEFUN_NO_FORM(cli_aaa_set_authorization,
               AAA_STR
               AAA_USER_AUTHOR_STR
               AAA_COMMAND_AUTHOR_STR
-              AAA_DEFAULT_LINE_HELP_STR);
+              AAA_DEFAULT_AUTHOR_LINE_HELP_STR);
 
 static int
 show_aaa_server_groups(const char* group_type)
@@ -3080,6 +3079,7 @@ cli_post_init(void)
     /* Install default VTY commands to new nodes.  */
     install_default (AAA_SERVER_GROUP_NODE);
     install_element(ENABLE_NODE, &aaa_show_aaa_authentication_cmd);
+    install_element(ENABLE_NODE, &aaa_show_aaa_authorization_cmd);
     install_element(CONFIG_NODE, &aaa_set_global_status_cmd);
     install_element(CONFIG_NODE, &no_aaa_set_global_status_cmd);
     install_element(CONFIG_NODE, &aaa_set_authentication_cmd);
