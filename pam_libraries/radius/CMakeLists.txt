@@ -37,7 +37,7 @@ include(FindPkgConfig)
 
 add_definitions(-DSYSCONFDIR="${CMAKE_INSTALL_SYSCONFDIR}")
 
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Werror -DFTR_PROXY_ARP -DFTR_LOCAL_PROXY_ARP -DHAVE_LIBCRYPTO -DHAVE_OPENSSL_MD5_H")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Werror")
 
 include_directories(
   ${CMAKE_SOURCE_DIR}
@@ -50,7 +50,6 @@ include_directories(
 # PAM libraries source files
 set (SOURCES_LIB_PAM_RADIUS
   src/pam_radius_auth.c
-  src/md5.c
     )
 
 add_library (${LIBPAM_RADIUS} SHARED ${SOURCES_LIB_PAM_RADIUS})

@@ -51,9 +51,9 @@ include_directories(
 
 # PAM libraries source files
 set (SOURCES_LIB_PAM_TACACS
-  ../pam_tacplus.c
-  ../support.c
-  ../author_utils.c
+  pam_tacplus.c
+  support.c
+  author_utils.c
   lib/attrib.c
   lib/crypt.c
   lib/acct_s.c
@@ -68,8 +68,7 @@ set (SOURCES_LIB_PAM_TACACS
   lib/cont_s.c
   lib/authen_s.c
   lib/header.c
-  lib/version.c
-    )
+  )
 
 add_library (${LIBPAM_TACPLUS} SHARED ${SOURCES_LIB_PAM_TACACS})
 

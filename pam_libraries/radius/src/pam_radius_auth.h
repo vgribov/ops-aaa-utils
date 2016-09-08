@@ -23,7 +23,7 @@
 #include <security/pam_modules.h>
 
 #include "radius.h"
-#include "md5.h"
+#include <openssl/md5.h>
 
 /* Defaults for the prompt option */
 #define MAXPROMPT 33               /* max prompt length, including '\0' */

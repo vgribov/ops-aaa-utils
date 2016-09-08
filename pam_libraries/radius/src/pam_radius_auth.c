@@ -58,7 +58,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <sys/time.h>
-
+#include <openssl/md5.h>
 #include "pam_radius_auth.h"
 
 #define DPRINT if (opt_debug & PAM_DEBUG_ARG) _pam_log
@@ -391,10 +391,10 @@ static void get_random_vector(unsigned char *vector)
 		tv.tv_sec ^= getpid() * session++;
 
 		/* Hash things to get maybe cryptographically strong pseudo-random numbers */
-		MD5Init(&my_md5);
-		MD5Update(&my_md5, (unsigned char *) &tv, sizeof(tv));
-		MD5Update(&my_md5, (unsigned char *) &tz, sizeof(tz));
-		MD5Final(vector, &my_md5);				/* set the final vector */
+		MD5_Init(&my_md5);
+		MD5_Update(&my_md5, (unsigned char *) &tv, sizeof(tv));
+		MD5_Update(&my_md5, (unsigned char *) &tz, sizeof(tz));
+		MD5_Final(vector, &my_md5);				/* set the final vector */
 	}
 }
 
@@ -411,11 +411,11 @@ static void get_accounting_vector(AUTH_HDR *request, radius_server_t *server)
 	int len = ntohs(request->length);
 
 	memset(request->vector, 0, AUTH_VECTOR_LEN);
-	MD5Init(&my_md5);
+	MD5_Init(&my_md5);
 	memcpy(((char *)request) + len, server->secret, secretlen);
 
-	MD5Update(&my_md5, (unsigned char *)request, len + secretlen);
-	MD5Final(request->vector, &my_md5);			/* set the final vector */
+	MD5_Update(&my_md5, (unsigned char *)request, len + secretlen);
+	MD5_Final(request->vector, &my_md5);			/* set the final vector */
 }
 
 /*
@@ -435,8 +435,8 @@ static int verify_packet(char *secret, AUTH_HDR *response, AUTH_HDR *request)
 	memcpy(response->vector, request->vector, AUTH_VECTOR_LEN); /* sent vector */
 
 	/* MD5(response packet header + vector + response packet data + secret) */
-	MD5Init(&my_md5);
-	MD5Update(&my_md5, (unsigned char *) response, ntohs(response->length));
+	MD5_Init(&my_md5);
+	MD5_Update(&my_md5, (unsigned char *) response, ntohs(response->length));
 
 	/*
 	 * This next bit is necessary because of a bug in the original Livingston
@@ -448,10 +448,10 @@ static int verify_packet(char *secret, AUTH_HDR *response, AUTH_HDR *request)
 	 * to the secret!
 	 */
 	if (*secret) {
-		MD5Update(&my_md5, (unsigned char *) secret, strlen(secret));
+		MD5_Update(&my_md5, (unsigned char *) secret, strlen(secret));
 	}
 
-	MD5Final(calculated, &my_md5);			/* set the final vector */
+	MD5_Final(calculated, &my_md5);			/* set the final vector */
 
 	/* Did he use the same random vector + shared secret? */
 	if (memcmp(calculated, reply, AUTH_VECTOR_LEN) != 0) {
@@ -549,18 +549,18 @@ static void add_password(AUTH_HDR *request, unsigned char type, CONST char *pass
 	/* ************************************************************ */
 	/* encrypt the password */
 	/* password : e[0] = p[0] ^ MD5(secret + vector) */
-	MD5Init(&md5_secret);
-	MD5Update(&md5_secret, (unsigned char *) secret, strlen(secret));
+	MD5_Init(&md5_secret);
+	MD5_Update(&md5_secret, (unsigned char *) secret, strlen(secret));
 	my_md5 = md5_secret;				/* so we won't re-do the hash later */
-	MD5Update(&my_md5, vector, AUTH_VECTOR_LEN);
-	MD5Final(misc, &my_md5);			/* set the final vector */
+	MD5_Update(&my_md5, vector, AUTH_VECTOR_LEN);
+	MD5_Final(misc, &my_md5);			/* set the final vector */
 	xor(hashed, misc, AUTH_PASS_LEN);
 
 	/* For each step through, e[i] = p[i] ^ MD5(secret + e[i-1]) */
 	for (i = 1; i < (length >> 4); i++) {
 		my_md5 = md5_secret;			/* grab old value of the hash */
-		MD5Update(&my_md5, &hashed[(i-1) * AUTH_PASS_LEN], AUTH_PASS_LEN);
-		MD5Final(misc, &my_md5);			/* set the final vector */
+		MD5_Update(&my_md5, &hashed[(i-1) * AUTH_PASS_LEN], AUTH_PASS_LEN);
+		MD5_Final(misc, &my_md5);			/* set the final vector */
 		xor(&hashed[i * AUTH_PASS_LEN], misc, AUTH_PASS_LEN);
 	}
 
