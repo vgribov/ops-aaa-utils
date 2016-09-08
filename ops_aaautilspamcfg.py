@@ -22,6 +22,9 @@ import ovs.unixctl.server
 import argparse
 import ovs.vlog
 import os
+
+import vrf_utils
+
 # Assign my_auth to default local config
 my_auth = "passwd"
 
@@ -62,9 +65,12 @@ SYSTEM_RADIUS_SERVER_COLUMN = "radius_servers"
 RADIUS_SERVER_TABLE = "Radius_Server"
 SYSTEM_TACACS_SERVER_COLUMN = "tacacs_servers"
 TACACS_SERVER_TABLE = "Tacacs_Server"
+PORT_TABLE = "Port"
+VRF_TABLE = "VRF"
 
 SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN = "auto_provisioning_status"
 
+AAA_TACACS = "tacacs"
 AAA_RADIUS = "radius"
 AAA_RADIUS_AUTH = "radius_auth"
 AAA_LOCAL = "local"
@@ -140,6 +146,10 @@ URL = "url"
 global_tacacs_passkey = TACACS_SERVER_PASSKEY_DEFAULT
 global_tacacs_timeout = TACACS_SERVER_TIMEOUT_DEFAULT
 global_tacacs_auth = TACACS_PAP
+
+tacacs_source_interface = None
+radius_source_interface = None
+
 
 #---------------- unixctl_exit --------------------------
 
@@ -302,6 +312,41 @@ def check_for_row_initialization():
         if not ovs_rec.aaa:
             add_default_row()
 
+def  get_source_interface(protocol):
+    '''
+    Get tacacs/radius source interface configuration
+    '''
+    global radius_source_interface
+    global tacacs_source_interface
+
+    if protocol == AAA_RADIUS:
+        radius_source_interface = vrf_utils.get_source_interface(idl, protocol)
+        vlog.info("radius_source_interface = %s\n" % (radius_source_interface))
+
+    if protocol == AAA_TACACS:
+        tacacs_source_interface = vrf_utils.get_source_interface(idl, protocol)
+        vlog.info("tacacs_source_interface = %s\n" % (tacacs_source_interface))
+
+def get_src_ip_dstn_ns(source_interface):
+    '''
+    Get source ip and destination namespace from source interface
+    '''
+    dstn_ns = None
+
+    mgmt_ip = vrf_utils.get_mgmt_ip(idl)
+    vlog.info("mgmt_ip = %s\n" % (mgmt_ip))
+
+    if source_interface is None:
+        return source_interface, dstn_ns
+
+    if source_interface != mgmt_ip:
+        vrf_name = vrf_utils.get_vrf_name_from_ip(idl, source_interface)
+        vlog.info("vrf_name = %s\n" % (vrf_name))
+
+        dstn_ns = vrf_utils.get_namespace_from_vrf(idl, vrf_name)
+
+    return source_interface, dstn_ns
+
 #---------------------- update_ssh_config_file ---------------------
 def update_ssh_config_file():
     '''
@@ -438,7 +483,18 @@ def modify_common_auth_access_file(server_list):
     modify common-auth-access file, based on RADIUS, TACACS+ and local
     values set in the DB
     '''
-    global global_tacacs_passkey, global_tacacs_timeout, global_tacacs_auth
+    global tacacs_source_interface
+    src_ip = None
+    dstn_ns = None
+
+    if tacacs_source_interface is not None:
+        src_ip, dstn_ns = get_src_ip_dstn_ns(tacacs_source_interface)
+
+    vlog.info("##### tacacs_src_interface = %s, radius_src_interface = %s," \
+        " src_ip = %s, dstn_ns = %s ########" \
+        % (str(tacacs_source_interface), str(radius_source_interface), \
+        str(src_ip), str(dstn_ns)))
+
     vlog.info("AAA: server_list = %s\n" % server_list)
     if not server_list:
         vlog.info("AAA: server_list is empty. Adding default local")
@@ -466,6 +522,7 @@ def modify_common_auth_access_file(server_list):
                   "# and here are more per-package modules (the \"Additional\" block)\n"
 
     common_auth_access_filename = PAM_ETC_CONFIG_DIR + "common-auth-access"
+
     with open(common_auth_access_filename, "w") as f:
 
         # Write the file header
@@ -496,7 +553,14 @@ def modify_common_auth_access_file(server_list):
                     passkey = global_tacacs_passkey
                 else:
                     passkey = server.passkey[0]
-                auth_line = "auth\t" + PAM_CONTROL_VALUE + "\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + ":" + str(tcp_port) + " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + "\n"
+
+                if dstn_ns is not None:
+                    auth_line = "auth\t" + PAM_CONTROL_VALUE + "\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + \
+                        ":" + str(tcp_port) + " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + \
+                        " dstn_namespace=" + dstn_ns +  " source_ip=" + str(src_ip) + " \n"
+                else:
+                    auth_line = "auth\t" + PAM_CONTROL_VALUE + "\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + \
+                        ":" + str(tcp_port) + " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + "\n"
 
             f.write(auth_line)
 
@@ -521,7 +585,14 @@ def modify_common_auth_access_file(server_list):
                 passkey = global_tacacs_passkey
             else:
                 passkey = server.passkey[0]
-            auth_line = "auth\t[success=1 default=ignore]\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + ":" + str(tcp_port) + " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + "\n"
+
+            if dstn_ns is not None:
+                auth_line = "auth\t[success=1 default=ignore]\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + \
+                    " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + \
+                    " dstn_namespace=" + dstn_ns +  " source_ip=" + str(src_ip) + " \n"
+            else:
+                auth_line = "auth\t[success=1 default=ignore]\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + \
+                    " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + " \n"
 
         f.write(auth_line)
 
@@ -547,6 +618,11 @@ def aaa_util_reconfigure():
         check_for_row_initialization()
 
     update_ssh_config_file()
+
+    get_source_interface(AAA_TACACS)
+    #get_source_interface(AAA_RADIUS)
+    vlog.info("##### tacacs_src_interface = %s, radius_src_interface = %s ########" \
+        % (str(tacacs_source_interface), str(radius_source_interface)))
 
     # TODO: For now we're calling the functionality to configure
     # TACACS+ PAM config files after all RADIUS config is done
@@ -602,6 +678,11 @@ def main():
 
     schema_helper = ovs.db.idl.SchemaHelper(location=ovs_schema)
     schema_helper.register_columns(SYSTEM_TABLE, ["cur_cfg"])
+    schema_helper.register_columns(SYSTEM_TABLE, ["other_config"])
+    schema_helper.register_columns(SYSTEM_TABLE, ["mgmt_intf_status"])
+    schema_helper.register_columns(PORT_TABLE, ["ip4_address", "name"])
+    schema_helper.register_columns(VRF_TABLE, ["name", "ports", "table_id", "source_ip", "source_interface"])
+
     schema_helper.register_columns(
         SYSTEM_TABLE,
         [SYSTEM_AAA_COLUMN, SYSTEM_OTHER_CONFIG,

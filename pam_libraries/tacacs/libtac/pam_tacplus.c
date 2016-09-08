@@ -19,6 +19,9 @@
  * See `CHANGES' file for revision history.
  */
 
+#define _GNU_SOURCE
+#include <sched.h>
+
 #include "pam_tacplus.h"
 #include "support.h"
 #include "libtac.h"
@@ -38,6 +41,9 @@
 #include <unistd.h>
 #include <strings.h>
 #include <openssl/rand.h>
+
+#include <sys/types.h>
+#include "nl-utils.h"
 
 /* address of server discovered by pam_sm_authenticate */
 static tacplus_server_t active_server;
@@ -238,6 +244,7 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
         int priv_lvl_status;
 #define MAX_ENV_VAR_LEN 20
   char env_var_str[MAX_ENV_VAR_LEN];
+	struct addrinfo *source_address = NULL;
 
 	user = pass = tty = r_addr = NULL;
   memset(env_var_str,0,MAX_ENV_VAR_LEN);
@@ -280,13 +287,23 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	if (ctrl & PAM_TAC_DEBUG)
 		syslog(LOG_DEBUG, "%s: rhost [%s] obtained", __FUNCTION__, r_addr);
 
+        /* switch to destination namespace */
+	syslog(LOG_DEBUG, "tac_dstn_namespace = %s, source_ip = %s, dst ns len = %d",
+	    tac_dstn_namespace, tac_source_ip,
+	    (int) strlen(tac_dstn_namespace));
+
+        nl_setns_with_name(tac_dstn_namespace);
+
+	/* set the source ip address for the tacacs packets */
+	set_source_ip(tac_source_ip, &source_address);
+
 	status = PAM_AUTHINFO_UNAVAIL;
 	for (srv_i = 0; srv_i < tac_srv_no; srv_i++) {
 		if (ctrl & PAM_TAC_DEBUG)
 			syslog(LOG_DEBUG, "%s: trying srv %d", __FUNCTION__, srv_i);
 
 		tac_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key,
-				NULL, tac_timeout);
+				source_address, tac_timeout);
 		if (tac_fd < 0) {
 			_pam_log(LOG_ERR, "connection failed srv %d: %m", srv_i);
 			continue;
@@ -513,10 +530,10 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
                       syslog(LOG_ERR, "Failed to set Privilege Level for the user %s", user);
                     }
                 }
-
 		if (status == PAM_SUCCESS || status == PAM_AUTH_ERR)
 			break;
 	}
+
 	if (status != PAM_SUCCESS && status != PAM_AUTH_ERR)
 		_pam_log(LOG_ERR, "no more servers to connect");
 
@@ -546,6 +563,10 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		}
 	}
 
+	/* switch to default namespace */
+	syslog(LOG_DEBUG, "source_ip = %s", tac_source_ip);
+
+	nl_setns_oobm();
 	return status;
 } /* pam_sm_authenticate */
 
