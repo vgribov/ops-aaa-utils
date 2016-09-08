@@ -28,11 +28,6 @@
 #include <getopt.h>
 #include <ctype.h>
 #include <openssl/rand.h>
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "tacplus.h"
 #include "libtac.h"
 
@@ -304,7 +299,7 @@ int main(int argc, char **argv) {
 		struct tac_attrib *attr = NULL;
 		sprintf(buf, "%lu", time(0));
 		tac_add_attrib(&attr, "start_time", buf);
-		RAND_pseudo_bytes((unsigned char *) &task_id, sizeof(task_id));
+		RAND_bytes((unsigned char *) &task_id, sizeof(task_id));
 		sprintf(buf, "%hu", task_id);
 		tac_add_attrib(&attr, "task_id", buf);
 		tac_add_attrib(&attr, "service", service);

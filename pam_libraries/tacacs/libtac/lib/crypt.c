@@ -20,16 +20,7 @@
  */
 
 #include "libtac.h"
-
-#ifdef HAVE_CONFIG_H
-  #include "config.h"
-#endif
-
-#if defined(HAVE_OPENSSL_MD5_H) && defined(HAVE_LIBCRYPTO)
-# include <openssl/md5.h>
-#else
-# include "md5.h"
-#endif
+#include <openssl/md5.h>
 
 /* Produce MD5 pseudo-random pad for TACACS+ encryption.
    Use data from packet header and secret, which

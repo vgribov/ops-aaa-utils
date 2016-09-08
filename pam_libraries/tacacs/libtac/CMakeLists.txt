@@ -38,7 +38,7 @@ add_definitions(-DSYSCONFDIR="${CMAKE_INSTALL_SYSCONFDIR}")
 # Rules to locate needed libraries
 pkg_check_modules(OVSCOMMON REQUIRED libovscommon)
 
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Werror -DFTR_PROXY_ARP -DFTR_LOCAL_PROXY_ARP -DHAVE_LIBCRYPTO -DHAVE_OPENSSL_MD5_H")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Werror")
 
 include_directories(
   ${CMAKE_SOURCE_DIR}
@@ -57,7 +57,6 @@ set (SOURCES_LIB_PAM_TACACS
   lib/attrib.c
   lib/crypt.c
   lib/acct_s.c
-  lib/magic.c
   lib/authen_r.c
   lib/author_r.c
   lib/messages.c
@@ -67,7 +66,6 @@ set (SOURCES_LIB_PAM_TACACS
   lib/read_wait.c
   lib/acct_r.c
   lib/cont_s.c
-  lib/md5.c
   lib/authen_s.c
   lib/header.c
   lib/version.c
