@@ -181,9 +181,6 @@ void tac_free_attrib(struct tac_attrib **);
 char *tac_acct_flag2str(int);
 int tac_acct_send(int, int, const char *, char *, char *, struct tac_attrib *);
 int tac_acct_read(int, struct areply *);
-void *xcalloc(size_t, size_t);
-void *xrealloc(void *, size_t);
-char *xstrcpy(char *, const char *, size_t);
 char *_tac_check_header(HDR *, int);
 int tac_author_send(int, const char *, char *, char *, struct tac_attrib *);
 int tac_author_read(int, struct areply *);
@@ -197,6 +194,16 @@ int tac_cmd_author(const char *tac_server_name, const char *tac_secret,
 char * get_ip_port_tuple(struct sockaddr *sa, char *ip,
                          unsigned short *port, size_t maxlen,
                          bool quiet);
+
+
+/* Prototypes for a few program-wide used functions.  */
+extern void *xmalloc (size_t n)
+__attribute_malloc__ __attribute_alloc_size__ ((1));
+extern void *xcalloc (size_t n, size_t s)
+__attribute_malloc__ __attribute_alloc_size__ ((1, 2));
+extern void *xrealloc (void *o, size_t n)
+__attribute_malloc__ __attribute_alloc_size__ ((2));
+extern char *xstrdup (const char *) __attribute_malloc__;
 
 /* magic.c */
 u_int32_t magic(void);

@@ -21,7 +21,6 @@
  */
 
 #include "libtac.h"
-#include "xalloc.h"
 
 void tac_add_attrib(struct tac_attrib **attr, char *name, char *value) {
     tac_add_attrib_pair(attr, name, '=', value);

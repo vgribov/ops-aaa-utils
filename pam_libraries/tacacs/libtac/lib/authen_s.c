@@ -24,7 +24,6 @@
 #endif
 
 #include "libtac.h"
-#include "xalloc.h"
 
 #if defined(HAVE_OPENSSL_MD5_H) && defined(HAVE_LIBCRYPTO)
 # include <openssl/md5.h>

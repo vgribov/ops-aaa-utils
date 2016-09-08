@@ -23,7 +23,6 @@
 #define PAM_TACPLUS_SUPPORT_H
 
 #include "libtac.h"
-
 #include <security/pam_modules.h>
 
 typedef struct {
@@ -44,7 +43,6 @@ unsigned long _getserveraddr (char *serv);
 int tacacs_get_password (pam_handle_t *, int, int, char **);
 int converse (pam_handle_t *, int, const struct pam_message *, struct pam_response **);
 void _pam_log (int, const char *, ...);
-void *_xcalloc (size_t);
 char *_pam_get_user(pam_handle_t *);
 char *_pam_get_terminal(pam_handle_t *);
 char *_pam_get_rhost(pam_handle_t *);

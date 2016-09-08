@@ -60,7 +60,6 @@ add_executable(tacc
   libtac/lib/hdr_check.c
   libtac/lib/read_wait.c
   libtac/lib/acct_r.c
-  libtac/lib/xalloc.c
   libtac/lib/cont_s.c
   libtac/lib/md5.c
   libtac/lib/authen_s.c
