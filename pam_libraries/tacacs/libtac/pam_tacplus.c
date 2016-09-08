@@ -21,6 +21,7 @@
 
 #include "pam_tacplus.h"
 #include "support.h"
+#include "libtac.h"
 
 #include <stdlib.h>     /* malloc */
 #include <stdio.h>
@@ -234,6 +235,7 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	char *r_addr;
 	int srv_i;
 	int tac_fd, status, msg, communicating;
+        int priv_lvl_status;
 
 	user = pass = tty = r_addr = NULL;
 
@@ -497,6 +499,16 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 
 		} /* end while(communicating) */
 		close(tac_fd);
+
+                if (status == PAM_SUCCESS)
+                {
+                    priv_lvl_status = get_priv_level(tac_srv[srv_i].addr, tac_srv[srv_i].key,
+                                                                 user, tty, r_addr, true);
+                    if ( priv_lvl_status == EXIT_OK )
+			syslog(LOG_DEBUG, "Privilege level set for %s : %s", user, getenv(PRIV_LVL_ENV));
+                    else
+			syslog(LOG_ERR, "Failed to set Privilege Level for the user %s", user);
+                }
 
 		if (status == PAM_SUCCESS || status == PAM_AUTH_ERR)
 			break;

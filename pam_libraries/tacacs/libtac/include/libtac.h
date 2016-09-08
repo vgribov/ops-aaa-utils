@@ -63,6 +63,9 @@ extern int logmsg __P((int, const char*, ...));
 #endif
 
 #define TACC_CONN_TIMEOUT 60
+#define PRIV_LVL_ENV "PRIV_LVL"
+#define PRIV_RET_STR  "priv-lvl"
+#define PRV_LVL_LENGTH 3
 
 #define PRINT(...)            printf(__VA_ARGS__)
 #define VLOG_INFORMATION(...) VLOG_INFO(__VA_ARGS__)
@@ -194,7 +197,9 @@ int tac_cmd_author(const char *tac_server_name, const char *tac_secret,
 char * get_ip_port_tuple(struct sockaddr *sa, char *ip,
                          unsigned short *port, size_t maxlen,
                          bool quiet);
-
+int get_priv_level(struct addrinfo *tac_server, const char *tac_secret,
+                    char *user, char *tty, char *remote_addr,
+                    bool quiet);
 
 /* Prototypes for a few program-wide used functions.  */
 extern void *xmalloc (size_t n)
