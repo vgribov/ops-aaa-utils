@@ -55,7 +55,7 @@ extern struct ovsdb_idl *idl;
 static int aaa_set_global_status (const char *status, bool no_flag);
 static int aaa_set_radius_authentication(const char *auth);
 static int aaa_fallback_option (const char *value);
-static int aaa_show_aaa_authenctication ();
+static int aaa_show_aaa_authentication ();
 static int tacacs_set_global_auth_type(const char *auth_type);
 static int tacacs_set_global_passkey (const char *passkey);
 static int tacacs_set_global_timeout (const char *timeout);
@@ -554,7 +554,7 @@ DEFUN_NO_FORM (cli_aaa_allow_fail_through,
  * Shows status of Fallback authenticaion to local [Enabled/Disabled]
  */
 static int
-aaa_show_aaa_authenctication()
+aaa_show_aaa_authentication()
 {
     const struct ovsrec_system *row = NULL;
 
@@ -641,13 +641,13 @@ show_aaa_authentication_priority_group()
 }
 
 /* CLI to show authentication mechanism configured in DB. */
-DEFUN(cli_aaa_show_aaa_authenctication,
-        aaa_show_aaa_authenctication_cmd,
+DEFUN(cli_aaa_show_aaa_authentication,
+        aaa_show_aaa_authentication_cmd,
         "show aaa authentication",
         SHOW_STR
         "Show authentication options\n" "Show aaa authentication information\n")
 {
-    return aaa_show_aaa_authenctication();
+    return aaa_show_aaa_authentication();
 }
 
 DEFUN(cli_aaa_set_authorization,
@@ -3020,7 +3020,7 @@ cli_post_init(void)
 
     /* Install default VTY commands to new nodes.  */
     install_default (AAA_SERVER_GROUP_NODE);
-    install_element(ENABLE_NODE, &aaa_show_aaa_authenctication_cmd);
+    install_element(ENABLE_NODE, &aaa_show_aaa_authentication_cmd);
     install_element(CONFIG_NODE, &aaa_set_global_status_cmd);
     install_element(CONFIG_NODE, &no_aaa_set_global_status_cmd);
     install_element(CONFIG_NODE, &aaa_set_authentication_cmd);
