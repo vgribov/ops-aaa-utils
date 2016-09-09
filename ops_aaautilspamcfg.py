@@ -517,9 +517,10 @@ def modify_common_auth_access_file(server_list):
         f.write(file_header)
 
         # Now write the server list to the config file
-        PAM_CONTROL_VALUE = "requisite"
+        PAM_CONTROL_VALUE = "[success=done new_authtok_reqd=done default=ignore auth_err=die]"
         if AAA_FAIL_THROUGH_ENABLED:
             PAM_CONTROL_VALUE = "sufficient"
+            # Note: "sufficient" is same as [success=done new_authtok_reqd=done default=ignore]
 
         for server, server_type in server_list[:-1]:
             auth_line = ""
