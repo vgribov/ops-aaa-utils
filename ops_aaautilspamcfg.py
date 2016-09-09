@@ -21,7 +21,7 @@ import ovs.unixctl
 import ovs.unixctl.server
 import argparse
 import ovs.vlog
-
+import os
 # Assign my_auth to default local config
 my_auth = "passwd"
 
@@ -182,7 +182,7 @@ def system_is_configured():
     # Check the OVS-DB/File status to see if initialization has completed.
     if not db_get_system_status(idl.tables):
         # Delay a little before trying again
-        sleep(1)
+        os.sleep(1)
         return False
 
     system_initialized = 1
