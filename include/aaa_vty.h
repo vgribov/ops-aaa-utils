@@ -107,6 +107,14 @@ typedef struct aaa_server_group_prio_params_s {
 #define SSH_PUBLICKEY_AUTHENTICATION_ENABLE "ssh_publickeyauthentication_enable"
 #define SSH_PASSWORD_AUTHENTICATION_ENABLE  "ssh_passkeyauthentication_enable"
 
+#define PRIV_LVL_ENV                        "PRIV_LVL"
+#define MAX_GROUPS_USED                     64
+#define ROLE_ADMIN                          "ops_admin"
+#define ROLE_NETOP                          "ops_netop"
+#define PRIV_LVL_ADMIN                      "15"
+#define PRIV_LVL_NETOP                      "14"
+#define MAX_ROLE_NAME_LEN                   20
+
 #define AAA_GROUP_HELP_STR                    "Define AAA server group\n"
 #define AAA_SERVER_TYPE_HELP_STR              "Specify a server type\n"
 #define AAA_SERVER_HELP_STR                   "Specify a server\n"
@@ -141,6 +149,7 @@ typedef struct aaa_server_group_prio_params_s {
 #define AAA_NONE_AUTHOR_HELP_STR              "No authorization\n"
 #define AAA_COMMAND_AUTHOR_STR                "Command authorization\n"
 #define TACACS_ENABLE_AUTHOR_STR              "Enable TACACS+ authorization\n"
+#define SHOW_PRIV_LVL_STR                     "Show privilege level of the active user\n"
 void cli_pre_init(void);
 void cli_post_init(void);
 #endif /* _AAA_VTY_H */
