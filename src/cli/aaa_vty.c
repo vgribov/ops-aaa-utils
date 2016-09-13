@@ -1378,7 +1378,8 @@ tacacs_set_global_passkey(const char *passkey)
     /* validate the length of passkey */
     if (strlen(passkey) > MAX_LENGTH_TACACS_PASSKEY)
     {
-        vty_out(vty, "Length of passkey should be less than 64%s", VTY_NEWLINE);
+        vty_out(vty, "Length of passkey should be less than %d %s",
+                         MAX_LENGTH_TACACS_PASSKEY, VTY_NEWLINE);
         return CMD_ERR_NOTHING_TODO;
     }
 
