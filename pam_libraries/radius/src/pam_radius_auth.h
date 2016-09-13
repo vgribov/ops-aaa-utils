@@ -61,6 +61,7 @@ typedef struct radius_conf_t {
 	int sockfd;
 	int debug;
 	char prompt[MAXPROMPT];
+	int use_chap;
 } radius_conf_t;
 
 
@@ -103,7 +104,6 @@ typedef struct radius_conf_t {
 #define PAM_USE_FIRST_PASS 4
 #define PAM_TRY_FIRST_PASS 8
 #define PAM_RUSER_ARG      16
-
 
 /* Module defines */
 #ifndef BUFFER_SIZE
