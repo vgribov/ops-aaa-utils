@@ -209,6 +209,8 @@ int _pam_parse (int argc, const char **argv) {
             ctrl |= PAM_TAC_ACCT;
         } else if (!strcmp (*argv, "bypass_acct")) {
             ctrl |= PAM_TAC_BYPASS_ACCT;
+        } else if (!strcmp (*argv, "bypass_session")) {
+            ctrl |= PAM_TAC_BYPASS_SESSION;
         } else if (!strncmp (*argv, "server=", 7)) { /* authen & acct */
             if(tac_srv_no < TAC_PLUS_MAXSERVERS) {
                 struct addrinfo hints, *servers, *server;

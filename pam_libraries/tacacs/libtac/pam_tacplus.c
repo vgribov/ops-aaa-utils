@@ -118,7 +118,7 @@ int _pam_account(pam_handle_t *pamh, int argc, const char **argv, int type,
 	typemsg = tac_acct_flag2str(type);
 	ctrl = _pam_parse(argc, argv);
 
-	if (ctrl & PAM_TAC_BYPASS_ACCT) {
+	if (ctrl & PAM_TAC_BYPASS_SESSION) {
 		/*
 		 * session management is not supported yet, return SUCCESS
 		 * if authentication was successful with Tacacs

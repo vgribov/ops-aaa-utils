@@ -36,7 +36,8 @@
 #define PAM_TAC_ACCT  0x02 /* account on all specified servers */
 #define PAM_TAC_USE_FIRST_PASS 0x04
 #define PAM_TAC_TRY_FIRST_PASS 0x08
-#define PAM_TAC_BYPASS_ACCT 0x10 /* bypass accounting and session mgmt */
+#define PAM_TAC_BYPASS_ACCT    0x10  /* bypass accounting */
+#define PAM_TAC_BYPASS_SESSION 0x20  /* bypass session */
 
 /* pam_tacplus major, minor and patchlevel version numbers */
 #define PAM_TAC_VMAJ 1
