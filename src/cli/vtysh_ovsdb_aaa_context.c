@@ -321,6 +321,11 @@ vtysh_display_aaa_server_group_priority_authorization(vtysh_ovsdb_cbmsg *p_msg)
 
   group_prio_list = ovsrec_aaa_server_group_prio_first(p_msg->idl);
 
+  if (!group_prio_list)
+  {
+      return e_vtysh_ok;
+  }
+
   count = group_prio_list->n_authorization_group_prios;
 
   if (count > 1)
