@@ -21,7 +21,7 @@ import ovs.unixctl
 import ovs.unixctl.server
 import argparse
 import ovs.vlog
-
+import os
 # Assign my_auth to default local config
 my_auth = "passwd"
 
@@ -60,14 +60,37 @@ SYSTEM_AAA_COLUMN = "aaa"
 SYSTEM_OTHER_CONFIG = "other_config"
 SYSTEM_RADIUS_SERVER_COLUMN = "radius_servers"
 RADIUS_SERVER_TABLE = "Radius_Server"
+SYSTEM_TACACS_SERVER_COLUMN = "tacacs_servers"
+TACACS_SERVER_TABLE = "Tacacs_Server"
 
 SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN = "auto_provisioning_status"
 
 AAA_RADIUS = "radius"
 AAA_RADIUS_AUTH = "radius_auth"
+AAA_LOCAL = "local"
+AAA_NONE = "none"
 AAA_FALLBACK = "fallback"
-OPS_TRUE = "true"
-OPS_FALSE = "false"
+AAA_FAIL_THROUGH = "fail_through"
+AAA_FAIL_THROUGH_ENABLED = False
+AAA_TACACS = "tacacs"
+AAA_TACACS_PLUS = "tacacs_plus"
+AAA_TACACS_AUTH = "tacacs_auth"
+
+AAA_TRUE_FLAG = "true"
+AAA_FALSE_FLAG = "false"
+
+AAA_SERVER_GROUP_TABLE = "AAA_Server_Group"
+AAA_SERVER_GROUP_IS_STATIC = "is_static"
+AAA_SERVER_GROUP_NAME = "group_name"
+AAA_SERVER_GROUP_TYPE = "group_type"
+AAA_DEFAULT_GROUP_STATIC = True
+
+AAA_SERVER_GROUP_PRIO_TABLE = "AAA_Server_Group_Prio"
+AAA_SERVER_GROUP_PRIO_SESSION_TYPE = "session_type"
+AAA_AUTHENTICATION_GROUP_PRIOS = "authentication_group_prios"
+AAA_AUTHORIZATION_GROUP_PRIOS = "authorization_group_prios"
+AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT = "default"
+PRIO_ZERO = 0
 
 RADIUS_SERVER_IPADDRESS = "ip_address"
 RADIUS_SERVER_PORT = "udp_port"
@@ -75,6 +98,35 @@ RADIUS_SERVER_PASSKEY = "passkey"
 RADIUS_SERVER_TIMEOUT = "timeout"
 RADIUS_SERVER_RETRIES = "retries"
 RADIUS_SEREVR_PRIORITY = "priority"
+RADIUS_PAP = "pap"
+RADIUS_CHAP = "chap"
+
+#TACACS+ Defaults
+TACACS_SERVER_TCP_PORT_DEFAULT = "49"
+TACACS_SERVER_PASSKEY_DEFAULT = "testing123-1"
+TACACS_SERVER_TIMEOUT_DEFAULT = "5"
+
+#TACACS+ Globals - from aaa column in System Table
+GBL_TACACS_SERVER_PORT = "tacacs_tcp_port"
+GBL_TACACS_SERVER_PASSKEY = "tacacs_passkey"
+GBL_TACACS_SERVER_TIMEOUT = "tacacs_timeout"
+GBL_TACACS_SERVER_AUTH_TYPE = "tacacs_auth"
+
+#TACACS+ Server Columns
+TACACS_SERVER_IPADDRESS = "ip_address"
+TACACS_SERVER_PORT = "tcp_port"
+TACACS_SERVER_PASSKEY = "passkey"
+TACACS_SERVER_TIMEOUT = "timeout"
+TACACS_SERVER_AUTH_TYPE = "auth_type"
+TACACS_SERVER_GROUP = "group"
+TACACS_SERVER_GROUP_PRIO = "group_priority"
+TACACS_SERVER_DEFAULT_PRIO = "default_priority"
+
+TACACS_PAP = "pap"
+TACACS_CHAP = "chap"
+
+PAM_TACACS_MODULE = "/usr/lib/security/libpam_tacplus.so"
+PAM_LOCAL_MODULE = "pam_unix.so"
 
 SSH_PASSKEY_AUTHENTICATION_ENABLE = "ssh_passkeyauthentication_enable"
 SSH_PUBLICKEY_AUTHENTICATION_ENABLE = "ssh_publickeyauthentication_enable"
@@ -87,8 +139,9 @@ SFTP_SERVER_CONFIG = "sftp_server_enable"
 PERFORMED = "performed"
 URL = "url"
 
-RADIUS_PAP = "pap"
-RADIUS_CHAP = "chap"
+global_tacacs_passkey = TACACS_SERVER_PASSKEY_DEFAULT
+global_tacacs_timeout = TACACS_SERVER_TIMEOUT_DEFAULT
+global_tacacs_auth = TACACS_PAP
 
 #---------------- unixctl_exit --------------------------
 
@@ -115,7 +168,6 @@ def db_get_system_status(data):
 
     return False
 
-
 #------------------ system_is_configured() ----------------
 def system_is_configured():
     '''
@@ -130,7 +182,7 @@ def system_is_configured():
     # Check the OVS-DB/File status to see if initialization has completed.
     if not db_get_system_status(idl.tables):
         # Delay a little before trying again
-        sleep(1)
+        os.sleep(1)
         return False
 
     system_initialized = 1
@@ -162,21 +214,34 @@ def default_sshd_config():
 # ----------------- add_default_row -----------------------
 def add_default_row():
     '''
-    Add default values to the radius and fallback columns
-    by default radius is false and fallback is true
+    System Table:
+       Add default values to the radius and fallback columns
+       by default radius is false and fallback is true
+       Add default global config value for tacacs column
+    AAA_Server_Group Table:
+       Add default group local, tacacs+ and radius
     '''
     global idl
     global default_row_initialized
 
     data = {}
+    prio_list_authentication = {}
+    prio_list_authorization = {}
     auto_provisioning_data = {}
 
     # Default values for aaa column
-    data[AAA_FALLBACK] = OPS_TRUE
-    data[AAA_RADIUS] = OPS_FALSE
+    data[AAA_FALLBACK] = AAA_TRUE_FLAG
+    data[AAA_FAIL_THROUGH] = AAA_FALSE_FLAG
+    data[AAA_RADIUS] = AAA_FALSE_FLAG
     data[AAA_RADIUS_AUTH] = RADIUS_PAP
+    data[AAA_TACACS] = AAA_FALSE_FLAG
+    data[AAA_TACACS_AUTH] = TACACS_PAP
     data[SSH_PASSKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
     data[SSH_PUBLICKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
+    # Default values for tacacs
+    data[GBL_TACACS_SERVER_PASSKEY] = TACACS_SERVER_PASSKEY_DEFAULT
+    data[GBL_TACACS_SERVER_TIMEOUT] = TACACS_SERVER_TIMEOUT_DEFAULT
+    data[GBL_TACACS_SERVER_AUTH_TYPE] = TACACS_PAP
 
     # Default values for auto provisioning status column
     auto_provisioning_data[PERFORMED] = "False"
@@ -190,6 +255,35 @@ def add_default_row():
     setattr(ovs_rec, SYSTEM_AAA_COLUMN, data)
     setattr(ovs_rec, SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN,
             auto_provisioning_data)
+
+    # create default server groups: local, tacacs+ and radius
+    none_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
+    setattr(none_row, AAA_SERVER_GROUP_IS_STATIC, AAA_DEFAULT_GROUP_STATIC)
+    setattr(none_row, AAA_SERVER_GROUP_NAME, AAA_NONE)
+    setattr(none_row, AAA_SERVER_GROUP_TYPE, AAA_NONE)
+
+    local_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
+    setattr(local_row, AAA_SERVER_GROUP_IS_STATIC, AAA_DEFAULT_GROUP_STATIC)
+    setattr(local_row, AAA_SERVER_GROUP_NAME, AAA_LOCAL)
+    setattr(local_row, AAA_SERVER_GROUP_TYPE, AAA_LOCAL)
+
+    tacacs_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
+    setattr(tacacs_row, AAA_SERVER_GROUP_IS_STATIC, AAA_DEFAULT_GROUP_STATIC)
+    setattr(tacacs_row, AAA_SERVER_GROUP_NAME, AAA_TACACS_PLUS)
+    setattr(tacacs_row, AAA_SERVER_GROUP_TYPE, AAA_TACACS_PLUS)
+
+    radius_row = txn.insert(idl.tables[AAA_SERVER_GROUP_TABLE], new_uuid=None)
+    setattr(radius_row, AAA_SERVER_GROUP_IS_STATIC, AAA_DEFAULT_GROUP_STATIC)
+    setattr(radius_row, AAA_SERVER_GROUP_NAME, AAA_RADIUS)
+    setattr(radius_row, AAA_SERVER_GROUP_TYPE, AAA_RADIUS)
+
+    # create default AAA_Server_Group_Prio table session
+    default_row = txn.insert(idl.tables[AAA_SERVER_GROUP_PRIO_TABLE], new_uuid=None)
+    setattr(default_row, AAA_SERVER_GROUP_PRIO_SESSION_TYPE, AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT)
+    prio_list_authorization[PRIO_ZERO] = none_row
+    setattr(default_row, AAA_AUTHORIZATION_GROUP_PRIOS, prio_list_authorization)
+    prio_list_authentication[PRIO_ZERO] = local_row
+    setattr(default_row, AAA_AUTHENTICATION_GROUP_PRIOS, prio_list_authentication)
 
     txn.commit_block()
 
@@ -319,6 +413,167 @@ def update_ssh_config_file():
         contents = "".join(contents)
         f.write(contents)
 
+# ----------------------- get_server_list -------------------
+def get_server_list(session_type):
+
+    server_list = []
+
+    global_tacacs_passkey = TACACS_SERVER_PASSKEY_DEFAULT
+    global_tacacs_timeout = TACACS_SERVER_TIMEOUT_DEFAULT
+    global_tacacs_auth = TACACS_PAP
+
+    for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
+        if ovs_rec.aaa and ovs_rec.aaa is not None:
+            for key, value in ovs_rec.aaa.iteritems():
+                if key == GBL_TACACS_SERVER_TIMEOUT:
+                    global_tacacs_timeout = value
+                if key == GBL_TACACS_SERVER_AUTH_TYPE:
+                    global_tacacs_auth = value
+                if key == GBL_TACACS_SERVER_PASSKEY:
+                    global_tacacs_passkey = value
+                if key == AAA_FAIL_THROUGH:
+                    global AAA_FAIL_THROUGH_ENABLED
+
+                    if value == AAA_TRUE_FLAG:
+                        AAA_FAIL_THROUGH_ENABLED = True
+                    else:
+                        AAA_FAIL_THROUGH_ENABLED = False
+
+    for ovs_rec in idl.tables[AAA_SERVER_GROUP_PRIO_TABLE].rows.itervalues():
+        if ovs_rec.session_type != session_type:
+            continue
+
+        size = len(ovs_rec.authentication_group_prios)
+        if size == 1 and ovs_rec.authentication_group_prios.keys()[0] == PRIO_ZERO:
+            vlog.info("AAA: Default local authentication configured\n")
+        else:
+            for prio, group in sorted(ovs_rec.authentication_group_prios.iteritems()):
+                if group is None:
+                    continue
+
+                vlog.info("AAA: group_name = %s, group_type = %s\n" % (group.group_name, group.group_type))
+
+                server_table = ""
+                if group.group_type == AAA_TACACS_PLUS:
+                    server_table = TACACS_SERVER_TABLE
+                elif group.group_type == AAA_RADIUS:
+                    server_table = RADIUS_SERVER_TABLE
+                elif group.group_type == AAA_LOCAL:
+                    server_list.append((0, group.group_type))
+
+                if server_table == RADIUS_SERVER_TABLE or server_table == TACACS_SERVER_TABLE:
+                    group_server_dict = {}
+                    for server in idl.tables[server_table].rows.itervalues():
+                        vlog.info("AAA: Server %s group = %s group_prio = %s default_prio = %s\n" %
+                                   (server.ip_address, server.group[0].group_name, server.group_priority, server.default_priority))
+
+                        if server.group[0] == group:
+                            if (server.group_priority == PRIO_ZERO):
+                                group_server_dict[server.default_priority] = server
+                            else:
+                                group_server_dict[server.group_priority] = server
+
+                    vlog.info("AAA: group_server_dict = %s\n" % (group_server_dict))
+
+                    for server_prio, server in sorted(group_server_dict.iteritems()):
+                        server_list.append((server, group.group_type))
+
+    return server_list
+
+# ----------------------- modify_common_auth_access_file -------------------
+def modify_common_auth_access_file(server_list):
+    '''
+    modify common-auth-access file, based on RADIUS, TACACS+ and local
+    values set in the DB
+    '''
+    vlog.info("AAA: server_list = %s\n" % server_list)
+    if not server_list:
+        vlog.info("AAA: server_list is empty. Adding default local")
+
+        server_list.append((0, AAA_LOCAL))
+
+    file_header = "# THIS IS AN AUTO-GENERATED FILE\n" \
+                  "#\n" \
+                  "# /etc/pam.d/common-auth- authentication settings common to all services\n" \
+                  "# This file is included from other service-specific PAM config files,\n" \
+                  "# and should contain a list of the authentication modules that define\n" \
+                  "# the central authentication scheme for use on the system\n" \
+                  "# (e.g., /etc/shadow, LDAP, Kerberos, etc.). The default is to use the\n" \
+                  "# traditional Unix authentication mechanisms.\n" \
+                  "#\n" \
+                  "# here are the per-package modules (the \"Primary\" block)\n"
+
+    file_footer = "#\n" \
+                  "# here's the fallback if no module succeeds\n" \
+                  "auth    requisite                       pam_deny.so\n" \
+                  "# prime the stack with a positive return value if there isn't one already;\n" \
+                  "# this avoids us returning an error just because nothing sets a success code\n" \
+                  "# since the modules above will each just jump around\n" \
+                  "auth    required                        pam_permit.so\n" \
+                  "# and here are more per-package modules (the \"Additional\" block)\n"
+
+    common_auth_access_filename = PAM_ETC_CONFIG_DIR + "common-auth-access"
+    with open(common_auth_access_filename, "w") as f:
+
+        # Write the file header
+        f.write(file_header)
+
+        # Now write the server list to the config file
+        PAM_CONTROL_VALUE = "[success=done new_authtok_reqd=done default=ignore auth_err=die]"
+        if AAA_FAIL_THROUGH_ENABLED:
+            PAM_CONTROL_VALUE = "sufficient"
+            # Note: "sufficient" is same as [success=done new_authtok_reqd=done default=ignore]
+
+        for server, server_type in server_list[:-1]:
+            auth_line = ""
+            if server_type == AAA_LOCAL:
+                auth_line = "auth\t" + PAM_CONTROL_VALUE + "\t" + PAM_LOCAL_MODULE + " nullok\n"
+            elif server_type == AAA_TACACS_PLUS:
+                ip_address = server.ip_address
+                tcp_port = server.tcp_port
+                if len(server.timeout) == 0:
+                    timeout = global_tacacs_timeout
+                else:
+                    timeout = server.timeout[0]
+                if len(server.auth_type) == 0:
+                    auth_type = global_tacacs_auth
+                else:
+                    auth_type = server.auth_type[0]
+                if len(server.passkey) == 0:
+                    passkey = global_tacacs_passkey
+                else:
+                    passkey = server.passkey[0]
+                auth_line = "auth\t" + PAM_CONTROL_VALUE + "\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + ":" + str(tcp_port) + " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + "\n"
+
+            f.write(auth_line)
+
+        # Print the last element
+        server = server_list[-1][0]
+        server_type = server_list[-1][1]
+        auth_line = ""
+        if server_type == AAA_LOCAL:
+            auth_line = "auth\t[success=1 default=ignore]\t" + PAM_LOCAL_MODULE + " nullok\n"
+        elif server_type == AAA_TACACS_PLUS:
+            ip_address = server.ip_address
+            tcp_port = server.tcp_port
+            if len(server.timeout) == 0:
+                timeout = global_tacacs_timeout
+            else:
+                timeout = server.timeout[0]
+            if len(server.auth_type) == 0:
+                auth_type = global_tacacs_auth
+            else:
+                auth_type = server.auth_type[0]
+            if len(server.passkey) == 0:
+                passkey = global_tacacs_passkey
+            else:
+                passkey = server.passkey[0]
+            auth_line = "auth\t[success=1 default=ignore]\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + ":" + str(tcp_port) + " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + "\n"
+
+        f.write(auth_line)
+
+        # Write the file footer
+        f.write(file_footer)
 
 # ----------------------- modify_common_auth_file -------------------
 def modify_common_auth_session_file(fallback_value, radius_value,
@@ -345,25 +600,25 @@ def modify_common_auth_session_file(fallback_value, radius_value,
     # continue to use pam_radius_auth.so module
 
     if radius_xap_value == RADIUS_CHAP:
-        radius_lib_suffix = "chap_auth.so"
+        radius_lib_suffix = "_chap.so"
     else:
-        radius_lib_suffix = "auth.so"
+        radius_lib_suffix = ".so"
 
     local_auth[0] = "auth\t[success=1 default=ignore]\tpam_unix.so nullok\n"
     radius_auth[0] = \
-        "auth\t[success=1 default=ignore]\tpam_radius_"
+        "auth\t[success=1 default=ignore]\t/usr/lib/security/libpam_radius"
     fallback_and_radius_auth[0] = \
-        "auth\t[success=2 authinfo_unavail=ignore default=1]\tpam_radius_"
+        "auth\t[success=2 authinfo_unavail=ignore default=1]\t/usr/lib/security/libpam_radius"
 
     fallback_local_auth[0] =  \
         "auth\t[success=1 default=ignore]\tpam_unix.so\ttry_first_pass\n"
 
     local_auth[1] = "session\trequired\tpam_unix.so\n"
-    radius_auth[1] = "session\trequired\tpam_radius_auth.so\n"
+    radius_auth[1] = "session\trequired\t/usr/lib/security/libpam_radius.so\n"
 
     fallback_and_radius_auth[1] = \
         "session\t[success=done new_authtok_reqd=done authinfo_unavail=ignore \
-        session_err=ignore default=die]\tpam_radius_auth.so\n"
+        session_err=ignore default=die]\t/usr/lib/security/libpam_radius.so\n"
 
     fallback_local_auth[1] = "session\trequired\tpam_unix.so\n"
 
@@ -381,26 +636,26 @@ def modify_common_auth_session_file(fallback_value, radius_value,
                 del contents[index]
                 break
 
-        if radius_value == OPS_FALSE:
+        if radius_value == AAA_FALSE_FLAG:
             contents.insert(index, local_auth[count])
 
-        if radius_value == OPS_TRUE and fallback_value == OPS_FALSE  \
+        if radius_value == AAA_TRUE_FLAG and fallback_value == AAA_FALSE_FLAG  \
            and count == 0:
             contents.insert(index, radius_auth[count] + radius_lib_suffix +
                             "\tretry=" + radius_retries + "\n")
 
-        if radius_value == OPS_TRUE and fallback_value == OPS_FALSE and  \
+        if radius_value == AAA_TRUE_FLAG and fallback_value == AAA_FALSE_FLAG and  \
            count == 1:
             contents.insert(index, radius_auth[count])
 
-        if radius_value == OPS_TRUE and fallback_value == OPS_TRUE and \
+        if radius_value == AAA_TRUE_FLAG and fallback_value == AAA_TRUE_FLAG and \
            count == 0:
             contents.insert(index, fallback_local_auth[count])
             contents.insert(index, fallback_and_radius_auth[count] +
                             radius_lib_suffix + "\tretry=" +
                             radius_retries + "\n")
 
-        if radius_value == OPS_TRUE and fallback_value == OPS_TRUE \
+        if radius_value == AAA_TRUE_FLAG and fallback_value == AAA_TRUE_FLAG \
            and count == 1:
             contents.insert(index, fallback_local_auth[count])
             contents.insert(index, fallback_and_radius_auth[count])
@@ -421,10 +676,10 @@ def update_access_files():
     global idl
 
     passwdText = "pam_unix.so"
-    radiusText = "pam_radius_auth.so"
+    radiusText = "/usr/lib/security/libpam_radius.so"
     commonPasswordText = "pam_unix.so obscure sha512"
-    fallback_value = OPS_TRUE
-    radius_value = OPS_FALSE
+    fallback_value = AAA_TRUE_FLAG
+    radius_value = AAA_FALSE_FLAG
     radius_auth_value = RADIUS_PAP
     # Hardcoded file path
     filename = [PAM_ETC_CONFIG_DIR + "common-password-access",
@@ -440,7 +695,7 @@ def update_access_files():
                     fallback_value = value
                 if key == AAA_RADIUS:
                     radius_value = value
-                    if value == OPS_TRUE:
+                    if value == AAA_TRUE_FLAG:
                         my_auth = "radius"
                     else:
                         my_auth = "passwd"
@@ -495,8 +750,15 @@ def aaa_util_reconfigure():
     update_access_files()
     update_ssh_config_file()
 
-    return
+    # TODO: For now we're calling the functionality to configure
+    # TACACS+ PAM config files after all RADIUS config is done
+    # This way we can still test RADIUS by not configuring TACACS+
+    # To unconfigure TACACS+ for now, just use -
+    # no aaa authentication login default
+    server_list = get_server_list("default")
+    modify_common_auth_access_file(server_list)
 
+    return
 
 #----------------- aaa_run() -----------------------
 def aaa_util_run():
@@ -556,6 +818,23 @@ def main():
                                     RADIUS_SERVER_TIMEOUT,
                                     RADIUS_SERVER_RETRIES,
                                     RADIUS_SEREVR_PRIORITY])
+    schema_helper.register_columns(TACACS_SERVER_TABLE,
+                                   [TACACS_SERVER_IPADDRESS,
+                                    TACACS_SERVER_PORT,
+                                    TACACS_SERVER_PASSKEY,
+                                    TACACS_SERVER_TIMEOUT,
+                                    TACACS_SERVER_AUTH_TYPE,
+                                    TACACS_SERVER_GROUP,
+                                    TACACS_SERVER_GROUP_PRIO,
+                                    TACACS_SERVER_DEFAULT_PRIO])
+    schema_helper.register_columns(AAA_SERVER_GROUP_TABLE,
+                                   [AAA_SERVER_GROUP_IS_STATIC,
+                                    AAA_SERVER_GROUP_NAME,
+                                    AAA_SERVER_GROUP_TYPE])
+    schema_helper.register_columns(AAA_SERVER_GROUP_PRIO_TABLE,
+                                   [AAA_SERVER_GROUP_PRIO_SESSION_TYPE,
+                                    AAA_AUTHENTICATION_GROUP_PRIOS,
+                                    AAA_AUTHORIZATION_GROUP_PRIOS])
 
     idl = ovs.db.idl.Idl(remote, schema_helper)
 

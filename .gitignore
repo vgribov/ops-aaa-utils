@@ -1,2 +1,3 @@
 build/
+ops-tests/feature/__pycache__/
 ops_aaautilspamcfg.egg-info/

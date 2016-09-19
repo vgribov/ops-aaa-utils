@@ -14,16 +14,12 @@
 
 cmake_minimum_required (VERSION 2.8)
 
-project ("aaa_utils_cli")
+project ("aaa_utils_lib")
 
 set (INCL_DIR ${CMAKE_SOURCE_DIR}/include)
-set (LIBAAA_UTILS_CLI aaa_utils_cli)
+set (LIBAAA_UTILS_LIB aaa_utils_lib)
 
-# This option is passed by build system.
-OPTION( CPU_LITTLE_ENDIAN "Specifies CPU architecture is Little-Endian" OFF )
-
-# Define compile flags
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -Werror")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DTEMPLATE_USER=\"netop\" -std=gnu99 -Wall -Werror")
 
 
 add_definitions(-DHAVE_CONFIG_H -DHAVE_SOCKLEN_T)
@@ -41,14 +37,12 @@ include_directories (${INCL_DIR}
                     )
 
 # CLI libraries source files
-set (SOURCES_CLI ${PROJECT_SOURCE_DIR}/aaa_vty.c
-     ${PROJECT_SOURCE_DIR}/vtysh_ovsdb_aaa_context.c
+set (SOURCES_LIB ${PROJECT_SOURCE_DIR}/getpwnam-preload.c
     )
 
 
-add_library (${LIBAAA_UTILS_CLI} SHARED ${SOURCES_CLI})
+add_library (${LIBAAA_UTILS_LIB} SHARED ${SOURCES_LIB})
 
 # Installation
-install(TARGETS ${LIBAAA_UTILS_CLI}
-        LIBRARY DESTINATION lib/cli/plugins
-       )
+install(TARGETS ${LIBAAA_UTILS_LIB}
+        LIBRARY DESTINATION lib/security)

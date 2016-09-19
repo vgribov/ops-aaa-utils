@@ -331,7 +331,7 @@ def loginsshradiuswithfallback(step):
         assert loginpass != 1, "Failed to validate radius authetication" \
                                " when server is not reachable"
 
-
+@mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
 @mark.gate
 @mark.platform_incompatible(['ostl'])
 def test_aaa_ft_authentication(topology, step):
