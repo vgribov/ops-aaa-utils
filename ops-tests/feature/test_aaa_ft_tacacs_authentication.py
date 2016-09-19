@@ -233,6 +233,7 @@ def verify_login_success(step, user, password, login_type, is_ipv6):
     s1("echo $SHELL", shell="bash")
     myssh = ssh_client + " " + user + "@" + switch_ip
     p = pexpect.spawn(myssh)
+
     index = p.expect([SSH_NEWKEY_HELP_STR, "password:", pexpect.EOF, pexpect.TIMEOUT])
 
     if index == 0:

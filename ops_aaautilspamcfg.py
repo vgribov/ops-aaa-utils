@@ -73,7 +73,6 @@ SYSTEM_AUTO_PROVISIONING_STATUS_COLUMN = "auto_provisioning_status"
 
 AAA_TACACS = "tacacs"
 AAA_RADIUS = "radius"
-AAA_RADIUS_AUTH = "radius_auth"
 AAA_LOCAL = "local"
 AAA_NONE = "none"
 AAA_FAIL_THROUGH = "fail_through"
@@ -95,14 +94,17 @@ AAA_SERVER_GROUP_PRIO_SESSION_TYPE = "session_type"
 AAA_AUTHENTICATION_GROUP_PRIOS = "authentication_group_prios"
 AAA_AUTHORIZATION_GROUP_PRIOS = "authorization_group_prios"
 AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT = "default"
-PRIO_ZERO = 0
+PRIO_ONE = 1
 
-RADIUS_SERVER_IPADDRESS = "ip_address"
+RADIUS_SERVER_IPADDRESS = "address"
 RADIUS_SERVER_PORT = "udp_port"
 RADIUS_SERVER_PASSKEY = "passkey"
 RADIUS_SERVER_TIMEOUT = "timeout"
 RADIUS_SERVER_RETRIES = "retries"
-RADIUS_SEREVR_PRIORITY = "priority"
+RADIUS_SERVER_AUTH_TYPE = "auth_type"
+RADIUS_SERVER_DEFAULT_PRIO = "default_group_priority"
+RADIUS_SERVER_GROUP_PRIO = "user_group_priority"
+RADIUS_SERVER_GROUP = "group"
 RADIUS_PAP = "pap"
 RADIUS_CHAP = "chap"
 
@@ -111,27 +113,41 @@ TACACS_SERVER_TCP_PORT_DEFAULT = "49"
 TACACS_SERVER_PASSKEY_DEFAULT = "testing123-1"
 TACACS_SERVER_TIMEOUT_DEFAULT = "5"
 
+#RADIUS Defaults
+RADIUS_SERVER_UDP_PORT_DEFAULT = "1812"
+RADIUS_SERVER_PASSKEY_DEFAULT = "testing123-1"
+RADIUS_SERVER_TIMEOUT_DEFAULT = "5"
+RADIUS_SERVER_RETRIES_DEFAULT = "1"
+
 #TACACS+ Globals - from aaa column in System Table
 GBL_TACACS_SERVER_PORT = "tacacs_tcp_port"
 GBL_TACACS_SERVER_PASSKEY = "tacacs_passkey"
 GBL_TACACS_SERVER_TIMEOUT = "tacacs_timeout"
 GBL_TACACS_SERVER_AUTH_TYPE = "tacacs_auth"
 
+#RADIUS Globals - from aaa column in System Table
+GBL_RADIUS_SERVER_PORT = "radius_udp_port"
+GBL_RADIUS_SERVER_PASSKEY = "radius_passkey"
+GBL_RADIUS_SERVER_TIMEOUT = "radius_timeout"
+GBL_RADIUS_SERVER_AUTH_TYPE = "radius_auth"
+GBL_RADIUS_SERVER_RETRIES = "radius_retries"
+
 #TACACS+ Server Columns
-TACACS_SERVER_IPADDRESS = "ip_address"
+TACACS_SERVER_IPADDRESS = "address"
 TACACS_SERVER_PORT = "tcp_port"
 TACACS_SERVER_PASSKEY = "passkey"
 TACACS_SERVER_TIMEOUT = "timeout"
 TACACS_SERVER_AUTH_TYPE = "auth_type"
 TACACS_SERVER_GROUP = "group"
-TACACS_SERVER_GROUP_PRIO = "group_priority"
-TACACS_SERVER_DEFAULT_PRIO = "default_priority"
+TACACS_SERVER_GROUP_PRIO = "user_group_priority"
+TACACS_SERVER_DEFAULT_PRIO = "default_group_priority"
 
 TACACS_PAP = "pap"
 TACACS_CHAP = "chap"
 
 PAM_TACACS_MODULE = "/usr/lib/security/libpam_tacplus.so"
 PAM_LOCAL_MODULE = "pam_unix.so"
+PAM_RADIUS_MODULE = "/usr/lib/security/libpam_radius.so"
 
 SSH_PASSKEY_AUTHENTICATION_ENABLE = "ssh_passkeyauthentication_enable"
 SSH_PUBLICKEY_AUTHENTICATION_ENABLE = "ssh_publickeyauthentication_enable"
@@ -147,6 +163,13 @@ URL = "url"
 global_tacacs_passkey = TACACS_SERVER_PASSKEY_DEFAULT
 global_tacacs_timeout = TACACS_SERVER_TIMEOUT_DEFAULT
 global_tacacs_auth = TACACS_PAP
+
+global_radius_passkey = RADIUS_SERVER_PASSKEY_DEFAULT
+global_radius_timeout = RADIUS_SERVER_TIMEOUT_DEFAULT
+global_radius_auth = RADIUS_PAP
+global_radius_retries = RADIUS_SERVER_RETRIES_DEFAULT
+
+local_group = None
 
 tacacs_source_interface = None
 radius_source_interface = None
@@ -242,15 +265,17 @@ def add_default_row():
 
     # Default values for aaa column
     data[AAA_FAIL_THROUGH] = AAA_FALSE_FLAG
-    data[AAA_RADIUS] = AAA_FALSE_FLAG
-    data[AAA_RADIUS_AUTH] = RADIUS_PAP
-    data[AAA_TACACS_AUTH] = TACACS_PAP
     data[SSH_PASSKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
     data[SSH_PUBLICKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
     # Default values for tacacs
     data[GBL_TACACS_SERVER_PASSKEY] = TACACS_SERVER_PASSKEY_DEFAULT
     data[GBL_TACACS_SERVER_TIMEOUT] = TACACS_SERVER_TIMEOUT_DEFAULT
     data[GBL_TACACS_SERVER_AUTH_TYPE] = TACACS_PAP
+    # Default values for radius
+    data[GBL_RADIUS_SERVER_PASSKEY] = RADIUS_SERVER_PASSKEY_DEFAULT
+    data[GBL_RADIUS_SERVER_TIMEOUT] = RADIUS_SERVER_TIMEOUT_DEFAULT
+    data[GBL_RADIUS_SERVER_AUTH_TYPE] = RADIUS_PAP
+    data[GBL_RADIUS_SERVER_RETRIES] = RADIUS_SERVER_RETRIES_DEFAULT
 
     # Default values for auto provisioning status column
     auto_provisioning_data[PERFORMED] = "False"
@@ -289,9 +314,9 @@ def add_default_row():
     # create default AAA_Server_Group_Prio table session
     default_row = txn.insert(idl.tables[AAA_SERVER_GROUP_PRIO_TABLE], new_uuid=None)
     setattr(default_row, AAA_SERVER_GROUP_PRIO_SESSION_TYPE, AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT)
-    prio_list_authorization[PRIO_ZERO] = none_row
+    prio_list_authorization[PRIO_ONE] = none_row
     setattr(default_row, AAA_AUTHORIZATION_GROUP_PRIOS, prio_list_authorization)
-    prio_list_authentication[PRIO_ZERO] = local_row
+    prio_list_authentication[PRIO_ONE] = local_row
     setattr(default_row, AAA_AUTHENTICATION_GROUP_PRIOS, prio_list_authentication)
 
     txn.commit_block()
@@ -427,6 +452,19 @@ def get_server_list(session_type):
     global_tacacs_timeout = TACACS_SERVER_TIMEOUT_DEFAULT
     global_tacacs_auth = TACACS_PAP
 
+
+    global global_radius_passkey, global_radius_timeout, global_radius_auth, global_radius_retries
+    global_radius_passkey = RADIUS_SERVER_PASSKEY_DEFAULT
+    global_radius_timeout = RADIUS_SERVER_TIMEOUT_DEFAULT
+    global_radius_retries = RADIUS_SERVER_RETRIES_DEFAULT
+    global_radius_auth = RADIUS_PAP
+
+    global local_group
+    if local_group is None:
+        for group_rec in idl.tables[AAA_SERVER_GROUP_TABLE].rows.itervalues():
+            if group_rec.group_name == AAA_LOCAL:
+                local_group = group_rec
+
     for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
         if ovs_rec.aaa and ovs_rec.aaa is not None:
             for key, value in ovs_rec.aaa.iteritems():
@@ -436,6 +474,14 @@ def get_server_list(session_type):
                     global_tacacs_auth = value
                 if key == GBL_TACACS_SERVER_PASSKEY:
                     global_tacacs_passkey = value
+                if key == GBL_RADIUS_SERVER_TIMEOUT:
+                    global_radius_timeout = value
+                if key == GBL_RADIUS_SERVER_AUTH_TYPE:
+                    global_radius_auth = value
+                if key == GBL_RADIUS_SERVER_PASSKEY:
+                    global_radius_passkey = value
+                if key == GBL_RADIUS_SERVER_RETRIES:
+                    global_radius_retries = value
                 if key == AAA_FAIL_THROUGH:
                     global AAA_FAIL_THROUGH_ENABLED
 
@@ -449,7 +495,7 @@ def get_server_list(session_type):
             continue
 
         size = len(ovs_rec.authentication_group_prios)
-        if size == 1 and ovs_rec.authentication_group_prios.keys()[0] == PRIO_ZERO:
+        if size == 1 and ovs_rec.authentication_group_prios.keys()[0] == local_group:
             vlog.info("AAA: Default local authentication configured\n")
         else:
             for prio, group in sorted(ovs_rec.authentication_group_prios.iteritems()):
@@ -468,15 +514,18 @@ def get_server_list(session_type):
 
                 if server_table == RADIUS_SERVER_TABLE or server_table == TACACS_SERVER_TABLE:
                     group_server_dict = {}
-                    for server in idl.tables[server_table].rows.itervalues():
-                        vlog.info("AAA: Server %s group = %s group_prio = %s default_prio = %s\n" %
-                                   (server.ip_address, server.group[0].group_name, server.group_priority, server.default_priority))
 
-                        if server.group[0] == group:
-                            if (server.group_priority == PRIO_ZERO):
-                                group_server_dict[server.default_priority] = server
-                            else:
-                                group_server_dict[server.group_priority] = server
+                    if group.group_name == AAA_RADIUS or group.group_name == AAA_TACACS_PLUS:
+                        for server in idl.tables[server_table].rows.itervalues():
+                            vlog.info("AAA: Server %s length = %s group = %s group_prio = %s default_prio = %s\n" % (server.address, len(server.group), server.group[0].group_name, server.user_group_priority[0], server.default_group_priority))
+                            if len(server.group) <= 1:
+                                group_server_dict[server.default_group_priority] = server
+                    else:
+                        for server in idl.tables[server_table].rows.itervalues():
+                            vlog.info("AAA: Server %s length = %s group = %s group_prio = %s default_prio = %s\n" % (server.address, len(server.group), server.group[0].group_name, server.user_group_priority[0], server.default_group_priority))
+                            if len(server.group) > 1 and (server.group[0] == group  or server.group[1] == group):
+                                group_server_dict[server.user_group_priority[0]] = server
+
 
                     vlog.info("AAA: group_server_dict = %s\n" % (group_server_dict))
 
@@ -516,6 +565,8 @@ def modify_common_auth_access_file(server_list):
         str(tacacs_src_ip), str(tacacs_dstn_ns), \
          str(radius_src_ip), str(radius_dstn_ns)))
 
+    global global_tacacs_passkey, global_tacacs_timeout, global_tacacs_auth
+    global global_radius_passkey, global_radius_timeout, global_radius_auth, global_radius_retries
     vlog.info("AAA: server_list = %s\n" % server_list)
     if not server_list:
         vlog.info("AAA: server_list is empty. Adding default local")
@@ -560,8 +611,8 @@ def modify_common_auth_access_file(server_list):
             if server_type == AAA_LOCAL:
                 auth_line = "auth\t" + PAM_CONTROL_VALUE + "\t" + PAM_LOCAL_MODULE + " nullok\n"
             elif server_type == AAA_TACACS_PLUS:
-                ip_address = server.ip_address
-                tcp_port = server.tcp_port
+                ip_address = server.address
+                tcp_port = server.tcp_port[0]
                 if len(server.timeout) == 0:
                     timeout = global_tacacs_timeout
                 else:
@@ -583,6 +634,27 @@ def modify_common_auth_access_file(server_list):
                     auth_line = "auth\t" + PAM_CONTROL_VALUE + "\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + \
                         ":" + str(tcp_port) + " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + "\n"
 
+            elif server_type == AAA_RADIUS:
+                ip_address = server.address
+                udp_port = server.udp_port[0]
+                if len(server.timeout) == 0:
+                    timeout = global_radius_timeout
+                else:
+                    timeout = server.timeout[0]
+                if len(server.auth_type) == 0:
+                    auth_type = global_radius_auth
+                else:
+                    auth_type = server.auth_type[0]
+                if len(server.passkey) == 0:
+                    passkey = global_radius_passkey
+                else:
+                    passkey = server.passkey[0]
+                if len(server.retries) == 0:
+                    retries = global_radius_retries
+                else:
+                    retries = server.retries[0]
+                auth_line = "auth\t" + PAM_CONTROL_VALUE + "\t" + PAM_RADIUS_MODULE + "\tdebug server=" + ip_address + ":" +  str(udp_port) + " secret=" + str(passkey) + " login=" + auth_type  + " retry=" + str(retries) + " timeout=" + str(timeout) + "\n"
+
             f.write(auth_line)
 
         # Print the last element
@@ -592,8 +664,8 @@ def modify_common_auth_access_file(server_list):
         if server_type == AAA_LOCAL:
             auth_line = "auth\t[success=1 default=ignore]\t" + PAM_LOCAL_MODULE + " nullok\n"
         elif server_type == AAA_TACACS_PLUS:
-            ip_address = server.ip_address
-            tcp_port = server.tcp_port
+            ip_address = server.address
+            tcp_port = server.tcp_port[0]
             if len(server.timeout) == 0:
                 timeout = global_tacacs_timeout
             else:
@@ -614,6 +686,27 @@ def modify_common_auth_access_file(server_list):
             else:
                 auth_line = "auth\t[success=1 default=ignore]\t" + PAM_TACACS_MODULE + "\tdebug server=" + ip_address + \
                     " secret=" + str(passkey) + " login=" + auth_type + " timeout=" + str(timeout) + " \n"
+        elif server_type == AAA_RADIUS:
+            ip_address = server.address
+            udp_port = server.udp_port[0]
+            if len(server.timeout) == 0:
+                timeout = global_radius_timeout
+            else:
+                timeout = server.timeout[0]
+            if len(server.auth_type) == 0:
+                auth_type = global_radius_auth
+            else:
+                auth_type = server.auth_type[0]
+            if len(server.passkey) == 0:
+                passkey = global_radius_passkey
+            else:
+                passkey = server.passkey[0]
+            if len(server.retries) == 0:
+                retries = global_radius_retries
+            else:
+                retries = server.retries[0]
+            auth_line = "auth\t[success=1 default=ignore]\t"  + PAM_RADIUS_MODULE + "\tdebug server=" + ip_address + ":" +  str(udp_port) + " secret=" + str(passkey) + " login=" + auth_type  + " retry=" + str(retries) + " timeout=" + str(timeout) + "\n"
+
 
         f.write(auth_line)
 
@@ -722,6 +815,16 @@ def main():
                                     TACACS_SERVER_GROUP,
                                     TACACS_SERVER_GROUP_PRIO,
                                     TACACS_SERVER_DEFAULT_PRIO])
+    schema_helper.register_columns(RADIUS_SERVER_TABLE,
+                                   [RADIUS_SERVER_IPADDRESS,
+                                    RADIUS_SERVER_PORT,
+                                    RADIUS_SERVER_PASSKEY,
+                                    RADIUS_SERVER_RETRIES,
+                                    RADIUS_SERVER_TIMEOUT,
+                                    RADIUS_SERVER_AUTH_TYPE,
+                                    RADIUS_SERVER_GROUP,
+                                    RADIUS_SERVER_GROUP_PRIO,
+                                    RADIUS_SERVER_DEFAULT_PRIO])
     schema_helper.register_columns(AAA_SERVER_GROUP_TABLE,
                                    [AAA_SERVER_GROUP_IS_STATIC,
                                     AAA_SERVER_GROUP_NAME,

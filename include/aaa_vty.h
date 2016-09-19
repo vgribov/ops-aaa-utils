@@ -27,15 +27,17 @@
 
 
 /* Structure definitions */
-typedef struct tacacs_server_params_s {
+typedef struct server_params_s {
     bool no_form;                 /* TRUE/FALSE */
+    bool is_radius_server;        /* TRUE/FALSE */
     const char *server_name;      /* FQDN or IP Address */
     const char *timeout;          /* Timeout */
     const char *shared_key;       /* Shared secret key */
     const char *auth_port;        /* Authentication port */
     const char *auth_type;        /* Authentication type pap/chap */
+    const char *retries;          /* RADIUS server retries value */
     int64_t priority;             /* default priority of server*/
-} tacacs_server_params_t;
+} server_params_t;
 
 typedef struct aaa_server_group_params_s {
     bool no_form;           /* TRUE/FALSE */
@@ -65,11 +67,9 @@ typedef struct aaa_server_group_prio_params_s {
 #define SYSTEM_AAA_RADIUS               "radius"
 #define SYSTEM_AAA_TACACS               "tacacs"
 #define SYSTEM_AAA_TACACS_PLUS          "tacacs_plus"
-#define SYSTEM_AAA_FALLBACK             "fallback"
 #define SYSTEM_AAA_FAIL_THROUGH         "fail_through"
 #define SYSTEM_AAA_FAIL_THROUGH_DEFAULT "false"
 #define SYSTEM_AAA_RADIUS_LOCAL         "local"
-#define SYSTEM_AAA_RADIUS_AUTH          "radius_auth"
 #define RADIUS_CHAP                     "chap"
 #define RADIUS_PAP                      "pap"
 #define TACACS_CHAP                     "chap"
@@ -81,15 +81,21 @@ typedef struct aaa_server_group_prio_params_s {
 #define SYSTEM_AAA_TACACS_TCP_PORT             "tacacs_tcp_port"
 #define SYSTEM_AAA_TACACS_PASSKEY              "tacacs_passkey"
 #define SYSTEM_AAA_TACACS_AUTH                 "tacacs_auth"
-#define SYSTEM_AAA_TACACS_AUTHORIZATION_ENABLE "tacacs_authorization_enable"
+#define SYSTEM_AAA_RADIUS_TIMEOUT              "radius_timeout"
+#define SYSTEM_AAA_RADIUS_UDP_PORT             "radius_udp_port"
+#define SYSTEM_AAA_RADIUS_PASSKEY              "radius_passkey"
+#define SYSTEM_AAA_RADIUS_AUTH                 "radius_auth"
+#define SYSTEM_AAA_RADIUS_RETRIES              "radius_retries"
 #define TACACS_SERVER_AUTH_TYPE_DEFAULT        "pap"
 #define AAA_SERVER_GROUP_IS_STATIC_DEFAULT     false
-#define TACACS_SERVER_GROUP_PRIORITY_DEFAULT   0
+#define TACACS_SERVER_GROUP_PRIORITY_DEFAULT   1
+#define RADIUS_SERVER_GROUP_PRIORITY_DEFAULT   1
 #define AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT "default"
 
 #define MAX_TACACS_SERVERS                    64
 #define TACACS_SERVER_PASSKEY_DEFAULT         "testing123-1"
 #define TACACS_SERVER_TCP_PORT_DEFAULT        49
+#define TACACS_SERVER_TCP_PORT_DEFAULT_STR    "49"
 #define TACACS_SERVER_TIMEOUT_DEFAULT         5
 #define TACACS_SERVER_TIMEOUT_DEFAULT_VAL     "5"
 #define MAX_CHARS_IN_TACACS_SERVER_NAME       45
@@ -100,7 +106,13 @@ typedef struct aaa_server_group_prio_params_s {
 #define RADIUS_SERVER_DEFAULT_PORT            1812
 #define RADIUS_SERVER_DEFAULT_RETRIES         1
 #define RADIUS_SERVER_DEFAULT_TIMEOUT         5
+#define RADIUS_SERVER_DEFAULT_PORT_STR        "1812"
+#define RADIUS_SERVER_DEFAULT_RETRIES_STR     "1"
+#define RADIUS_SERVER_DEFAULT_TIMEOUT_STR     "5"
+#define RADIUS_SERVER_AUTH_TYPE_DEFAULT       "pap"
 
+#define MAX_CHARS_IN_SERVER_NAME              45
+#define MAX_LENGTH_PASSKEY                    32
 #define MAX_CHARS_IN_SERVER_GROUP_NAME        32
 
 #define AUTO_PROVISIONING_ENABLE              "enable"
@@ -120,11 +132,13 @@ typedef struct aaa_server_group_prio_params_s {
 #define PRIV_LVL_NETOP                      "14"
 #define MAX_ROLE_NAME_LEN                   20
 
+#define GROUP_COUNT_FOR_EACH_SERVER           2
+
 #define AAA_GROUP_HELP_STR                    "Define AAA server group\n"
 #define AAA_SERVER_TYPE_HELP_STR              "Specify a server type\n"
 #define AAA_SERVER_HELP_STR                   "Specify a server\n"
 #define AAA_SERVER_NAME_HELP_STR              "Server IP address or hostname\n"
-#define RADIUS_HELP_STR                       "Radius server\n"
+#define RADIUS_HELP_STR                       "RADIUS server\n"
 #define TACACS_HELP_STR                       "TACACS+ server\n"
 #define AAA_GROUP_NAME_HELP_STR               "Specify a server group name\n"
 #define AUTH_PORT_HELP_STR                    "Set authentication port\n"
