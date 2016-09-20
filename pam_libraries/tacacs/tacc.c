@@ -487,6 +487,7 @@ void showusage(char *progname) {
 	printf(
 			"  -R, --authorize     perform authorization for requested service\n");
 	printf("  -A, --account       account session beginning and end\n");
+	printf("  -G, --get_priv      get privilege level for the user\n");
 	printf("  -h, --help          display this help and exit\n");
 	printf(" Data:\n");
 	printf("  -u, --username      remote user name\n");

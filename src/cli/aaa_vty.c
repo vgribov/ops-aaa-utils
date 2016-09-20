@@ -43,6 +43,7 @@
 #include "smap.h"
 #include "openvswitch/vlog.h"
 #include "openswitch-idl.h"
+#include "vtysh/utils/tacacs_vtysh_utils.h"
 #include "vtysh/vtysh_ovsdb_if.h"
 #include "vtysh/vtysh_ovsdb_config.h"
 #include "vtysh/utils/ovsdb_vtysh_utils.h"
