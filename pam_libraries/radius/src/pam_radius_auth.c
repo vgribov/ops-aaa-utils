@@ -188,6 +188,7 @@ static int _pam_parse(int argc, CONST char **argv, radius_conf_t *conf)
                                 return ctrl;
                         }
                         tmp->next = NULL;
+                        tmp->port = 0;
 			if (server) {
 				server->next = tmp;
 				server = server->next;
@@ -1114,7 +1115,11 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
 	AUTH_HDR *request = (AUTH_HDR *) send_buffer;
 	AUTH_HDR *response = (AUTH_HDR *) recv_buffer;
 	radius_conf_t config;
+        char priv_lvl_env[ENV_MAXLEN];
+        char auth_mode_env[ENV_MAXLEN];
 
+        memset(priv_lvl_env, 0,  ENV_MAXLEN);
+        memset(auth_mode_env, 0, ENV_MAXLEN);
 	ctrl = _pam_parse(argc, argv, &config);
 
 	/* grab the user name */
@@ -1198,8 +1203,6 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
 	} /* end of password == NULL */
 
 	build_radius_packet(request, user, password, &config);
-	/* not all servers understand this service type, but some do */
-	add_int_attribute(request, PW_USER_SERVICE_TYPE, PW_AUTHENTICATE_ONLY);
 
 	/*
 	 *	Tell the server which host the user is coming from.
@@ -1290,7 +1293,35 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
 
 	/* Whew! Done the pasword checks, look for an authentication acknowledge */
 	if (response->code == PW_AUTHENTICATION_ACK) {
-		retval = PAM_SUCCESS;
+                attribute_t *a_service_type;
+
+                if ((a_service_type = find_attribute(response,
+                                      PW_USER_SERVICE_TYPE)) == NULL) {
+                    /*
+                     * Return authentication failure when service-type AVP is
+                     * not set as the privilege level of the user is unknown.
+                     */
+                    DPRINT(LOG_ERR, "Service type attribute was not set");
+                    retval = PAM_AUTH_ERR;
+                } else {
+                    int priv_lvl = ntohl(*((int *)a_service_type->data));
+                    DPRINT(LOG_DEBUG, "Service type AVP = %d\n", priv_lvl);
+
+                    switch (priv_lvl) {
+                        /* Administrative user */
+                        case PW_SHELL_USER:
+                        /* Non privileged user */
+                        case PW_NAS_PROMPT:
+                            snprintf(priv_lvl_env, ENV_MAXLEN, "%s=%d",
+                                     PRIV_LVL_ENV, priv_lvl);
+                            snprintf(auth_mode_env, ENV_MAXLEN, "%s=%s",
+                                     AUTH_MODE_ENV, RADIUS);
+                            retval = PAM_SUCCESS;
+                            break;
+                       default:
+                            retval = PAM_AUTH_ERR;
+                    }
+                }
 	} else {
 		retval = PAM_AUTH_ERR;	/* authentication failure */
 
@@ -1322,6 +1353,22 @@ error:
                 _pam_log(LOG_ERR, "%s: error setting PAM environment",
                        __FUNCTION__);
                 return PAM_SERVICE_ERR;
+            }
+            if ((pam_putenv(pamh, priv_lvl_env)) != PAM_SUCCESS) {
+                _pam_log(LOG_ERR, "%s: error setting PRIV_LVL PAM ENV",
+                       __FUNCTION__);
+                return PAM_SERVICE_ERR;
+            } else {
+                _pam_log(LOG_INFO, "PRIV_LVL set to %s",
+                         pam_getenv(pamh, PRIV_LVL_ENV));
+            }
+            if ((pam_putenv(pamh, auth_mode_env)) != PAM_SUCCESS) {
+                _pam_log(LOG_ERR, "%s: error setting AUTH_MODE PAM ENV",
+                       __FUNCTION__);
+                return PAM_SERVICE_ERR;
+            } else {
+                _pam_log(LOG_INFO, "AUTH_MODE set to %s",
+                         pam_getenv(pamh, AUTH_MODE_ENV));
             }
         }
 	return retval;

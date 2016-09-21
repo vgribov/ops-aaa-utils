@@ -29,6 +29,11 @@
 #define MAXPROMPT 33               /* max prompt length, including '\0' */
 #define DEFAULT_PROMPT "Password"  /* default prompt, without the ': '  */
 
+#define ENV_MAXLEN                20
+#define RADIUS                   "RADIUS"
+#define PRIV_LVL_ENV             "PRIV_LVL"
+#define AUTH_MODE_ENV            "AUTH_MODE"
+
 #define PAP            "pap"
 #define LOGIN          "login="
 #define SERVER         "server="
