@@ -236,9 +236,11 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	int srv_i;
 	int tac_fd, status, msg, communicating;
         int priv_lvl_status;
+#define MAX_ENV_VAR_LEN 20
+  char env_var_str[MAX_ENV_VAR_LEN];
 
 	user = pass = tty = r_addr = NULL;
-
+  memset(env_var_str,0,MAX_ENV_VAR_LEN);
 	ctrl = _pam_parse(argc, argv);
 
 	if (ctrl & PAM_TAC_DEBUG)
@@ -504,10 +506,12 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
                 {
                     priv_lvl_status = get_priv_level(tac_srv[srv_i].addr, tac_srv[srv_i].key,
                                                                  user, tty, r_addr, true);
-                    if ( priv_lvl_status == EXIT_OK )
-			syslog(LOG_DEBUG, "Privilege level set for %s : %s", user, getenv(PRIV_LVL_ENV));
-                    else
-			syslog(LOG_ERR, "Failed to set Privilege Level for the user %s", user);
+                    if ( priv_lvl_status == EXIT_OK ) {
+                      syslog(LOG_DEBUG, "Privilege level set for %s : %s", user, getenv(PRIV_LVL_ENV));
+                      snprintf(env_var_str,MAX_ENV_VAR_LEN,"%s=%s",PRIV_LVL_ENV,getenv(PRIV_LVL_ENV));
+                    } else {
+                      syslog(LOG_ERR, "Failed to set Privilege Level for the user %s", user);
+                    }
                 }
 
 		if (status == PAM_SUCCESS || status == PAM_AUTH_ERR)
@@ -530,7 +534,12 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	 * this will be used by accounting and session modules
 	 */
 	if (status == PAM_SUCCESS) {
-		if ((pam_putenv(pamh, "auth_status=success")) != PAM_SUCCESS) {
+		if ((pam_putenv(pamh,  "auth_status=success")) != PAM_SUCCESS) {
+			syslog(LOG_ERR, "%s: error setting PAM environment",
+			    __FUNCTION__);
+			return PAM_SERVICE_ERR;
+		}
+		if ((pam_putenv(pamh, env_var_str)) != PAM_SUCCESS) {
 			syslog(LOG_ERR, "%s: error setting PAM environment",
 			    __FUNCTION__);
 			return PAM_SERVICE_ERR;
