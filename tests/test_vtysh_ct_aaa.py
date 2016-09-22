@@ -415,43 +415,52 @@ class Test_autoProvision:
             info('### Test to disable SSH public key authentication: Passed '
                  '###\n')
 
+    @pytest.mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
     def test_SetRadiusServerHost(self):
         if self.test.SetRadiusServerHost():
             info('### Test to configure the radius server host IP: Passed '
                  '###\n')
 
+    @pytest.mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
     def test_SetRadiusServerTimeout(self):
         if self.test.SetRadiusServerTimeout():
             info('### Test to configure radius server Timeout: Passed ###\n')
 
+    @pytest.mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
     def test_SetRadiusServerRetries(self):
         if self.test.SetRadiusServerRetries():
             info('### Test to configure radius server Retries: Passed ###\n')
 
+    @pytest.mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
     def test_SetRadiusAuthPort(self):
         if self.test.SetRadiusAuthPort():
             info('### Test to configure radius server Authentication port: '
                  'Passed ###\n')
 
+    @pytest.mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
     def test_SetRadiuspasskey(self):
         if self.test.SetRadiuspasskey():
             info('### Test to configure radius server Passkey: Passed ###\n')
 
+    @pytest.mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
     def test_NoRadiusPassky(self):
         if self.test.NoRadiusPassky():
             info('### Test to remove radius server Passkey and reset to '
                  'default: Passed ###\n')
 
+    @pytest.mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
     def test_NoRadiusAuthPort(self):
         if self.test.NoRadiusAuthPort():
             info('### Test to remove radius server Authentication port '
                  'and reset to default: Passed ###\n')
 
+    @pytest.mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
     def test_NoRadiusTimeout(self):
         if self.test.NoRadiusTimeout():
             info('### Test to remove radius server timeout and reset to '
                  'default: Passed ###\n')
 
+    @pytest.mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
     def test_NoRadiusRetries(self):
         if self.test.NoRadiusRetries():
             info('### Test to remove radius server Retries and reset to '

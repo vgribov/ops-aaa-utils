@@ -12,6 +12,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+from pytest import mark
 
 TOPOLOGY = """
 #
@@ -25,6 +26,7 @@ TOPOLOGY = """
 """
 
 
+@mark.gate
 def test_sftp_server_feature(topology, step):
     sw1 = topology.get('sw1')
 
@@ -37,6 +39,7 @@ def test_sftp_server_feature(topology, step):
     sw1('configure terminal')
     # enable the sftp server
     ret = sw1('sftp server enable')
+    sw1('end')
     assert ret == '', "Enable SFTP server failed"
 
     out = sw1('cat /etc/ssh/sshd_config | grep sftp', shell='bash')
@@ -44,6 +47,7 @@ def test_sftp_server_feature(topology, step):
         "Failed to enable SFTP server in sshd_config file"
 
     # disable the sftp server
+    sw1('configure terminal')
     ret = sw1('no sftp server enable')
     assert ret == '', "Disable SFTP server failed"
 
