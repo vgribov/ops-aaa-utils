@@ -370,7 +370,7 @@ def update_ssh_config_file():
 def get_server_list(session_type):
 
     server_list = []
-
+    global global_tacacs_passkey, global_tacacs_timeout, global_tacacs_auth
     global_tacacs_passkey = TACACS_SERVER_PASSKEY_DEFAULT
     global_tacacs_timeout = TACACS_SERVER_TIMEOUT_DEFAULT
     global_tacacs_auth = TACACS_PAP
@@ -439,6 +439,7 @@ def modify_common_auth_access_file(server_list):
     modify common-auth-access file, based on RADIUS, TACACS+ and local
     values set in the DB
     '''
+    global global_tacacs_passkey, global_tacacs_timeout, global_tacacs_auth
     vlog.info("AAA: server_list = %s\n" % server_list)
     if not server_list:
         vlog.info("AAA: server_list is empty. Adding default local")
