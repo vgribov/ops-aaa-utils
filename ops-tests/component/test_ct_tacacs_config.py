@@ -421,7 +421,7 @@ def tacacs_add_server_with_invalid_timeout(dut, step):
 def tacacs_add_server_with_invalid_passkey(dut, step):
     step('\n### === server (with invalid passkey) addition test start === ###')
     dut("configure terminal")
-    dut("tacacs-server host 4.4.4.4 passkey MBsaIbrZR5PIG4gfgNHrHPHHMJRhz3IVXYp4oLlf7gKacEhZTXKU980jEZsXo9u5")
+    dut("tacacs-server host 4.4.4.4 key abcdefghijklmnopqrstuvwxyz1234567")
     dut("end")
     dump = dut("show tacacs-server detail")
     lines = dump.splitlines()

@@ -47,7 +47,6 @@ vlog.init("/var/log/messages")
 
 # ------------------ wait_for_config_complete() ----------------
 
-
 def wait_for_config_complete(idl):
 
     system_is_configured = 0
@@ -250,7 +249,7 @@ def main():
                       % (AAA_TRUE_FLAG, argv[1]))
         else:
             vlog.err("Error, executing autoprovision script returned error %d"
-                     % ret)
+                  % ret)
 
     idl.close()
 

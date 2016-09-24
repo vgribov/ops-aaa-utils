@@ -77,7 +77,6 @@ typedef struct aaa_server_group_prio_params_s {
 #define AAA_TRUE_FLAG_STR                        "true"
 #define AAA_FALSE_FLAG_STR                       "false"
 
-/* TODO relocate to schema/openswitch-idl.h */
 #define SYSTEM_AAA_TACACS_TIMEOUT              "tacacs_timeout"
 #define SYSTEM_AAA_TACACS_TCP_PORT             "tacacs_tcp_port"
 #define SYSTEM_AAA_TACACS_PASSKEY              "tacacs_passkey"
@@ -88,14 +87,20 @@ typedef struct aaa_server_group_prio_params_s {
 #define TACACS_SERVER_GROUP_PRIORITY_DEFAULT   0
 #define AAA_SERVER_GROUP_PRIO_SESSION_TYPE_DEFAULT "default"
 
+#define MAX_TACACS_SERVERS                    64
+#define TACACS_SERVER_PASSKEY_DEFAULT         "testing123-1"
+#define TACACS_SERVER_TCP_PORT_DEFAULT        49
+#define TACACS_SERVER_TIMEOUT_DEFAULT         5
+#define TACACS_SERVER_TIMEOUT_DEFAULT_VAL     "5"
+#define MAX_CHARS_IN_TACACS_SERVER_NAME       45
+#define MAX_LENGTH_TACACS_PASSKEY             32
+
 #define MAX_RADIUS_SERVERS                    64
 #define RADIUS_SERVER_DEFAULT_PASSKEY         "testing123-1"
 #define RADIUS_SERVER_DEFAULT_PORT            1812
 #define RADIUS_SERVER_DEFAULT_RETRIES         1
 #define RADIUS_SERVER_DEFAULT_TIMEOUT         5
 
-#define MAX_CHARS_IN_TACACS_SERVER_NAME       45
-#define MAX_LENGTH_TACACS_PASSKEY             64
 #define MAX_CHARS_IN_SERVER_GROUP_NAME        32
 
 #define AUTO_PROVISIONING_ENABLE              "enable"
@@ -106,6 +111,14 @@ typedef struct aaa_server_group_prio_params_s {
 
 #define SSH_PUBLICKEY_AUTHENTICATION_ENABLE "ssh_publickeyauthentication_enable"
 #define SSH_PASSWORD_AUTHENTICATION_ENABLE  "ssh_passkeyauthentication_enable"
+
+#define PRIV_LVL_ENV                        "PRIV_LVL"
+#define MAX_GROUPS_USED                     64
+#define ROLE_ADMIN                          "ops_admin"
+#define ROLE_NETOP                          "ops_netop"
+#define PRIV_LVL_ADMIN                      "15"
+#define PRIV_LVL_NETOP                      "14"
+#define MAX_ROLE_NAME_LEN                   20
 
 #define AAA_GROUP_HELP_STR                    "Define AAA server group\n"
 #define AAA_SERVER_TYPE_HELP_STR              "Specify a server type\n"
@@ -137,7 +150,7 @@ typedef struct aaa_server_group_prio_params_s {
 #define AAA_DEFAULT_AUTHOR_LINE_HELP_STR      "Default authorization list\n"
 #define AAA_LOCAL_AUTHENTICATION_HELP_STR     "Local authentication\n"
 #define GROUP_HELP_STR                        "Server-group\n"
-#define GROUP_NAME_HELP_STR                   "Group Name or family name (Valid family names: tacacs+, radius, and local)\n"
+#define GROUP_NAME_HELP_STR                   "Group Name or family name (Valid family names: tacacs_plus, radius, and local)\n"
 #define SHOW_TACACS_SERVER_HELP_STR           "Show TACACS+ server configuration\n"
 #define SHOW_DETAILS_HELP_STR                 "Detailed information about TACACS+ servers\n"
 #define SHOW_RADIUS_SERVER_HELP_STR           "Show RADIUS server configuration\n"
@@ -147,6 +160,7 @@ typedef struct aaa_server_group_prio_params_s {
 #define AAA_NONE_AUTHOR_HELP_STR              "No authorization\n"
 #define AAA_COMMAND_AUTHOR_STR                "Command authorization\n"
 #define TACACS_ENABLE_AUTHOR_STR              "Enable TACACS+ authorization\n"
+#define SHOW_PRIV_LVL_STR                     "Show privilege level of the active user\n"
 void cli_pre_init(void);
 void cli_post_init(void);
 #endif /* _AAA_VTY_H */
