@@ -713,7 +713,7 @@ show_aaa_server_groups(const char* group_type)
 
 DEFUN(cli_show_aaa_server_groups,
       show_aaa_server_groups_cmd,
-      "show aaa server-groups {radius | tacacs+}",
+      "show aaa server-groups {radius | tacacs_plus}",
       SHOW_STR
       AAA_STR
       AAA_GROUP_HELP_STR
@@ -867,7 +867,7 @@ configure_aaa_server_group(aaa_server_group_params_t *server_group_params)
 /* CLI to create AAA TACACS+ server group  */
 DEFUN (cli_aaa_create_tacacs_server_group,
        aaa_create_tacacs_server_group_cmd,
-       "aaa group server (radius | tacacs+) WORD",
+       "aaa group server (radius | tacacs_plus) WORD",
        AAA_STR
        AAA_GROUP_HELP_STR
        AAA_SERVER_TYPE_HELP_STR
@@ -912,7 +912,7 @@ DEFUN (cli_aaa_create_tacacs_server_group,
 
 DEFUN_NO_FORM (cli_aaa_create_tacacs_server_group,
                aaa_create_tacacs_server_group_cmd,
-               "aaa group server (radius | tacacs+) WORD",
+               "aaa group server (radius | tacacs_plus) WORD",
                AAA_STR
                AAA_GROUP_HELP_STR
                AAA_SERVER_TYPE_HELP_STR
