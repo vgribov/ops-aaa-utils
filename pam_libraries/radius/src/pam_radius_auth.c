@@ -1304,7 +1304,9 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
                     DPRINT(LOG_ERR, "Service type attribute was not set");
                     retval = PAM_AUTH_ERR;
                 } else {
-                    int priv_lvl = ntohl(*((int *)a_service_type->data));
+                    int priv_lvl = -1;
+                    memcpy(&priv_lvl, a_service_type->data, sizeof(int));
+                    priv_lvl = ntohl(priv_lvl);
                     DPRINT(LOG_DEBUG, "Service type AVP = %d\n", priv_lvl);
 
                     switch (priv_lvl) {
