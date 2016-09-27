@@ -60,6 +60,10 @@
 #include <sys/time.h>
 #include <openssl/md5.h>
 #include "pam_radius_auth.h"
+#include "nl-utils.h"
+
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #define DPRINT if (opt_debug & PAM_DEBUG_ARG) _pam_log
 
@@ -176,9 +180,18 @@ static int _pam_parse(int argc, CONST char **argv, radius_conf_t *conf)
 		} else if (!strcmp(*argv, "force_prompt")) {
 			conf->force_prompt= TRUE;
 
-		} else if (!strncmp(*argv, "max_challenge=", 14)) {
+		} else if (!strncmp(*argv, DSTN_NAMESPACE, strlen(DSTN_NAMESPACE))) {
+			memset(conf->dstn_namespace, 0, sizeof(conf->dstn_namespace));
+			snprintf(conf->dstn_namespace, sizeof(conf->dstn_namespace), "%s",
+			    (char*)(*argv + strlen(DSTN_NAMESPACE)));
+                } else if (!strncmp(*argv, SOURCE_IP, strlen(SOURCE_IP))) {
+                        memset(conf->source_ip, 0, sizeof(conf->source_ip));
+                        snprintf(conf->source_ip, sizeof(conf->source_ip), "%s",
+			     (char*)(*argv + strlen(SOURCE_IP)));
+                } else if (!strcmp(*argv, "force_prompt")) {
+                        conf->force_prompt= TRUE;
+                } else if (!strncmp(*argv, "max_challenge=", 14)) {
 			conf->max_challenge = atoi(*argv+14);
-
 		} else if (!strncmp(*argv, SERVER, strlen(SERVER))) {
                         radius_server_t *tmp;
 			tmp = malloc(sizeof(radius_server_t));
@@ -718,7 +731,12 @@ static int initialize(radius_conf_t *conf, int accounting_val)
 	s_in = (struct sockaddr_in *) &salocal;
 	memset ((char *) s_in, '\0', sizeof(struct sockaddr));
 	s_in->sin_family = AF_INET;
-	s_in->sin_addr.s_addr = INADDR_ANY;
+
+	if (strlen(conf->source_ip) > 1) {
+		s_in->sin_addr.s_addr = inet_addr(conf->source_ip);
+	} else {
+		s_in->sin_addr.s_addr = INADDR_ANY;
+	}
 	s_in->sin_port = 0;
 
 	if (bind(conf->sockfd, &salocal, sizeof (struct sockaddr_in)) < 0) {
@@ -1150,6 +1168,16 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
 		}
 	}
 
+        /* switch to destination namespace */
+        _pam_log(LOG_DEBUG, "radius_dstn_namespace = %s, radius source_ip = %s,"
+            " dst ns len = %d, source ip len = %d",
+            config.dstn_namespace, config.source_ip,
+            (int) strlen(config.dstn_namespace), (int) strlen(config.source_ip));
+
+	if (strlen(config.dstn_namespace) > 1) {
+		nl_setns_with_name(config.dstn_namespace);
+	}
+
 	/*
 	 * Get the IP address of the authentication server
 	 * Then, open a socket, and bind it to a port
@@ -1221,6 +1249,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
 
 	retval = talk_radius(&config, request, response, password, NULL, config.retries + 1);
 	PAM_FAIL_CHECK;
+	nl_setns_oobm();
 
 	DPRINT(LOG_DEBUG, "Got RADIUS response code %d", response->code);
 

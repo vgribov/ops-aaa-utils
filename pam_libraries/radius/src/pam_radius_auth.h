@@ -34,6 +34,9 @@
 #define PRIV_LVL_ENV             "PRIV_LVL"
 #define AUTH_MODE_ENV            "AUTH_MODE"
 
+#define DSTN_NAMESPACE_LEN        32
+#define SOURCE_IP_LEN             32
+
 #define PAP            "pap"
 #define LOGIN          "login="
 #define SERVER         "server="
@@ -41,6 +44,8 @@
 #define TIMEOUT        "timeout="
 #define BYPASS_ACCT    "bypass_acct"
 #define BYPASS_SESSION "bypass_session"
+#define DSTN_NAMESPACE "dstn_namespace="
+#define SOURCE_IP      "source_ip="
 
 #define RADIUS_DEFAULT_UDP_PORT 1812
 
@@ -74,6 +79,8 @@ typedef struct radius_conf_t {
 	int debug;
 	char prompt[MAXPROMPT];
 	int use_chap;
+	char dstn_namespace[DSTN_NAMESPACE_LEN];
+	char source_ip[SOURCE_IP_LEN];
 } radius_conf_t;
 
 

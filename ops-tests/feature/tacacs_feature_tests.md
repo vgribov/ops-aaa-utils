@@ -25,6 +25,13 @@
 	- [No authentication option_non-existent user](#no-authentication-option-non-existent-user)
 - [IPv6 test](#ipv6-test)
 	- [TACACS+ authentication IPv6 user login](#tacacs-authentication-ipv6-user-login)
+- [Test source interface option](#test-source-interface-option)
+	- [Interface address as the source interface](#interface-address-as-the-source-interface)
+	- [Interface name as the source interface](#interface-name-as-the-source-interface)
+	- [Loopback address as the source interface](#loopback-address-as-the-source-interface)
+	- [Loopback name as the source interface](#loopback-name-as-the-source-interface)
+	- [OOBM address as the source interface](#oobm-address-as-the-source-interface)
+	- [No source interface configuration](#no-source-interface-configuration)
 
 ## Test local authentication
 
@@ -1143,3 +1150,222 @@ User user1 (password: user1) able to pass TACACS+ server authentication and logi
 
 ##### Test fail criteria
 User user1 (password: user1) failed to login after provide password three times
+
+## Test source interface option
+
+### Interface address as the source interface
+
+#### Objective
+This test case validates if the tacacs server can be reached through interface 1
+
+#### Requirements
+- Docker: Up-to-date OpenSwitch docker image and a pre-configured openswitch/tacacs_server image
+- Physical: AS5712 switch loaded with up-to-date OpenSwitch image, a TACACS+ server loaded with pre-configured openswitch/tacacs_server image
+
+#### Setup
+
+##### Topology diagram
+```ditaa
++----------+             +----------+             +----------+  
+|  Host 1  +-------------+  Switch  +-------------+ Host 2   |
++----------+       int 1 +----------+ OOBM        +----------+
+```
+
+##### Test Setup
+
+##### **Authentication client (OpenSwitch) setup**
+1. Configure interface 1 as the source interface for tacacs
+```
+configure terminal
+ip source-interface tacacs <primary ip address of interface>
+```
+
+#### Test result criteria
+
+##### Test pass criteria
+Tacacs User be able to pass tacacs authentication and login to OpenSwitch
+
+##### Test fail Criteria
+Tacacs User failed to pass tacacs authentication and login to OpenSwitch
+
+### Interface name as the source interface
+
+#### Objective
+This test case validates if the tacacs server can be reached through interface 1
+
+#### Requirements
+- Docker: Up-to-date OpenSwitch docker image and a pre-configured openswitch/tacacs_server image
+- Physical: AS5712 switch loaded with up-to-date OpenSwitch image, a TACACS+ server loaded with pre-configured openswitch/tacacs_server image
+
+#### Setup
+
+##### Topology diagram
+```ditaa
++----------+             +----------+             +----------+  
+|  Host 1  +-------------+  Switch  +-------------+ Host 2   |
++----------+       int 1 +----------+ OOBM        +----------+ 
+```
+
+##### Test Setup
+
+##### **Authentication client (OpenSwitch) setup**
+1. Configure interface 1 as the source interface for tacacs
+```
+configure terminal
+ip source-interface tacacs interface 1
+```
+
+#### Test result criteria
+
+##### Test pass criteria
+Tacacs User be able to pass tacacs authentication and login to OpenSwitch
+
+##### Test fail Criteria
+Tacacs User failed to pass tacacs authentication and login to OpenSwitch
+
+### Loopback address as the source interface
+
+#### Objective
+This test case validates if the tacacs server can be reached if loopback is used for the
+source interface
+
+#### Requirements
+- Docker: Up-to-date OpenSwitch docker image and a pre-configured openswitch/tacacs_server image
+- Physical: AS5712 switch loaded with up-to-date OpenSwitch image, a TACACS+ server loaded with pre-configured openswitch/tacacs_server image
+
+#### Setup
+
+##### Topology diagram
+```ditaa
++----------+             +----------+             +----------+  
+|  Host 1  +-------------+  Switch  +-------------+ Host 2   |
++----------+       int 1 +----------+ OOBM        +----------+ 
+```
+
+##### Test Setup
+
+##### **Authentication client (OpenSwitch) setup**
+1. Configure loopback address as the source interface for tacacs
+```
+configure terminal
+ip source-interface tacacs address <ip address of loopback>
+```
+
+#### Test result criteria
+
+##### Test pass criteria
+Tacacs User be able to pass tacacs authentication and login to OpenSwitch
+
+##### Test fail Criteria
+Tacacs User failed to pass tacacs authentication and login to OpenSwitch
+
+### Loopback name as the source interface
+
+#### Objective
+This test case validates if the tacacs server can be reached if loopback interface is used 
+for the source interface
+
+#### Requirements
+- Docker: Up-to-date OpenSwitch docker image and a pre-configured openswitch/tacacs_server image
+- Physical: AS5712 switch loaded with up-to-date OpenSwitch image, a TACACS+ server loaded with pre-configured openswitch/tacacs_server image
+
+#### Setup
+
+##### Topology diagram
+```ditaa
++----------+             +----------+             +----------+  
+|  Host 1  +-------------+  Switch  +-------------+ Host 2   |
++----------+       int 1 +----------+ OOBM        +----------+ 
+```
+
+##### Test Setup
+
+##### **Authentication client (OpenSwitch) setup**
+1. Configure loopback interface as the source interface for tacacs
+```
+configure terminal
+ip source-interface tacacs address loopback1
+```
+
+#### Test result criteria
+
+##### Test pass criteria
+Tacacs User be able to pass tacacs authentication and login to OpenSwitch
+
+##### Test fail Criteria
+Tacacs User failed to pass tacacs authentication and login to OpenSwitch
+
+### OOBM address as the source interface
+
+#### Objective
+This test case validates if the tacacs server can be reached if OOBM address is used for 
+the source interface
+
+#### Requirements
+- Docker: Up-to-date OpenSwitch docker image and a pre-configured openswitch/tacacs_server image
+- Physical: AS5712 switch loaded with up-to-date OpenSwitch image, a TACACS+ server loaded with pre-configured openswitch/tacacs_server image
+
+#### Setup
+
+##### Topology diagram
+```ditaa
++----------+             +----------+             +----------+  
+|  Host 1  +-------------+  Switch  +-------------+ Host 2   |
++----------+       int 1 +----------+ OOBM        +----------+
+```
+
+##### Test Setup
+
+##### **Authentication client (OpenSwitch) setup**
+1. Configure OOBM address as the source interface for tacacs
+```
+configure terminal
+ip source-interface tacacs address <ip address of OOBM port>
+```
+
+#### Test result criteria
+
+##### Test pass criteria
+Tacacs User be able to pass tacacs authentication and login to OpenSwitch
+
+##### Test fail Criteria
+Tacacs User failed to pass tacacs authentication and login to OpenSwitch
+
+### No source interface configuration
+
+#### Objective
+This test case validates if the tacacs server can be reached if no source interface 
+configuration is present.  In this case, tacacs server should be reached through the 
+default OOBM port
+
+#### Requirements
+- Docker: Up-to-date OpenSwitch docker image and a pre-configured openswitch/tacacs_server image
+- Physical: AS5712 switch loaded with up-to-date OpenSwitch image, a TACACS+ server loaded with pre-configured openswitch/tacacs_server image
+
+#### Setup
+
+##### Topology diagram
+```ditaa
++----------+             +----------+             +----------+  
+|  Host 1  +-------------+  Switch  +-------------+ Host 2   |
++----------+       int 1 +----------+ OOBM        +----------+
+```
+
+##### Test Setup
+
+##### **Authentication client (OpenSwitch) setup**
+1. Remove the source interface configuration
+```
+configure terminal
+no ip source-interface tacacs
+```
+
+#### Test result criteria
+
+##### Test pass criteria
+Tacacs User be able to pass tacacs authentication and login to OpenSwitch
+
+##### Test fail Criteria
+Tacacs User failed to pass tacacs authentication and login to OpenSwitch
+
+

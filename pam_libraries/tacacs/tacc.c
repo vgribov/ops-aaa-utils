@@ -100,7 +100,7 @@ static struct option long_options[] =
 						0, 0, 0, 0 } };
 
 /* command line letters */
-char *opt_string = "TRAVhu:p:s:k:c:qr:wnS:P:L:e:f:g";
+char *opt_string = "TRACGhu:p:s:k:c:qr:wnS:P:L:e:f:g";
 
 int main(int argc, char **argv) {
 	char *pass = NULL;

@@ -39,8 +39,8 @@ TOPOLOGY = """
 
 # Nodes
 [type=openswitch name="Switch 1"] sw1
-[type=host image="openswitch/tacacs_server:latest" name="host 1"] h1
-[type=oobmhost image="openswitch/tacacs_server:latest" name="Host 2"] h2
+[type=host image="host/freeradius-ubuntu:latest" name="host 1"] h1
+[type=oobmhost image="host/freeradius-ubuntu:latest" name="Host 2"] h2
 
 
 # Links
@@ -82,7 +82,7 @@ def configure(sw1):
     sw1("int loopback 1")
     sw1("ip address 13.0.13.2/8")
     sw1("end")
-    
+
     # FIXME
     sw1("configure terminal")
     sw1("dhcp-server")
@@ -101,21 +101,6 @@ def configure(sw1):
                                                   start_ipv4_address_pool2,
                                                   end_ipv4_address_pool2)"""
 
-
-def configure_secondary_ip(sw1):
-    print('\n### Configuring secondary IPV4 address on interface 1 ###\n')
-
-
-    sw1("configure terminal")
-    sw1("int 1")
-    sw1("no ip address 10.0.10.1/8")
-    sw1("ip address 10.0.10.1/8 secondary")
-    sw1("ip address 14.0.13.2/8 secondary")
-    sw1("ip address 15.0.13.2/8 secondary")
-    sw1("ip address 16.0.13.2/8 secondary")
-    sw1("end")
-
-    sw1("end")
 
 def dhcp_server_dynamic_ipv4_pool_config(sw1):
     print('\n### Verify DHCP server dynamic IPV4 pool config in db ###\n')
@@ -235,6 +220,47 @@ def dhcp_client_dynamic_ipv4_address_config(h1, h2, sw1):
     assert valid_config == 2 , "Invalid entry in DHCP Leases Database"
 
 
+def setupradiusserver(step):
+    """ This function is to setup radius server in the ops-host image
+    """
+    h1 = hosts[0]
+    h2 = hosts[1]
+
+    switchip = get_switch_ip(step)
+    print("SwitchIP:" + switchip)
+    out = h2("sed -i \"76s/steve/steve/\" /etc/freeradius/users")
+    out = h2("sed -i \"76s/#steve/steve/\" /etc/freeradius/users")
+    out = h2("sed -i \"77s/Framed-User/Administrative-User/\" /etc/freeradius/users")
+    out = h2("sed -i \"77s/#//\" /etc/freeradius/users")
+    out = h2("sed -i \"196s/192.168.0.0/"+switchip+"/\" "
+             "/etc/freeradius/clients.conf")
+    out = h2("sed -i \"196,199s/#//\" /etc/freeradius/clients.conf")
+
+    h2("service freeradius stop")
+    sleep(2)
+    out = h2("service freeradius start")
+    assert ("fail") not in out, "Failed to start freeradius on host"
+
+
+
+    print("SwitchIP:" + switchip)
+    out = h1("sed -i \"76s/steve/steve/\" /etc/freeradius/users")
+    out = h1("sed -i \"76s/#steve/steve/\" /etc/freeradius/users")
+    out = h1("sed -i \"77s/Framed-User/Administrative-User/\" /etc/freeradius/users")
+    out = h1("sed -i \"77s/#//\" /etc/freeradius/users")
+    out = h1("sed -i \"196s/192.168.0.0/0.0.0.0/\" "
+             "/etc/freeradius/clients.conf")
+    out = h1("sed -i \"196s/24/0/\" "
+             "/etc/freeradius/clients.conf")
+    out = h1("sed -i \"196,199s/#//\" /etc/freeradius/clients.conf")
+
+    h1("service freeradius stop")
+    sleep(2)
+    out = h1("service freeradius start")
+    assert ("fail") not in out, "Failed to start freeradius on host"
+
+    step("Configured radius server on host\n")
+
 def setup_tacacs_server(step, new_user, new_pass):
     """ This function is to setup tacacs server
     """
@@ -293,7 +319,7 @@ def setup_source_intf_interface_int_1(step):
     s1("exit")
     s1("end")
     step("####### Configure src intf name of interface 1 succeed #######")
-    
+
 
 def setup_source_intf_address_loopback(step):
     """ This function is to setup TACACS+ source interface
@@ -309,7 +335,7 @@ def setup_source_intf_address_loopback(step):
     s1("exit")
     s1("end")
     step("####### Configure src intf address of loopback 1  succeed #######")
-    
+
 def setup_source_intf_interface_loopback(step):
     """ This function is to setup TACACS+ source interface
     """
@@ -320,11 +346,11 @@ def setup_source_intf_interface_loopback(step):
         "Failed to enter configuration terminal"
 
     sleep(2)
-    s1("ip source-interface all interface loopback1")
+    s1("ip source-interface all interface " + "loopback 1")
     s1("exit")
     s1("end")
     step("####### Configure src intf name of loopback 1  succeed #######")
-    
+
 
 def setup_source_intf_address_mgmt(step):
     """ This function is to setup TACACS+ source interface
@@ -341,7 +367,7 @@ def setup_source_intf_address_mgmt(step):
     s1("exit")
     s1("end")
     step("####### Configure src intf address of mgmt interface  succeed #######")
-    
+
 def setup_source_intf_remove(step):
     """ This function is to setup TACACS+ source interface
     """
@@ -357,7 +383,7 @@ def setup_source_intf_remove(step):
     s1("exit")
     s1("end")
     step("####### Remove src intf configuration succeed #######")
-    
+
 def setup_tacacs_client(step):
     """ This function is to setup TACACS+ client in the switch
     """
@@ -375,6 +401,7 @@ def setup_tacacs_client(step):
     sleep(2)
     s1("tacacs-server host " + host_1_ip_address + " key tac_test timeout 15")
     s1("tacacs-server host " + host_2_ip_address + " key tac_test timeout 15")
+    s1("ip source-interface all  " + "10.0.10.1")
     s1("aaa group server tacacs+ sg1")
     s1("server " + host_1_ip_address)
     #s1("server " + host_2_ip_address)
@@ -382,23 +409,6 @@ def setup_tacacs_client(step):
     step("####### Configure TACACS+ client (on OpenSwitch) succeed #######")
 
 
-def add_oobm_tacacs_server(step):
-    """ This function is to setup TACACS+ client in the switch
-    """
-    step("####### Configure TACACS+ client (on OpenSwitch) start #######")
-    s1 = switches[0]
-    host_2_ip_address = get_host_ip_2(step, 1)
-    print("TACACS+ Server:" + host_2_ip_address)
-    sleep(2)
-    out = s1("configure terminal")
-    assert "Unknown command" not in out, \
-        "Failed to enter configuration terminal"
-
-    sleep(2)
-    s1("aaa group server tacacs+ sg1")
-    s1("server " + host_2_ip_address)
-    s1("end")
-    step("####### Configure TACACS+ client (on OpenSwitch) succeed #######")
 
 def enable_tacacs_authentication_by_group(step):
     """ This function is to enable TACACS+ authentication in DB
@@ -434,7 +444,7 @@ def get_host_ip(step, host_id):
     out = host("ifconfig %s" % host.ports["if01"])
     host_ip_address = out.split("\n")[1].split()[1][5:]
     return host_ip_address
-    
+
 def get_host_ip_2(step, host_id):
     """ This function is to get host IP addess
     """
@@ -497,40 +507,35 @@ def test_aaa_ft_authentication(topology, step):
     ops1.name = "ops1"
     hs1.name = "hs1"
     hs2.name = "hs2"
-    
+
 
     # copied from src intf topo (start)
-    
+
     step('\n########## Test DHCP server dynamic '
          'IPV4 configuration ##########\n')
     configure(ops1)
     configure_dhcp_client(hs1, hs2)
 
-    setup_tacacs_server(step, USER_NEW, "super")
-    setup_tacacs_client(step)
-    
+    setupradiusserver(step)
+    set_trace()
 
     enable_tacacs_authentication_by_group(step)
-    
+
     setup_source_intf_address_int_1(step)
-    #set_trace()
-    login_ssh_tacacs(step, USER_1, USER_1)
-    
-    setup_source_intf_interface_int_1(step)
-    login_ssh_tacacs(step, USER_1, USER_1)
-    configure_secondary_ip(ops1)
-    login_ssh_tacacs(step, USER_1, USER_1)
-    
-    setup_source_intf_address_loopback(step)
-    login_ssh_tacacs(step, USER_1, USER_1)
-    
-    setup_source_intf_interface_loopback(step)
-    login_ssh_tacacs(step, USER_1, USER_1)
-    
-    add_oobm_tacacs_server(step)
-    setup_source_intf_address_mgmt(step)
-    login_ssh_tacacs(step, USER_1, USER_1)
-    
-    setup_source_intf_remove(step)
+    set_trace()
     login_ssh_tacacs(step, USER_1, USER_1)
 
+    setup_source_intf_interface_int_1(step)
+    login_ssh_tacacs(step, USER_1, USER_1)
+
+    setup_source_intf_address_loopback(step)
+    login_ssh_tacacs(step, USER_1, USER_1)
+
+    setup_source_intf_interface_loopback(step)
+    login_ssh_tacacs(step, USER_1, USER_1)
+
+    setup_source_intf_address_mgmt(step)
+    login_ssh_tacacs(step, USER_1, USER_1)
+
+    setup_source_intf_remove(step)
+    login_ssh_tacacs(step, USER_1, USER_1)
