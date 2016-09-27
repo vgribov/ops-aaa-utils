@@ -59,7 +59,7 @@ int tac_cmd_author(const char *tac_server_name, const char *tac_secret,
 
     /* Get addr_info structure for tac_server_name */
     if ((ret = getaddrinfo(tac_server_name, "tacacs", &hints, &tac_server)) != 0) {
-        LOG(quiet, VLL_ERR, "error: resolving name %s: %s", tac_server_name,
+        LOG(quiet, VLL_DBG, "error: resolving name %s: %s", tac_server_name,
             gai_strerror(ret))
         return EXIT_ADDR_ERR;
     }
@@ -83,10 +83,10 @@ int tac_cmd_author(const char *tac_server_name, const char *tac_secret,
         unsigned short port;
         if (get_ip_port_tuple(tac_server->ai_addr,
                                ip, &port, sizeof(ip), quiet) != NULL) {
-            LOG(quiet, VLL_ERR, "Error connecting to TACACS+ server %s:%hu:"
+            LOG(quiet, VLL_DBG, "Error connecting to TACACS+ server %s:%hu:"
                                  "%m\n",ip, port)
         } else {
-            LOG(quiet, VLL_ERR, "Error connecting to TACACS+ server: %m\n")
+            LOG(quiet, VLL_DBG, "Error connecting to TACACS+ server: %m\n")
         }
         status_code = EXIT_CONN_ERR;
         goto CLEAN_UP;
@@ -96,7 +96,7 @@ int tac_cmd_author(const char *tac_server_name, const char *tac_secret,
     send_status = tac_author_send(tac_fd, user, tty, remote_addr, attr);
 
     if (send_status < 0) {
-        LOG(quiet, VLL_ERR, "Sending authorization request failed\n");
+        LOG(quiet, VLL_DBG, "Sending authorization request failed\n");
         status_code = EXIT_SEND_ERR;
         goto CLEAN_UP;
     }
@@ -106,10 +106,10 @@ int tac_cmd_author(const char *tac_server_name, const char *tac_secret,
 
     if (arep.status != AUTHOR_STATUS_PASS_ADD
         && arep.status != AUTHOR_STATUS_PASS_REPL) {
-        LOG(quiet, VLL_ERR, "Authorization FAILED: %s\n", arep.msg);
+        LOG(quiet, VLL_DBG, "Authorization FAILED: %s\n", arep.msg);
         status_code = EXIT_FAIL;
     } else {
-        LOG(quiet, VLL_INFO, "Authorization OK: %s\n", arep.msg);
+        LOG(quiet, VLL_DBG, "Authorization OK: %s\n", arep.msg);
         status_code = EXIT_OK;
     }
 
@@ -167,10 +167,10 @@ int get_priv_level(struct addrinfo *tac_server, const char *tac_secret,
         unsigned short port;
         if (get_ip_port_tuple(tac_server->ai_addr,
                                ip, &port, sizeof(ip), quiet) != NULL) {
-            LOG(quiet, VLL_ERR, "Error connecting to TACACS+ server %s:%hu:"
+            LOG(quiet, VLL_DBG, "Error connecting to TACACS+ server %s:%hu:"
                                  "%m\n",ip, port)
         } else {
-            LOG(quiet, VLL_ERR, "Error connecting to TACACS+ server: %m\n")
+            LOG(quiet, VLL_DBG, "Error connecting to TACACS+ server: %m\n")
         }
         status_code = EXIT_CONN_ERR;
         goto CLEAN_UP;
@@ -184,7 +184,7 @@ int get_priv_level(struct addrinfo *tac_server, const char *tac_secret,
     send_status = tac_author_send(tac_fd, user, tty, remote_addr, attr);
 
     if (send_status < 0) {
-        LOG(quiet, VLL_ERR, "Sending authorization request failed\n");
+        LOG(quiet, VLL_DBG, "Sending authorization request failed\n");
         status_code = EXIT_SEND_ERR;
         goto CLEAN_UP;
     }
@@ -209,19 +209,19 @@ int get_priv_level(struct addrinfo *tac_server, const char *tac_secret,
             if (strcmp(attr_ret, PRIV_RET_STR) == 0) {
                 setenv(PRIV_LVL_ENV, priv_lvl_value, 1);
                 /* To make sure that the privilege level env is set and returned*/
-                LOG(quiet, VLL_INFO,"Returned privilege level for user %s : %s\n",
+                LOG(quiet, VLL_DBG,"Returned privilege level for user %s : %s\n",
                     user, getenv(PRIV_LVL_ENV));
                 status_code = EXIT_OK;
             } else {
-                LOG(quiet, VLL_ERR, "Wrong attribute returned from the tacacs server: %s\n", attr_ret);
+                LOG(quiet, VLL_DBG, "Wrong attribute returned from the tacacs server: %s\n", attr_ret);
                 status_code = EXIT_FAIL;
             }
         } else {
-            LOG(quiet, VLL_ERR, "Could not seperate the value from attribute-value pair: %s\n", arep.attr->attr);
+            LOG(quiet, VLL_DBG, "Could not seperate the value from attribute-value pair: %s\n", arep.attr->attr);
             status_code = EXIT_FAIL;
         }
     } else {
-        LOG(quiet, VLL_ERR, "Could not retrieve attribute from the tacacs server\n");
+        LOG(quiet, VLL_DBG, "Could not retrieve attribute from the tacacs server\n");
         status_code = EXIT_FAIL;
     }
     free(attr_ret);
