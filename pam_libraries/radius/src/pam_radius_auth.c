@@ -1184,7 +1184,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
 
 	if (password) {
 		password = strdup(password);
-		DPRINT(LOG_DEBUG, "Got password %s", password);
+		DPRINT(LOG_DEBUG, "Got password");
 	}
 
 	/* no previous password: maybe get one from the user */
