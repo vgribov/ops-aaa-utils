@@ -229,7 +229,6 @@ def add_default_row():
 
     # Default values for aaa column
     data[AAA_FAIL_THROUGH] = AAA_FALSE_FLAG
-    data[AAA_RADIUS] = AAA_FALSE_FLAG
     data[AAA_RADIUS_AUTH] = RADIUS_PAP
     data[AAA_TACACS_AUTH] = TACACS_PAP
     data[SSH_PASSKEY_AUTHENTICATION_ENABLE] = AUTH_KEY_ENABLE
@@ -414,7 +413,8 @@ def get_server_list(session_type):
                 elif group.group_type == AAA_LOCAL:
                     server_list.append((0, group.group_type))
 
-                if server_table == RADIUS_SERVER_TABLE or server_table == TACACS_SERVER_TABLE:
+                #if server_table == RADIUS_SERVER_TABLE or server_table == TACACS_SERVER_TABLE:
+                if server_table == TACACS_SERVER_TABLE:
                     group_server_dict = {}
                     for server in idl.tables[server_table].rows.itervalues():
                         vlog.info("AAA: Server %s group = %s group_prio = %s default_prio = %s\n" %
