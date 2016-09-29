@@ -40,18 +40,11 @@ struct passwd *getpwnam(const char *name) {
     struct passwd *pw;
     getpwnam_type orig_getpwnam;
 
-    /* TODO: remove the debugs */
-    syslog(LOG_ERR, "Tacacs_Dev: entering %s for user %s, TEMPLATE_USER = %s ",
-         __FUNCTION__, name, xstr(TEMPLATE_USER));
     orig_getpwnam = (getpwnam_type)dlsym(RTLD_NEXT, "getpwnam");
     pw = orig_getpwnam(name);
 
     if (pw == NULL) {
-        syslog(LOG_ERR, "Tacacs_Dev: (%s) user %s not found locally",
-         __FUNCTION__, name);
-
-        /* TODO: rename it to appropriate user */
-        pw = orig_getpwnam(xstr(TEMPLATE_USER));
+        pw = orig_getpwnam(xstr(REMOTE_USER));
     }
 
     return pw;
