@@ -32,6 +32,8 @@
 	- [Loopback name as the source interface](#loopback-name-as-the-source-interface)
 	- [OOBM address as the source interface](#oobm-address-as-the-source-interface)
 	- [No source interface configuration](#no-source-interface-configuration)
+- [Test TACACS+ command authorization](#test-tacacs-command-authorization)
+	- [Tacacs+ command authorization](#tacacs-command-authorization)
 
 ## Test local authentication
 
@@ -1369,3 +1371,51 @@ Tacacs User be able to pass tacacs authentication and login to OpenSwitch
 Tacacs User failed to pass tacacs authentication and login to OpenSwitch
 
 
+## Test TACACS+ command authorization
+
+### Tacacs+ command authorization
+
+#### Objective
+This test case validates if command authorization works after configuring tacacs
+server for the authorizing a command for a perticular user.
+
+#### Requirements
+- Docker: Up-to-date OpenSwitch docker image and two pre-configured openswitch/tacacs_server image
+- Physical: AS5712 switch loaded with up-to-date OpenSwitch image, two TACACS+ servers loaded with pre-configured openswitch/tacacs_server image
+
+#### Setup
+
+##### Topology diagram
+```ditaa
++----------+   +----------+   +----------+
+|  Host 1  +---+  Switch  +---+  Host 1  |
++----------+   +----------+   +----------+
+```
+
+##### Test Setup
+
+##### **Authentication client (OpenSwitch) setup**
+1. Configure tacacs servers
+2. add tacacs servers  to groups
+3. enable aaa tacacs authorization
+```
+configure terminal
+tacacs-server host 192.168.1.254
+tacacs-server host 192.168.1.253
+aaa group server tacacs_plus tac1
+server 192.168.1.254
+exit
+aaa group server tacacs_plus tac2
+server 192.168.1.253
+exit
+aaa authorization commands default group tac1 tac2 none
+```
+
+#### Test result criteria
+
+##### Test pass criteria
+After authorization is configured, user should be able to run "show running-config" command
+
+##### Test fail Criteria
+After authorization is configured, user tries to run show running-config and receives
+"Cannot execute command. Command not allowed" error message.
