@@ -21,7 +21,7 @@ import os
 import sys
 from time import sleep
 import pytest
-
+from pytest import mark
 from opsvsi.docker import *
 from opsvsi.opsvsitest import *
 
@@ -164,6 +164,7 @@ class autoprovisionFeatureTest(OpsVsiTest):
             info("### Passed:Executing autoprovision script again,"
                  "autoprovision not performed  ###\n")
 
+@mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
 class Test_autoprovisionfeature:
     def setup(self):
         pass

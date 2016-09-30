@@ -16,6 +16,7 @@
 # under the License.
 
 import pytest
+from pytest import mark
 import re
 from opstestfw import *
 from opstestfw.switch.CLI import *
@@ -96,7 +97,7 @@ def sftpserverfeature(dut01):
 
     return True
 
-
+@mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
 class Test_sftpserver_feature:
     def setup_class(cls):
         # Test object will parse command line and formulate the env

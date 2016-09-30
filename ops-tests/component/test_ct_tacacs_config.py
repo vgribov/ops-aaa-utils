@@ -24,6 +24,7 @@ TOPOLOGY = """
 [type=openswitch name="Switch 1"] ops1
 """
 from pdb import set_trace
+from pytest import mark
 
 DEFAULT_TACACS_TIMEOUT = "5"
 DEFAULT_TACACS_AUTH_PORT = "49"
@@ -928,7 +929,7 @@ def set_aaa_authentication_local(dut, step):
     step('\n### set aaa authentication local test passed ###')
     step('\n### === set aaa authentication local test end === ###\n')
 
-
+@mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
 def test_ct_tacacs_config(topology, step):
     ops1 = topology.get("ops1")
     assert ops1 is not None

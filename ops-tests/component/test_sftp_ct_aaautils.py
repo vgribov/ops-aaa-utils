@@ -25,7 +25,7 @@ TOPOLOGY = """
 [type=openswitch name="Switch 1"] sw1
 """
 
-
+@mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
 @mark.gate
 def test_sftp_server_feature(topology, step):
     sw1 = topology.get('sw1')

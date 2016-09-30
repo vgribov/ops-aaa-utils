@@ -15,6 +15,7 @@
 
 from time import sleep
 from os.path import realpath, join, dirname
+from pytest import mark
 
 TOPOLOGY = """
 #               +-------+
@@ -123,7 +124,7 @@ def executeautoprovision(sw1, h1, step):
     step("### Passed:Executing autoprovision script again,"
          "autoprovision not performed  ###\n")
 
-
+@mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
 def test_autoprovisionfeature(topology, step):
     sw1 = topology.get('sw1')
     h1 = topology.get('h1')

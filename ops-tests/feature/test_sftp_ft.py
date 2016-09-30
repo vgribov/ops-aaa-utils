@@ -313,7 +313,7 @@ def sftp_fail_cases(s1, s2):
         "Verify invalid destination path test - FAILED"
     print("Verify invalid destination path test - SUCCESS")
 
-
+@mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
 @mark.gate
 def test_sftp_ft(topology, step):
     ops1 = topology.get("ops1")

@@ -19,6 +19,7 @@
 
 import time
 import pytest
+from pytest import mark
 from opsvsi.docker import *
 from opsvsi.opsvsitest import *
 
@@ -380,6 +381,7 @@ class AutoProvisioning(OpsVsiTest):
             'Test to remove radius server Retries and reset to default: Failed'
 
 
+@mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
 class Test_autoProvision:
 
     def setup_class(cls):
