@@ -375,7 +375,7 @@ def setup_tacacs_client(step):
     sleep(2)
     s1("tacacs-server host " + host_1_ip_address + " key tac_test timeout 15")
     s1("tacacs-server host " + host_2_ip_address + " key tac_test timeout 15")
-    s1("aaa group server tacacs+ sg1")
+    s1("aaa group server tacacs_plus sg1")
     s1("server " + host_1_ip_address)
     #s1("server " + host_2_ip_address)
     s1("end")
@@ -395,7 +395,7 @@ def add_oobm_tacacs_server(step):
         "Failed to enter configuration terminal"
 
     sleep(2)
-    s1("aaa group server tacacs+ sg1")
+    s1("aaa group server tacacs_plus sg1")
     s1("server " + host_2_ip_address)
     s1("end")
     step("####### Configure TACACS+ client (on OpenSwitch) succeed #######")
