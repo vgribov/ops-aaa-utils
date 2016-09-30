@@ -133,6 +133,7 @@ typedef struct pw_auth_hdr {
 #define	PW_DIALBACK_FRAMED_USER	4
 #define PW_OUTBOUND_USER		5
 #define PW_SHELL_USER			6
+#define PW_NAS_PROMPT                   7
 
 /*	FRAMED PROTOCOLS	*/
 

@@ -22,15 +22,57 @@
  *          global config context.
  */
 
+#include "shash.h"
 #include "vtysh/vty.h"
 #include "vtysh/vector.h"
 #include "vswitch-idl.h"
 #include "openswitch-idl.h"
+#include "vtysh/utils/tacacs_vtysh_utils.h"
 #include "vtysh/vtysh_ovsdb_if.h"
 #include "vtysh/vtysh_ovsdb_config.h"
 #include "vtysh/utils/system_vtysh_utils.h"
 #include "vtysh_ovsdb_aaa_context.h"
 #include "aaa_vty.h"
+
+/*-----------------------------------------------------------------------------
+| Function : vtysh_ovsdb_ovstable_parse_publickey_cfg
+| Responsibility : parse publickey config in aaa column in system table
+| Parameters :
+|    ifrow_aaa : aaa column object pointer
+|    pmsg : callback arguments from show running config handler|
+-----------------------------------------------------------------------------*/
+static vtysh_ret_val
+vtysh_ovsdb_ovstable_parse_publickey_cfg(const struct smap *ifrow_aaa, vtysh_ovsdb_cbmsg *p_msg)
+{
+    const char *data = NULL;
+
+    if (ifrow_aaa == NULL)
+    {
+        return e_vtysh_error;
+    }
+
+    vtysh_ovsdb_cli_print(p_msg, "!");
+
+    data = smap_get(ifrow_aaa, SSH_PASSWORD_AUTHENTICATION_ENABLE);
+    if (data)
+    {
+        if (!VTYSH_STR_EQ(data, SSH_AUTH_ENABLE))
+        {
+            vtysh_ovsdb_cli_print(p_msg, "no ssh password-authentication");
+        }
+    }
+
+    data = smap_get(ifrow_aaa, SSH_PUBLICKEY_AUTHENTICATION_ENABLE);
+    if (data)
+    {
+        if (!VTYSH_STR_EQ(data, SSH_AUTH_ENABLE))
+        {
+            vtysh_ovsdb_cli_print(p_msg, "no ssh public-key-authentication");
+        }
+    }
+
+    return e_vtysh_ok;
+}
 
 /*-----------------------------------------------------------------------------
 | Function : vtysh_ovsdb_ovstable_parse_tacacs_cfg
@@ -50,6 +92,8 @@ vtysh_ovsdb_ovstable_parse_tacacs_cfg(const struct smap *ifrow_aaa, vtysh_ovsdb_
   {
     return e_vtysh_error;
   }
+
+  vtysh_ovsdb_cli_print(p_msg, "!");
 
   passkey = smap_get(ifrow_aaa, SYSTEM_AAA_TACACS_PASSKEY);
   if (passkey)
@@ -81,68 +125,140 @@ vtysh_ovsdb_ovstable_parse_tacacs_cfg(const struct smap *ifrow_aaa, vtysh_ovsdb_
   return e_vtysh_ok;
 }
 
-/* Utility functions for tacacs server display*/
-
-/* qsort comparator function: default_priority*/
-int
-compare_nodes_by_tacacs_server_default_priority (const void *a, const void *b)
+/*-----------------------------------------------------------------------------
+| Function : vtysh_ovsdb_ovstable_parse_radius_cfg
+| Responsibility : parse radius config in aaa column in system table
+| Parameters :
+|    ifrow_aaa : aaa column object pointer
+|    pmsg : callback arguments from show running config handler|
+-----------------------------------------------------------------------------*/
+static vtysh_ret_val
+vtysh_ovsdb_ovstable_parse_radius_cfg(const struct smap *ifrow_aaa, vtysh_ovsdb_cbmsg *p_msg)
 {
-    const struct shash_node *const *node_a = a;
-    const struct shash_node *const *node_b = b;
-    const struct ovsrec_tacacs_server *server_a =
-                      (const struct ovsrec_tacacs_server *)(*node_a)->data;
-    const struct ovsrec_tacacs_server *server_b =
-                      (const struct ovsrec_tacacs_server *)(*node_b)->data;
+  const char *timeout = NULL;
+  const char *passkey = NULL;
+  const char *auth_type = NULL;
+  const char *retries = NULL;
 
-    return (server_a->default_priority - server_b->default_priority);
+  if(ifrow_aaa == NULL)
+  {
+    return e_vtysh_error;
+  }
+
+  vtysh_ovsdb_cli_print(p_msg, "!");
+
+  passkey = smap_get(ifrow_aaa, SYSTEM_AAA_RADIUS_PASSKEY);
+  if (passkey)
+  {
+    if (!VTYSH_STR_EQ(passkey, RADIUS_SERVER_DEFAULT_PASSKEY))
+    {
+        vtysh_ovsdb_cli_print(p_msg, "radius-server key %s", passkey);
+    }
+  }
+
+  timeout = smap_get(ifrow_aaa, SYSTEM_AAA_RADIUS_TIMEOUT);
+  if (timeout)
+  {
+    if (!VTYSH_STR_EQ(timeout, RADIUS_SERVER_DEFAULT_TIMEOUT_STR))
+    {
+        vtysh_ovsdb_cli_print(p_msg, "radius-server timeout %s", timeout);
+    }
+  }
+
+  auth_type = smap_get(ifrow_aaa, SYSTEM_AAA_RADIUS_AUTH);
+  if (auth_type)
+  {
+    if (!VTYSH_STR_EQ(auth_type, RADIUS_SERVER_AUTH_TYPE_DEFAULT))
+    {
+        vtysh_ovsdb_cli_print(p_msg, "radius-server auth-type %s", auth_type);
+    }
+  }
+
+  retries = smap_get(ifrow_aaa, SYSTEM_AAA_RADIUS_RETRIES);
+  if (retries)
+  {
+    if (!VTYSH_STR_EQ(retries, RADIUS_SERVER_DEFAULT_RETRIES_STR))
+    {
+        vtysh_ovsdb_cli_print(p_msg, "radius-server retries %s", retries);
+    }
+  }
+
+
+  return e_vtysh_ok;
 }
 
-
-/* qsort comparator function: group_priority*/
-int
-compare_nodes_by_tacacs_server_group_priority (const void *a, const void *b)
+/*-----------------------------------------------------------------------------
+| Function : vtysh_display_radius_server_table
+| Responsibility : display radius server table
+| scope : static
+| Parameters :
+|    pmsg : callback arguments from show running config handler|
+| Return : vtysh_ret_val, e_vtysh_ok
+-----------------------------------------------------------------------------*/
+static vtysh_ret_val
+vtysh_display_radius_server_table(vtysh_ovsdb_cbmsg *p_msg)
 {
-    const struct shash_node *const *node_a = a;
-    const struct shash_node *const *node_b = b;
-    const struct ovsrec_tacacs_server *server_a =
-                      (const struct ovsrec_tacacs_server *)(*node_a)->data;
-    const struct ovsrec_tacacs_server *server_b =
-                      (const struct ovsrec_tacacs_server *)(*node_b)->data;
+  const struct ovsrec_radius_server *row = NULL;
+  struct shash sorted_radius_servers;
+  const struct shash_node **nodes;
+  int count = 0;
+  int idx = 0;
+  bool sort_by_default_priority = true;
 
-    return (server_a->group_priority - server_b->group_priority);
-}
+  if (!ovsrec_radius_server_first(p_msg->idl))
+  {
+      return e_vtysh_ok;
+  }
 
-/*
- * Sorting function for tacacs servers
- * on success, returns sorted tacacs server list.
- */
-const struct shash_node **
-sort_tacacs_server(const struct shash *list, bool by_default_priority)
-{
-    if (shash_is_empty(list))
-    {
-        return NULL;
-    }
-    else
-    {
-        const struct shash_node **nodes;
-        struct shash_node *node;
-        size_t iter = 0;
-        size_t count = 0;
+  shash_init(&sorted_radius_servers);
 
-        count = shash_count(list);
-        nodes = malloc(count * sizeof(*nodes));
-        if (nodes == NULL)
-          return NULL;
-        SHASH_FOR_EACH (node, list) {
-            nodes[iter++] = node;
-        }
-        if (by_default_priority)
-            qsort(nodes, count, sizeof(*nodes), compare_nodes_by_tacacs_server_default_priority);
-        else
-            qsort(nodes, count, sizeof(*nodes), compare_nodes_by_tacacs_server_group_priority);
-        return nodes;
-    }
+  OVSREC_RADIUS_SERVER_FOR_EACH(row, p_msg->idl)
+  {
+      shash_add(&sorted_radius_servers, row->address, (void *)row);
+  }
+
+  nodes = sort_servers(&sorted_radius_servers, sort_by_default_priority, false);
+  if (nodes == NULL)
+  {
+     shash_destroy(&sorted_radius_servers);
+     return e_vtysh_error;
+  }
+  count = shash_count(&sorted_radius_servers);
+
+  vtysh_ovsdb_cli_print(p_msg, "!");
+  for(idx = 0; idx < count; idx++)
+  {
+      /*
+       * buff size based on port 11 " port %5d", timeout 11 " timeout %2d"
+       * key 63 " key %58s"  auth_type 15 " auth-type %4s"
+       */
+      char buff[128]= {0};
+      char *append_buff = buff;
+      row = (const struct ovsrec_radius_server *)nodes[idx]->data;
+
+      if (row->udp_port && *(row->udp_port) != RADIUS_SERVER_DEFAULT_PORT)
+         append_buff += sprintf(append_buff, " port %ld", *(row->udp_port));
+
+      if (row->timeout)
+         append_buff += sprintf(append_buff, " timeout %ld", *(row->timeout));
+
+      if (row->passkey)
+         append_buff += sprintf(append_buff, " key %s", row->passkey);
+
+      if (row->auth_type)
+         append_buff += sprintf(append_buff, " auth-type %s", row->auth_type);
+
+      if (row->retries)
+         append_buff += sprintf(append_buff, " retries %ld", *(row->retries));
+
+      vtysh_ovsdb_cli_print(p_msg, "radius-server host %s%s",
+                                    row->address, buff);
+  }
+
+  shash_destroy(&sorted_radius_servers);
+  free(nodes);
+
+  return e_vtysh_ok;
 }
 
 /*-----------------------------------------------------------------------------
@@ -172,10 +288,10 @@ vtysh_display_tacacs_server_table(vtysh_ovsdb_cbmsg *p_msg)
 
   OVSREC_TACACS_SERVER_FOR_EACH(row, p_msg->idl)
   {
-      shash_add(&sorted_tacacs_servers, row->ip_address, (void *)row);
+      shash_add(&sorted_tacacs_servers, row->address, (void *)row);
   }
 
-  nodes = sort_tacacs_server(&sorted_tacacs_servers, sort_by_default_priority);
+  nodes = sort_servers(&sorted_tacacs_servers, sort_by_default_priority, true);
   if (nodes == NULL)
   {
      shash_destroy(&sorted_tacacs_servers);
@@ -194,8 +310,8 @@ vtysh_display_tacacs_server_table(vtysh_ovsdb_cbmsg *p_msg)
       char *append_buff = buff;
       row = (const struct ovsrec_tacacs_server *)nodes[idx]->data;
 
-      if (row->tcp_port && row->tcp_port != TACACS_SERVER_TCP_PORT_DEFAULT)
-         append_buff += sprintf(append_buff, " port %ld", row->tcp_port);
+      if (row->tcp_port && *(row->tcp_port) != TACACS_SERVER_TCP_PORT_DEFAULT)
+         append_buff += sprintf(append_buff, " port %ld", *(row->tcp_port));
 
       if (row->timeout)
          append_buff += sprintf(append_buff, " timeout %ld", *(row->timeout));
@@ -207,7 +323,7 @@ vtysh_display_tacacs_server_table(vtysh_ovsdb_cbmsg *p_msg)
          append_buff += sprintf(append_buff, " auth-type %s", row->auth_type);
 
       vtysh_ovsdb_cli_print(p_msg, "tacacs-server host %s%s",
-                                    row->ip_address, buff);
+                                    row->address, buff);
   }
 
   shash_destroy(&sorted_tacacs_servers);
@@ -360,15 +476,93 @@ vtysh_display_aaa_server_group_priority_authorization(vtysh_ovsdb_cbmsg *p_msg)
 }
 
 /*-----------------------------------------------------------------------------
-| Function : vtysh_display_aaa_server_group_table
-| Responsibility : display AAA Server Group table
+| Function : vtysh_display_aaa_radius_server_group_table
+| Responsibility : display AAA Radius Server Group table
 | scope : static
 | Parameters :
 |    pmsg : callback arguments from show running config handler|
 | Return : vtysh_ret_val, e_vtysh_ok
 -----------------------------------------------------------------------------*/
 static vtysh_ret_val
-vtysh_display_aaa_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
+vtysh_display_aaa_radius_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
+{
+  const struct ovsrec_radius_server *radius_server_row = NULL;
+  const struct ovsrec_aaa_server_group *group_row = NULL;
+  struct shash sorted_radius_servers;
+  const struct shash_node **nodes;
+  int count = 0;
+  int idx = 0;
+  bool by_default_priority = false;
+
+  if (!ovsrec_aaa_server_group_first(p_msg->idl))
+  {
+      return e_vtysh_ok;
+  }
+
+  shash_init(&sorted_radius_servers);
+
+  OVSREC_RADIUS_SERVER_FOR_EACH(radius_server_row, p_msg->idl)
+  {
+      shash_add(&sorted_radius_servers, radius_server_row->address, (void *)radius_server_row);
+  }
+
+  nodes = sort_servers(&sorted_radius_servers, by_default_priority, false);
+  count = shash_count(&sorted_radius_servers);
+
+  OVSREC_AAA_SERVER_GROUP_FOR_EACH(group_row, p_msg->idl)
+  {
+      const char* name = group_row->group_name;
+
+      if (strcmp(group_row->group_type, SYSTEM_AAA_RADIUS) != 0)
+      {
+          continue;
+      }
+
+      if ((strcmp(name, SYSTEM_AAA_LOCAL) == 0) ||
+          (strcmp(name, SYSTEM_AAA_NONE) == 0) ||
+          (strcmp(name, SYSTEM_AAA_RADIUS) == 0) ||
+          (strcmp(name, SYSTEM_AAA_TACACS_PLUS) == 0))
+      {
+          continue;
+      }
+      vtysh_ovsdb_cli_print(p_msg, "!");
+      vtysh_ovsdb_cli_print(p_msg, "aaa group server radius %s", name);
+
+      for(idx = 0; idx < count; idx++)
+      {
+          radius_server_row = (const struct ovsrec_radius_server *)nodes[idx]->data;
+          if (radius_server_row->n_group > 1
+                  && (radius_server_row->group[0] == group_row || radius_server_row->group[1] == group_row ))
+          {
+              if (*(radius_server_row->udp_port) != RADIUS_SERVER_DEFAULT_PORT)
+              {
+                  vtysh_ovsdb_cli_print(p_msg, "    server %s port %ld",
+                                        radius_server_row->address, *(radius_server_row->udp_port));
+              }
+              else
+              {
+                  vtysh_ovsdb_cli_print(p_msg, "    server %s", radius_server_row->address);
+              }
+          }
+      }
+  }
+
+  shash_destroy(&sorted_radius_servers);
+  free(nodes);
+
+  return e_vtysh_ok;
+}
+
+/*-----------------------------------------------------------------------------
+| Function : vtysh_display_aaa_tacacs_server_group_table
+| Responsibility : display AAA tacacs Server Group table
+| scope : static
+| Parameters :
+|    pmsg : callback arguments from show running config handler|
+| Return : vtysh_ret_val, e_vtysh_ok
+-----------------------------------------------------------------------------*/
+static vtysh_ret_val
+vtysh_display_aaa_tacacs_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
 {
   const struct ovsrec_tacacs_server *server_row = NULL;
   const struct ovsrec_aaa_server_group *group_row = NULL;
@@ -387,15 +581,21 @@ vtysh_display_aaa_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
 
   OVSREC_TACACS_SERVER_FOR_EACH(server_row, p_msg->idl)
   {
-      shash_add(&sorted_tacacs_servers, server_row->ip_address, (void *)server_row);
+      shash_add(&sorted_tacacs_servers, server_row->address, (void *)server_row);
   }
 
-  nodes = sort_tacacs_server(&sorted_tacacs_servers, by_default_priority);
+  nodes = sort_servers(&sorted_tacacs_servers, by_default_priority, true);
   count = shash_count(&sorted_tacacs_servers);
 
   OVSREC_AAA_SERVER_GROUP_FOR_EACH(group_row, p_msg->idl)
   {
       const char* name = group_row->group_name;
+
+      if (strcmp(group_row->group_type, SYSTEM_AAA_TACACS_PLUS) != 0)
+      {
+          continue;
+      }
+
       if ((strcmp(name, SYSTEM_AAA_LOCAL) == 0) ||
           (strcmp(name, SYSTEM_AAA_NONE) == 0) ||
           (strcmp(name, SYSTEM_AAA_RADIUS) == 0) ||
@@ -409,16 +609,17 @@ vtysh_display_aaa_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
       for(idx = 0; idx < count; idx++)
       {
           server_row = (const struct ovsrec_tacacs_server *)nodes[idx]->data;
-          if (server_row->group == group_row)
-          {
-              if (server_row->tcp_port != TACACS_SERVER_TCP_PORT_DEFAULT)
+          if (server_row->n_group > 1
+                  && (server_row->group[0] == group_row || server_row->group[1] == group_row ))
+    {
+              if (*(server_row->tcp_port) != TACACS_SERVER_TCP_PORT_DEFAULT)
               {
                   vtysh_ovsdb_cli_print(p_msg, "    server %s port %ld",
-                                        server_row->ip_address, server_row->tcp_port);
+                                        server_row->address, *(server_row->tcp_port));
               }
               else
               {
-                  vtysh_ovsdb_cli_print(p_msg, "    server %s", server_row->ip_address);
+                  vtysh_ovsdb_cli_print(p_msg, "    server %s", server_row->address);
               }
           }
       }
@@ -449,11 +650,16 @@ vtysh_config_context_aaa_clientcallback(void *p_private)
     if(vswrow)
     {
        /* Generate CLI for aaa column */
+       vtysh_ovsdb_ovstable_parse_publickey_cfg(&vswrow->aaa, p_msg);
        vtysh_ovsdb_ovstable_parse_tacacs_cfg(&vswrow->aaa, p_msg);
+       vtysh_ovsdb_ovstable_parse_radius_cfg(&vswrow->aaa, p_msg);
     }
 
     /* Generate CLI for the Tacacs_Server Table*/
     vtysh_display_tacacs_server_table(p_msg);
+    /* Generate CLI for the Radius_Server Table*/
+    vtysh_display_radius_server_table(p_msg);
+
 
     if (vswrow)
     {
@@ -462,7 +668,9 @@ vtysh_config_context_aaa_clientcallback(void *p_private)
     }
 
     /* Generate CLI for the AAA_Server_Group Table*/
-    vtysh_display_aaa_server_group_table(p_msg);
+    vtysh_display_aaa_tacacs_server_group_table(p_msg);
+    vtysh_display_aaa_radius_server_group_table(p_msg);
+
     /* Generate CLI for the AAA_Server_Group_Prio Table for authentication*/
     vtysh_display_aaa_server_group_priority_authentication(p_msg);
     /* Generate CLI for the AAA_Server_Group_Prio Table for authorization*/

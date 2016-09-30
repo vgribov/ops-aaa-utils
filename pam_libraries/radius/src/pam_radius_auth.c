@@ -60,12 +60,15 @@
 #include <sys/time.h>
 #include <openssl/md5.h>
 #include "pam_radius_auth.h"
+#include "nl-utils.h"
+
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #define DPRINT if (opt_debug & PAM_DEBUG_ARG) _pam_log
 
 /* internal data */
 static CONST char *pam_module_name = "pam_radius_auth";
-static char conf_file[BUFFER_SIZE]; /* configuration file */
 static int opt_debug = FALSE;		/* print debug info */
 
 /* we need to save these from open_session to close_session, since
@@ -74,6 +77,10 @@ static int opt_debug = FALSE;		/* print debug info */
  * -- cristiang */
 static radius_server_t *live_server = NULL;
 static time_t session_time;
+
+char *secret        = NULL;
+int timeout         = 0;
+int accounting      = FALSE;
 
 /* logging */
 static void _pam_log(int err, CONST char *format, ...)
@@ -92,10 +99,13 @@ static void _pam_log(int err, CONST char *format, ...)
 static int _pam_parse(int argc, CONST char **argv, radius_conf_t *conf)
 {
 	int ctrl=0;
+	radius_server_t *server = NULL;
+
+        /* Initialize global parameters */
+        timeout = 0;
+        secret  = NULL;
 
 	memset(conf, 0, sizeof(radius_conf_t)); /* ensure it's initialized */
-
-	strcpy(conf_file, CONF_FILE);
 
 	/* set the default prompt */
 	snprintf(conf->prompt, MAXPROMPT, "%s: ", DEFAULT_PROMPT);
@@ -111,16 +121,7 @@ static int _pam_parse(int argc, CONST char **argv, radius_conf_t *conf)
 	for (ctrl=0; argc-- > 0; ++argv) {
 
 		/* generic options */
-		if (!strncmp(*argv,"conf=",5)) {
-			/* protect against buffer overflow */
-			if (strlen(*argv+5) >= sizeof(conf_file)) {
-				_pam_log(LOG_ERR, "conf= argument too long");
-				conf_file[0] = 0;
-				return 0;
-			}
-			strcpy(conf_file,*argv+5);
-
-		} else if (!strcmp(*argv, "use_first_pass")) {
+		if (!strcmp(*argv, "use_first_pass")) {
 			ctrl |= PAM_USE_FIRST_PASS;
 
 		} else if (!strcmp(*argv, "try_first_pass")) {
@@ -135,6 +136,17 @@ static int _pam_parse(int argc, CONST char **argv, radius_conf_t *conf)
 		} else if (!strcmp(*argv, "localifdown")) {
 			conf->localifdown = 1;
 
+		} else if (!strncmp(*argv, BYPASS_ACCT, strlen(BYPASS_ACCT))) {
+                        ctrl |= PAM_RAD_BYPASS_ACCT;
+                } else if (!strncmp(*argv, BYPASS_SESSION, strlen(BYPASS_SESSION))) {
+                        ctrl |= PAM_RAD_BYPASS_SESSION;
+                } else if (!strncmp(*argv, LOGIN, strlen(LOGIN))) {
+                        const char * value = *argv + strlen(LOGIN);
+                        if (!strncmp(value, PAP, strlen(PAP))) {
+                            conf->use_chap = 0;
+                        } else {
+			    conf->use_chap = 1;
+                        }
 		} else if (!strncmp(*argv, "client_id=", 10)) {
 			if (conf->client_id) {
 				_pam_log(LOG_WARNING, "ignoring duplicate '%s'", *argv);
@@ -168,10 +180,63 @@ static int _pam_parse(int argc, CONST char **argv, radius_conf_t *conf)
 		} else if (!strcmp(*argv, "force_prompt")) {
 			conf->force_prompt= TRUE;
 
-		} else if (!strncmp(*argv, "max_challenge=", 14)) {
+		} else if (!strncmp(*argv, DSTN_NAMESPACE, strlen(DSTN_NAMESPACE))) {
+			memset(conf->dstn_namespace, 0, sizeof(conf->dstn_namespace));
+			snprintf(conf->dstn_namespace, sizeof(conf->dstn_namespace), "%s",
+			    (char*)(*argv + strlen(DSTN_NAMESPACE)));
+                } else if (!strncmp(*argv, SOURCE_IP, strlen(SOURCE_IP))) {
+                        memset(conf->source_ip, 0, sizeof(conf->source_ip));
+                        snprintf(conf->source_ip, sizeof(conf->source_ip), "%s",
+			     (char*)(*argv + strlen(SOURCE_IP)));
+                } else if (!strcmp(*argv, "force_prompt")) {
+                        conf->force_prompt= TRUE;
+                } else if (!strncmp(*argv, "max_challenge=", 14)) {
 			conf->max_challenge = atoi(*argv+14);
-
-		} else {
+		} else if (!strncmp(*argv, SERVER, strlen(SERVER))) {
+                        radius_server_t *tmp;
+			tmp = malloc(sizeof(radius_server_t));
+                        if (tmp == NULL) {
+                                _pam_log(LOG_ERR, "malloc failed for"
+                                         "%s", *argv);
+                                return ctrl;
+                        }
+                        tmp->next = NULL;
+                        tmp->port = 0;
+			if (server) {
+				server->next = tmp;
+				server = server->next;
+			} else {
+				conf->server = tmp;
+				server= tmp;		/* first time */
+                        }
+                        const char *value = *argv + strlen(SERVER);
+                        server->hostname = malloc(strlen(value) + 1);
+                        if (server->hostname == NULL) {
+                                _pam_log(LOG_ERR, "malloc failed for "
+                                         "string %s", value);
+                                return ctrl;
+                        }
+                        strncpy(server->hostname, value, strlen(value) + 1);
+                        _pam_log(LOG_INFO, "Got server name "
+                                         "%s", server->hostname);
+                } else if (!strncmp(*argv, SECRET, strlen(SECRET))) {
+                        const char *value = *argv + strlen(SECRET);
+                        secret = malloc(strlen(value) + 1);
+                        if ( secret == NULL) {
+                                _pam_log(LOG_ERR, "malloc failed for string "
+                                         "%s", value);
+                                return ctrl;
+                        }
+                        strncpy(secret, value, strlen(value) + 1);
+                } else if (!strncmp(*argv, TIMEOUT, strlen(TIMEOUT))) {
+                        const char *value = *argv + strlen(TIMEOUT);
+                        timeout = atoi(value);
+                        if ((timeout < 0) || (timeout > 60)) {
+                                timeout = 5;
+                        }
+                        _pam_log(LOG_INFO, "Got timeout "
+                                         " %d", timeout);
+                } else {
 			_pam_log(LOG_WARNING, "unrecognized option '%s'", *argv);
 		}
 	}
@@ -301,7 +366,7 @@ static int host2server(radius_server_t *server)
 		if (p && isdigit(*p)) {	/* the port looks like it's a number */
 			unsigned int i = atoi(p) & 0xffff;
 
-			if (!server->accounting) {
+			if (!accounting) {
 				server->port = htons((uint16_t) i);
 			} else {
 				server->port = htons((uint16_t) (i + 1));
@@ -315,7 +380,7 @@ static int host2server(radius_server_t *server)
 				DPRINT(LOG_DEBUG, "DEBUG: getservbyname('%s', udp) returned %p.\n", p, svp);
 				*(--p) = ':';		/* be sure to put the delimiter back */
 			} else {
-				if (!server->accounting) {
+				if (!accounting) {
 					svp = getservbyname ("radius", "udp");
 					DPRINT(LOG_DEBUG, "DEBUG: getservbyname(radius, udp) returned %p.\n", svp);
 				} else {
@@ -330,6 +395,7 @@ static int host2server(radius_server_t *server)
 			}
 
 			server->port = svp->s_port;
+                        DPRINT(LOG_DEBUG, "DEBUG: Port %d.\n", server->port);
 		}
 	}
 
@@ -404,15 +470,15 @@ static void get_random_vector(unsigned char *vector)
  * server (http://home.cistron.nl/~miquels/radius/) does, and this code
  * seems to work with it.	It also works with Funk's Steel-Belted RADIUS.
  */
-static void get_accounting_vector(AUTH_HDR *request, radius_server_t *server)
+static void get_accounting_vector(AUTH_HDR *request)
 {
 	MD5_CTX my_md5;
-	int secretlen = strlen(server->secret);
+	int secretlen = strlen(secret);
 	int len = ntohs(request->length);
 
 	memset(request->vector, 0, AUTH_VECTOR_LEN);
 	MD5_Init(&my_md5);
-	memcpy(((char *)request) + len, server->secret, secretlen);
+	memcpy(((char *)request) + len, secret, secretlen);
 
 	MD5_Update(&my_md5, (unsigned char *)request, len + secretlen);
 	MD5_Final(request->vector, &my_md5);			/* set the final vector */
@@ -575,6 +641,56 @@ static void add_password(AUTH_HDR *request, unsigned char type, CONST char *pass
 	}
 }
 
+
+/*
+ * Add a CHAP RADIUS password attribute to the packet.
+ *
+ * If the attribute already exists, it's over-written. This allows
+ * us to simply call add_chap_password to update the password for different
+ * servers.
+ */
+static void add_chap_password(AUTH_HDR *request, CONST char *password)
+{
+    MD5_CTX  my_md5;
+    unsigned char chap_password[1 + AUTH_VECTOR_LEN]; /* 1 byte for the CHAP ID */
+    int cur_len = 0;
+    int length = strlen(password);
+    unsigned char chapString[1 + MAXPASS + AUTH_PASS_LEN];  /* can't be longer than this */
+    attribute_t *attr;
+    unsigned char chap_id[AUTH_VECTOR_LEN];
+
+    if (length > MAXPASS) {          /* shorten the password for now */
+        length = MAXPASS;
+    }
+
+    get_random_vector(chap_id); /* get a random value to set chap id */
+    chap_password[0] = chap_id[0];
+    chapString[0] = chap_id[0];
+    cur_len++;
+    memcpy(chapString + cur_len, password, length);
+    cur_len += length;
+
+    memcpy(chapString + cur_len, request->vector, AUTH_VECTOR_LEN);
+    cur_len += AUTH_VECTOR_LEN;
+
+    /* The following check is a safeguard from incorrect future modification */
+    if (cur_len > (1 + MAXPASS + AUTH_PASS_LEN)){
+        _pam_log(LOG_ERR, "CHAP encoding inputs too long\n", strerror(errno));
+    }
+
+    MD5_Init(&my_md5);
+    MD5_Update(&my_md5, chapString, cur_len);
+    memset(chapString, 0, cur_len);
+    MD5_Final(chap_password + 1, &my_md5);          /* set the final vector */
+
+    attr = find_attribute(request, PW_CHAP_PASSWORD);
+    if (!attr) {
+        add_attribute(request, PW_CHAP_PASSWORD, chap_password, AUTH_VECTOR_LEN + 1);
+    } else {
+        memcpy(attr->data, chap_password, AUTH_VECTOR_LEN + 1); /* update the attribute */
+    }
+}
+
 static void cleanup(radius_server_t *server)
 {
 	radius_server_t *next;
@@ -582,7 +698,7 @@ static void cleanup(radius_server_t *server)
 	while (server) {
 		next = server->next;
 		_pam_drop(server->hostname);
-		_pam_forget(server->secret);
+		_pam_forget(secret);
 		_pam_drop(server);
 		server = next;
 	}
@@ -592,81 +708,15 @@ static void cleanup(radius_server_t *server)
  * allocate and open a local port for communication with the RADIUS
  * server
  */
-static int initialize(radius_conf_t *conf, int accounting)
+static int initialize(radius_conf_t *conf, int accounting_val)
 {
 	struct sockaddr salocal;
-	char hostname[BUFFER_SIZE];
-	char secret[BUFFER_SIZE];
-
-	char buffer[BUFFER_SIZE];
-	char *p;
-	FILE *fserver;
-	radius_server_t *server = NULL;
 	struct sockaddr_in * s_in;
-	int timeout;
-	int line = 0;
 
-	/* the first time around, read the configuration file */
-	if ((fserver = fopen (conf_file, "r")) == (FILE*)NULL) {
-		_pam_log(LOG_ERR, "Could not open configuration file %s: %s\n",
-			conf_file, strerror(errno));
-		return PAM_ABORT;
-	}
-
-	while (!feof(fserver) && (fgets (buffer, sizeof(buffer), fserver) != (char*) NULL) && (!ferror(fserver))) {
-		line++;
-		p = buffer;
-
-		/*
-		 *	Skip blank lines and whitespace
-		 */
-		while (*p && ((*p == ' ') || (*p == '\t') || (*p == '\r') || (*p == '\n'))) {
-			p++;
-		}
-
-		/*
-		 *	Nothing, or just a comment. Ignore the line.
-		 */
-		if ((!*p) || (*p == '#')) {
-			continue;
-		}
-
-		timeout = 3;
-		if (sscanf(p, "%s %s %d", hostname, secret, &timeout) < 2) {
-			_pam_log(LOG_ERR, "ERROR reading %s, line %d: Could not read hostname or secret\n",
-				 conf_file, line);
-			continue;			/* invalid line */
-		} else {				/* read it in and save the data */
-			radius_server_t *tmp;
-
-			tmp = malloc(sizeof(radius_server_t));
-			if (server) {
-				server->next = tmp;
-				server = server->next;
-			} else {
-				conf->server = tmp;
-				server= tmp;		/* first time */
-			}
-
-			/* sometime later do memory checks here */
-			server->hostname = strdup(hostname);
-			server->secret = strdup(secret);
-			server->accounting = accounting;
-			server->port = 0;
-
-			if ((timeout < 1) || (timeout > 60)) {
-				server->timeout = 3;
-			} else {
-				server->timeout = timeout;
-			}
-			server->next = NULL;
-		}
-	}
-	fclose(fserver);
-
-	if (!server) {		/* no server found, die a horrible death */
+        accounting = accounting_val;
+	if (!conf->server) {		/* no server found, die a horrible death */
 		_pam_log(LOG_ERR, "No RADIUS server found in configuration file %s\n",
-			 conf_file);
+			 CONF_FILE);
 		return PAM_AUTHINFO_UNAVAIL;
 	}
 
@@ -681,9 +731,13 @@ static int initialize(radius_conf_t *conf, int accounting)
 	s_in = (struct sockaddr_in *) &salocal;
 	memset ((char *) s_in, '\0', sizeof(struct sockaddr));
 	s_in->sin_family = AF_INET;
-	s_in->sin_addr.s_addr = INADDR_ANY;
-	s_in->sin_port = 0;
 
+	if (strlen(conf->source_ip) > 1) {
+		s_in->sin_addr.s_addr = inet_addr(conf->source_ip);
+	} else {
+		s_in->sin_addr.s_addr = INADDR_ANY;
+	}
+	s_in->sin_port = 0;
 
 	if (bind(conf->sockfd, &salocal, sizeof (struct sockaddr_in)) < 0) {
 		_pam_log(LOG_ERR, "Failed binding to port: %s", strerror(errno));
@@ -718,13 +772,19 @@ static void build_radius_packet(AUTH_HDR *request, CONST char *user, CONST char 
 	 *	Add a password, if given.
 	 */
 	if (password) {
-		add_password(request, PW_PASSWORD, password, conf->server->secret);
+		add_password(request, PW_PASSWORD, password, secret);
+
+		if (conf->use_chap == 1) {
+			add_chap_password(request, password);
+		} else {
+			add_password(request, PW_PASSWORD, password, secret);
+		}
 
 		/*
 		 *	Add a NULL password to non-accounting requests.
 		 */
 	} else if (request->code != PW_ACCOUNTING_REQUEST) {
-		add_password(request, PW_PASSWORD, "", conf->server->secret);
+		add_password(request, PW_PASSWORD, "", secret);
 	}
 
 	/* the packet is from localhost if on localhost, to make configs easier */
@@ -814,7 +874,7 @@ static int talk_radius(radius_conf_t *conf, AUTH_HDR *request, AUTH_HDR *respons
 		total_length = ntohs(request->length);
 
 		if (!password) { 		/* make an RFC 2139 p6 request authenticator */
-			get_accounting_vector(request, server);
+			get_accounting_vector(request);
 		}
 
 		server_tries = tries;
@@ -831,7 +891,7 @@ static int talk_radius(radius_conf_t *conf, AUTH_HDR *request, AUTH_HDR *respons
 		/* ************************************************************ */
 		/* Wait for the response, and verify it. */
 		salen = sizeof(struct sockaddr);
-		tv.tv_sec = server->timeout;	/* wait for the specified time */
+		tv.tv_sec = timeout;	/* wait for the specified time */
 		tv.tv_usec = 0;
 		FD_ZERO(&set);			/* clear out the set */
 		FD_SET(conf->sockfd, &set);	/* wait only for the RADIUS UDP socket */
@@ -843,7 +903,6 @@ static int talk_radius(radius_conf_t *conf, AUTH_HDR *request, AUTH_HDR *respons
 		ok = TRUE;
 		while (ok) {
 			rcode = select(conf->sockfd + 1, &set, NULL, NULL, &tv);
-
 			/* select timed out */
 			if (rcode == 0) {
 				_pam_log(LOG_ERR, "RADIUS server %s failed to respond", server->hostname);
@@ -853,7 +912,6 @@ static int talk_radius(radius_conf_t *conf, AUTH_HDR *request, AUTH_HDR *respons
 				ok = FALSE;
 				break;			/* exit from the select loop */
 			} else if (rcode < 0) {
-
 				/* select had an error */
 				if (errno == EINTR) {	/* we were interrupted */
 					time(&now);
@@ -880,7 +938,6 @@ static int talk_radius(radius_conf_t *conf, AUTH_HDR *request, AUTH_HDR *respons
 
 			/* the select returned OK */
 			} else if (FD_ISSET(conf->sockfd, &set)) {
-
 				/* try to receive some data */
 				if ((total_length = recvfrom(conf->sockfd, (void *) response, BUFFER_SIZE,
 				        0, &saremote, &salen)) < 0) {
@@ -891,8 +948,7 @@ static int talk_radius(radius_conf_t *conf, AUTH_HDR *request, AUTH_HDR *respons
 
 				/* there's data, see if it's valid */
 				} else {
-					char *p = server->secret;
-
+					char *p = secret;
 					if ((ntohs(response->length) != total_length) ||
 					    (ntohs(response->length) > BUFFER_SIZE)) {
 						_pam_log(LOG_ERR, "RADIUS packet from server %s is corrupted",
@@ -958,8 +1014,7 @@ static int talk_radius(radius_conf_t *conf, AUTH_HDR *request, AUTH_HDR *respons
 			old = server;
 			server = server->next;
 			conf->server = server;
-
-			_pam_forget(old->secret);
+			_pam_forget(secret);
 			free(old->hostname);
 			free(old);
 
@@ -975,7 +1030,11 @@ static int talk_radius(radius_conf_t *conf, AUTH_HDR *request, AUTH_HDR *respons
 						add_password(request, PW_PASSWORD, password, old_password);
 						add_password(request, PW_OLD_PASSWORD, old_password, old_password);
 					} else {		/* authentication request */
-						add_password(request, PW_PASSWORD, password, server->secret);
+						if (conf->use_chap == 1) {
+							add_chap_password(request, password);
+						} else {
+							add_password(request, PW_PASSWORD, password, secret);
+						}
 					}
 				}
 			}
@@ -1074,7 +1133,11 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
 	AUTH_HDR *request = (AUTH_HDR *) send_buffer;
 	AUTH_HDR *response = (AUTH_HDR *) recv_buffer;
 	radius_conf_t config;
+        char priv_lvl_env[ENV_MAXLEN];
+        char auth_mode_env[ENV_MAXLEN];
 
+        memset(priv_lvl_env, 0,  ENV_MAXLEN);
+        memset(auth_mode_env, 0, ENV_MAXLEN);
 	ctrl = _pam_parse(argc, argv, &config);
 
 	/* grab the user name */
@@ -1103,6 +1166,16 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
 		} else {
 			DPRINT(LOG_DEBUG, "Skipping ruser for non-root auth");
 		}
+	}
+
+        /* switch to destination namespace */
+        _pam_log(LOG_DEBUG, "radius_dstn_namespace = %s, radius source_ip = %s,"
+            " dst ns len = %d, source ip len = %d",
+            config.dstn_namespace, config.source_ip,
+            (int) strlen(config.dstn_namespace), (int) strlen(config.source_ip));
+
+	if (strlen(config.dstn_namespace) > 1) {
+		nl_setns_with_name(config.dstn_namespace);
 	}
 
 	/*
@@ -1139,7 +1212,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
 
 	if (password) {
 		password = strdup(password);
-		DPRINT(LOG_DEBUG, "Got password %s", password);
+		DPRINT(LOG_DEBUG, "Got password");
 	}
 
 	/* no previous password: maybe get one from the user */
@@ -1158,8 +1231,6 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
 	} /* end of password == NULL */
 
 	build_radius_packet(request, user, password, &config);
-	/* not all servers understand this service type, but some do */
-	add_int_attribute(request, PW_USER_SERVICE_TYPE, PW_AUTHENTICATE_ONLY);
 
 	/*
 	 *	Tell the server which host the user is coming from.
@@ -1178,6 +1249,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
 
 	retval = talk_radius(&config, request, response, password, NULL, config.retries + 1);
 	PAM_FAIL_CHECK;
+	nl_setns_oobm();
 
 	DPRINT(LOG_DEBUG, "Got RADIUS response code %d", response->code);
 
@@ -1250,7 +1322,37 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
 
 	/* Whew! Done the pasword checks, look for an authentication acknowledge */
 	if (response->code == PW_AUTHENTICATION_ACK) {
-		retval = PAM_SUCCESS;
+                attribute_t *a_service_type;
+
+                if ((a_service_type = find_attribute(response,
+                                      PW_USER_SERVICE_TYPE)) == NULL) {
+                    /*
+                     * Return authentication failure when service-type AVP is
+                     * not set as the privilege level of the user is unknown.
+                     */
+                    DPRINT(LOG_ERR, "Service type attribute was not set");
+                    retval = PAM_AUTH_ERR;
+                } else {
+                    int priv_lvl = -1;
+                    memcpy(&priv_lvl, a_service_type->data, sizeof(int));
+                    priv_lvl = ntohl(priv_lvl);
+                    DPRINT(LOG_DEBUG, "Service type AVP = %d\n", priv_lvl);
+
+                    switch (priv_lvl) {
+                        /* Administrative user */
+                        case PW_SHELL_USER:
+                        /* Non privileged user */
+                        case PW_NAS_PROMPT:
+                            snprintf(priv_lvl_env, ENV_MAXLEN, "%s=%d",
+                                     PRIV_LVL_ENV, priv_lvl);
+                            snprintf(auth_mode_env, ENV_MAXLEN, "%s=%s",
+                                     AUTH_MODE_ENV, RADIUS);
+                            retval = PAM_SUCCESS;
+                            break;
+                       default:
+                            retval = PAM_AUTH_ERR;
+                    }
+                }
 	} else {
 		retval = PAM_AUTH_ERR;	/* authentication failure */
 
@@ -1272,6 +1374,34 @@ error:
 		*pret = retval;
 		pam_set_data(pamh, "rad_setcred_return", (void *) pret, _int_free);
 	}
+
+        /*
+         * set the environment variable if authentication is successful
+         * this will be used by accounting and session modules
+         */
+        if (retval == PAM_SUCCESS) {
+            if ((pam_putenv(pamh, "auth_status=success")) != PAM_SUCCESS) {
+                _pam_log(LOG_ERR, "%s: error setting PAM environment",
+                       __FUNCTION__);
+                return PAM_SERVICE_ERR;
+            }
+            if ((pam_putenv(pamh, priv_lvl_env)) != PAM_SUCCESS) {
+                _pam_log(LOG_ERR, "%s: error setting PRIV_LVL PAM ENV",
+                       __FUNCTION__);
+                return PAM_SERVICE_ERR;
+            } else {
+                _pam_log(LOG_INFO, "PRIV_LVL set to %s",
+                         pam_getenv(pamh, PRIV_LVL_ENV));
+            }
+            if ((pam_putenv(pamh, auth_mode_env)) != PAM_SUCCESS) {
+                _pam_log(LOG_ERR, "%s: error setting AUTH_MODE PAM ENV",
+                       __FUNCTION__);
+                return PAM_SERVICE_ERR;
+            } else {
+                _pam_log(LOG_INFO, "AUTH_MODE set to %s",
+                         pam_getenv(pamh, AUTH_MODE_ENV));
+            }
+        }
 	return retval;
 }
 
@@ -1297,15 +1427,32 @@ PAM_EXTERN int pam_sm_setcred(pam_handle_t *pamh,int flags,int argc,CONST char *
 static int pam_private_session(pam_handle_t *pamh, int flags, int argc, CONST char **argv, int status)
 {
 	CONST char *user;
+        const char *auth_status;
 	int retval = PAM_AUTH_ERR;
-
+        int ctrl;
 	char recv_buffer[4096];
 	char send_buffer[4096];
 	AUTH_HDR *request = (AUTH_HDR *) send_buffer;
 	AUTH_HDR *response = (AUTH_HDR *) recv_buffer;
 	radius_conf_t config;
 
-	_pam_parse(argc, argv, &config);
+	ctrl = _pam_parse(argc, argv, &config);
+
+        if (ctrl & PAM_RAD_BYPASS_SESSION) {
+            /*
+             * session management is not supported yet, return SUCCESS
+             * if authentication was successful with Radius
+             */
+            if ((auth_status = pam_getenv(pamh, "auth_status")) == NULL) {
+                _pam_log(LOG_INFO, "%s: unable to get PAM env"
+                                   " auth_status", __FUNCTION__);
+                return PAM_IGNORE;
+            } else {
+                _pam_log(LOG_INFO, "%s: got PAM env, auth_status = %s",
+                                   __FUNCTION__, auth_status);
+                return PAM_SUCCESS;
+            }
+        }
 
 	/* grab the user name */
 	retval = pam_get_user(pamh, &user, NULL);
@@ -1566,8 +1713,8 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc, CONST c
 		request->id = request->vector[0]; /* this should be evenly distributed */
 
 		/* the secret here can not be know to the user, so it's the new password */
-		_pam_forget(config.server->secret);
-		config.server->secret = strdup(password); /* it's free'd later */
+		_pam_forget(secret);
+		secret = strdup(password); /* it's free'd later */
 
 		build_radius_packet(request, user, new_password, &config);
 		add_password(request, PW_OLD_PASSWORD, password, password);
@@ -1617,9 +1764,27 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t *pamh, int flags, int argc, CONST c
  */
 PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t *pamh,int flags,int argc,CONST char **argv)
 {
-	int retval;
-	retval = PAM_SUCCESS;
-	return retval;
+        int ctrl;
+        const char *auth_status;
+        radius_conf_t config;
+
+	ctrl = _pam_parse(argc, argv, &config);
+        if (ctrl & PAM_RAD_BYPASS_ACCT) {
+            /*
+             * session management is not supported yet, return SUCCESS
+             * if authentication was successful with Radius
+             */
+            if ((auth_status = pam_getenv(pamh, "auth_status")) == NULL) {
+                _pam_log(LOG_INFO, "%s: unable to get PAM env"
+                                   " auth_status", __FUNCTION__);
+                return PAM_IGNORE;
+            } else {
+                _pam_log(LOG_INFO, "%s: got PAM env, auth_status = %s",
+                                   __FUNCTION__, auth_status);
+                return PAM_SUCCESS;
+            }
+        }
+        return PAM_SUCCESS;
 }
 
 #ifdef PAM_STATIC

@@ -29,6 +29,26 @@
 #define MAXPROMPT 33               /* max prompt length, including '\0' */
 #define DEFAULT_PROMPT "Password"  /* default prompt, without the ': '  */
 
+#define ENV_MAXLEN                20
+#define RADIUS                   "RADIUS"
+#define PRIV_LVL_ENV             "PRIV_LVL"
+#define AUTH_MODE_ENV            "AUTH_MODE"
+
+#define DSTN_NAMESPACE_LEN        32
+#define SOURCE_IP_LEN             32
+
+#define PAP            "pap"
+#define LOGIN          "login="
+#define SERVER         "server="
+#define SECRET         "secret="
+#define TIMEOUT        "timeout="
+#define BYPASS_ACCT    "bypass_acct"
+#define BYPASS_SESSION "bypass_session"
+#define DSTN_NAMESPACE "dstn_namespace="
+#define SOURCE_IP      "source_ip="
+
+#define RADIUS_DEFAULT_UDP_PORT 1812
+
 /*************************************************************************
  * Additional RADIUS definitions
  *************************************************************************/
@@ -45,9 +65,6 @@ typedef struct radius_server_t {
 	struct in_addr ip;
 	uint16_t port;
 	char *hostname;
-	char *secret;
-	int timeout;
-	int accounting;
 } radius_server_t;
 
 typedef struct radius_conf_t {
@@ -61,6 +78,9 @@ typedef struct radius_conf_t {
 	int sockfd;
 	int debug;
 	char prompt[MAXPROMPT];
+	int use_chap;
+	char dstn_namespace[DSTN_NAMESPACE_LEN];
+	char source_ip[SOURCE_IP_LEN];
 } radius_conf_t;
 
 
@@ -98,12 +118,13 @@ typedef struct radius_conf_t {
 #define _pam_drop(X) if (X) {free(X);X = NULL;}
 #endif
 
-#define PAM_DEBUG_ARG      1
-#define PAM_SKIP_PASSWD    2
-#define PAM_USE_FIRST_PASS 4
-#define PAM_TRY_FIRST_PASS 8
-#define PAM_RUSER_ARG      16
-
+#define PAM_DEBUG_ARG          1
+#define PAM_SKIP_PASSWD        2
+#define PAM_USE_FIRST_PASS     4
+#define PAM_TRY_FIRST_PASS     8
+#define PAM_RUSER_ARG          16
+#define PAM_RAD_BYPASS_ACCT    32  /* bypass accounting */
+#define PAM_RAD_BYPASS_SESSION 64  /* bypass session */
 
 /* Module defines */
 #ifndef BUFFER_SIZE
@@ -116,7 +137,7 @@ typedef struct radius_conf_t {
                          * compiled in. This is the default.
                          */
 #ifndef CONF_FILE       /* the configuration file holding the server secret */
-#define CONF_FILE       "/etc/raddb/server"
+#define CONF_FILE       "/etc/pam.d/common-auth-access"
 #endif /* CONF_FILE */
 
 #ifndef FALSE

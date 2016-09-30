@@ -14,12 +14,12 @@
 
 cmake_minimum_required (VERSION 2.8)
 
-project ("aaa_utils_lib")
+project ("stub_getpwnam")
 
 set (INCL_DIR ${CMAKE_SOURCE_DIR}/include)
-set (LIBAAA_UTILS_LIB aaa_utils_lib)
+set (LIBSTUB_GETPWNAM stub_getpwnam)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DTEMPLATE_USER=\"netop\" -std=gnu99 -Wall -Werror")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DREMOTE_USER=\"remote_user\" -std=gnu99 -Wall -Werror")
 
 
 add_definitions(-DHAVE_CONFIG_H -DHAVE_SOCKLEN_T)
@@ -41,8 +41,8 @@ set (SOURCES_LIB ${PROJECT_SOURCE_DIR}/getpwnam-preload.c
     )
 
 
-add_library (${LIBAAA_UTILS_LIB} SHARED ${SOURCES_LIB})
+add_library (${LIBSTUB_GETPWNAM} SHARED ${SOURCES_LIB})
 
 # Installation
-install(TARGETS ${LIBAAA_UTILS_LIB}
+install(TARGETS ${LIBSTUB_GETPWNAM}
         LIBRARY DESTINATION lib/security)

@@ -63,6 +63,8 @@ extern int logmsg __P((int, const char*, ...));
 #endif
 
 #define TACC_CONN_TIMEOUT 60
+#define TACACS        "TACACS"
+#define AUTH_MODE_ENV "AUTH_MODE"
 #define PRIV_LVL_ENV "PRIV_LVL"
 #define PRIV_RET_STR  "priv-lvl"
 #define PRV_LVL_LENGTH 3
