@@ -513,7 +513,8 @@ def get_server_list(session_type):
                 elif group.group_type == AAA_LOCAL:
                     server_list.append((0, group.group_type))
 
-                if server_table == RADIUS_SERVER_TABLE or server_table == TACACS_SERVER_TABLE:
+                #if server_table == RADIUS_SERVER_TABLE or server_table == TACACS_SERVER_TABLE:
+                if server_table == TACACS_SERVER_TABLE:
                     group_server_dict = {}
 
                     if group.group_name == AAA_RADIUS or group.group_name == AAA_TACACS_PLUS:
