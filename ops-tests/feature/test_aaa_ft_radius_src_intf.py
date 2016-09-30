@@ -486,7 +486,7 @@ def login_ssh_tacacs(step, username, password):
         p.kill(0)
     step("####### Test SSH login with TACACS+ authentication succeed #######")
 
-@pytest.mark.skipif(True, reason="Disabling test because of RADIUS src intf not supported")
+@mark.skipif(True, reason="Disabling test because of RADIUS src intf not supported")
 @mark.platform_incompatible(['ostl'])
 def test_aaa_ft_authentication(topology, step):
     global switches, hosts
