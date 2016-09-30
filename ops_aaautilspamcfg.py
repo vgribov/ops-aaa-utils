@@ -25,6 +25,7 @@ import os
 
 import vrf_utils
 import source_interface_utils
+import l3_utils
 
 # Assign my_auth to default local config
 my_auth = "passwd"
@@ -366,14 +367,14 @@ def get_src_ip_dstn_ns(source_ip, source_interface):
     '''
     dstn_ns = None
 
-    mgmt_ip = vrf_utils.get_mgmt_ip(idl)
+    mgmt_ip = l3_utils.get_mgmt_ip(idl)
     vlog.info("mgmt_ip = %s\n" % (mgmt_ip))
 
     if source_ip is None and source_interface is None:
         return source_ip, dstn_ns
 
     if source_ip is None:
-        source_ip = vrf_utils.get_ip_from_interface(idl, source_interface)
+        source_ip = l3_utils.get_ip_from_interface(idl, source_interface)
 
     if source_ip != mgmt_ip:
         dstn_ns = vrf_utils.get_vrf_ns_from_name(idl, vrf_utils.DEFAULT_VRF_NAME)
