@@ -166,7 +166,6 @@ def disable_fail_through(dut):
     assert count == 0, \
             'Test to disable fail-through : Failed'
 
-@mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
 @mark.gate
 def test_vtysh_ct_aaa(topology, step):
     ops1 = topology.get('ops1')

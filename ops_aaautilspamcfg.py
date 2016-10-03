@@ -812,8 +812,14 @@ def modify_common_auth_access_file(server_list):
                     retries = global_radius_retries
                 else:
                     retries = server.retries[0]
-                auth_line = "auth\t" + PAM_CONTROL_VALUE + "\t" + PAM_RADIUS_MODULE + "\tdebug server=" + ip_address + ":" +  str(udp_port) + " secret=" + str(passkey) + " login=" + auth_type  + " retry=" + str(retries) + " timeout=" + str(timeout) + "\n"
-                pam_server_list_str = pam_server_list_str + " " + ip_address
+                if radius_dstn_ns is not None:
+                    auth_line = "auth\t" + PAM_CONTROL_VALUE + "\t" + PAM_RADIUS_MODULE + "\tdebug server=" + ip_address + ":" + \
+                        str(udp_port) + " secret=" + str(passkey) + " login=" + auth_type  + " retry=" + str(retries) + \
+                        " timeout=" + str(timeout) + " dstn_namespace=" + radius_dstn_ns +  " source_ip=" + str(radius_src_ip) + "\n"
+                else:
+                    auth_line = "auth\t" + PAM_CONTROL_VALUE + "\t" + PAM_RADIUS_MODULE + "\tdebug server=" + ip_address + ":" + \
+                        str(udp_port) + " secret=" + str(passkey) + " login=" + auth_type  + " retry=" + str(retries) + \
+                        " timeout=" + str(timeout) + "\n"
 
             f.write(auth_line)
 
@@ -869,8 +875,15 @@ def modify_common_auth_access_file(server_list):
                 retries = global_radius_retries
             else:
                 retries = server.retries[0]
-            auth_line = "auth\t[success=1 default=ignore]\t"  + PAM_RADIUS_MODULE + "\tdebug server=" + ip_address + ":" +  str(udp_port) + " secret=" + str(passkey) + " login=" + auth_type  + " retry=" + str(retries) + " timeout=" + str(timeout) + "\n"
-            pam_server_list_str = pam_server_list_str + " " + ip_address
+
+            if radius_dstn_ns is not None:
+                auth_line = "auth\t[success=1 default=ignore]\t"  + PAM_RADIUS_MODULE + "\tdebug server=" + ip_address + \
+                    ":" +  str(udp_port) + " secret=" + str(passkey) + " login=" + auth_type  + " retry=" + str(retries) + \
+                    " timeout=" + str(timeout) + " dstn_namespace=" + radius_dstn_ns +  " source_ip=" + str(radius_src_ip) + "\n"
+            else:
+                auth_line = "auth\t[success=1 default=ignore]\t"  + PAM_RADIUS_MODULE + "\tdebug server=" + ip_address + \
+                    ":" +  str(udp_port) + " secret=" + str(passkey) + " login=" + auth_type  + " retry=" + str(retries) + \
+                    " timeout=" + str(timeout) + "\n"
 
         f.write(auth_line)
 
