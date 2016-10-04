@@ -21,11 +21,13 @@ import ovs.unixctl
 import ovs.unixctl.server
 import argparse
 import ovs.vlog
+import fileinput
 import os
 
 import vrf_utils
 import source_interface_utils
 import l3_utils
+import ops_diagdump
 
 # Assign my_auth to default local config
 my_auth = "passwd"
@@ -50,7 +52,6 @@ exiting = False
 seqno = 0
 
 PAM_ETC_CONFIG_DIR = "/etc/pam.d/"
-RADIUS_CLIENT = "/etc/raddb/server"
 SSHD_CONFIG = "/etc/ssh/sshd_config"
 
 # OpenSSH banner files
@@ -770,6 +771,33 @@ def aaa_util_run():
     return
 
 
+# ------- ops_aaa_diagnostics_handler -------
+
+def ops_aaa_diagnostics_handler(argv):
+    # argv[0] is basic
+    # argv[1] is feature name
+    feature = argv.pop()
+    buff = 'Diagnostic dump response for feature ' + feature + '.\n'
+
+    COMMON_AUTH_ACCESS_FILE  = PAM_ETC_CONFIG_DIR + "common-auth-access"
+    SSHD_ACCT_ACCESS_FILE    = PAM_ETC_CONFIG_DIR + "sshd-account-access"
+    SSHD_SESSION_ACCESS_FILE = PAM_ETC_CONFIG_DIR + "sshd-session-access"
+    AUTH_LOG = "/var/log/auth.log"
+
+    files = [COMMON_AUTH_ACCESS_FILE, SSHD_ACCT_ACCESS_FILE,
+             SSHD_SESSION_ACCESS_FILE]
+
+    if os.path.isfile(AUTH_LOG):
+        files.append(AUTH_LOG)
+
+    for x in fileinput.input(files):
+        if fileinput.isfirstline():
+            buff += '\n' + fileinput.filename()
+            buff += '\n=====================================================\n'
+        buff += x
+    return buff
+
+
 #----------------- main() -------------------
 def main():
 
@@ -838,12 +866,16 @@ def main():
     idl = ovs.db.idl.Idl(remote, schema_helper)
 
     ovs.daemon.daemonize()
+    ovs.daemon.set_pidfile(None)
+    ovs.daemon._make_pidfile()
 
     ovs.unixctl.command_register("exit", "", 0, 0, unixctl_exit, None)
     error, unixctl_server = ovs.unixctl.server.UnixctlServer.create(None)
     if error:
         ovs.util.ovs_fatal(error, "could not create unixctl server", vlog)
 
+    # Diags callback init for AAA
+    ops_diagdump.init_diag_dump_basic(ops_aaa_diagnostics_handler)
     seqno = idl.change_seqno  # Sequence number when last processed the db
 
     while not exiting:
