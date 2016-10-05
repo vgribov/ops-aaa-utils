@@ -1512,13 +1512,6 @@ is_valid_server_name(const char *server_name)
 const int
 server_sanitize_parameters(server_params_t *server_params)
 {
-    /* Check server_name to see if it exceeds maximum number of characters */
-    if (strlen(server_params->server_name) > MAX_CHARS_IN_SERVER_NAME) {
-        vty_out(vty, "Server name should be less than %d characters%s",
-                     MAX_CHARS_IN_SERVER_NAME, VTY_NEWLINE);
-        return CMD_ERR_NOTHING_TODO;
-    }
-
     /* Check the validity of server name */
     if (!is_valid_server_name(server_params->server_name)) {
         vty_out(vty, "Invalid server name %s", VTY_NEWLINE);
@@ -2244,7 +2237,7 @@ DEFUN(cli_radius_server_set_passkey,
       "radius-server key WORD",
       RADIUS_SERVER_HELP_STR
       SHARED_KEY_HELP_STR
-      SHARED_KEY_VAL_HELP_STR)
+      RADIUS_SHARED_KEY_VAL_HELP_STR)
 {
     if (vty_flags & CMD_FLAG_NO_CMD)
         return set_global_passkey(RADIUS_SERVER_DEFAULT_PASSKEY, false);
@@ -2507,11 +2500,11 @@ DEFUN (cli_radius_server_host,
        RADIUS_SERVER_HOST_HELP_STR
        RADIUS_SERVER_NAME_HELP_STR
        AUTH_PORT_HELP_STR
-       AUTH_PORT_RANGE_HELP_STR
+       RADIUS_AUTH_PORT_RANGE_HELP_STR
        TIMEOUT_HELP_STR
        TIMEOUT_RANGE_HELP_STR
        SHARED_KEY_HELP_STR
-       SHARED_KEY_VAL_HELP_STR
+       RADIUS_SHARED_KEY_VAL_HELP_STR
        RETRIES_HELP_STR
        RETRIES_RANGE_HELP_STR
        AAA_AUTH_TYPE_HELP_STR

@@ -11,7 +11,6 @@
 - [Test addition failure of TACACS+ server (with invalid timeout option)](#test-addition-failure-of-tacacs-server-with-invalid-timeout-option)
 - [Test addition failure of TACACS+ server (with invalid port option)](#test-addition-failure-of-tacacs-server-with-invalid-port-option)
 - [Test addition failure of TACACS+ server (with invalid key option)](#test-addition-failure-of-tacacs-server-with-invalid-key-option)
-- [Test addition of TACACS+ server (with long server name)](#test-addition-of-tacacs-server-with-long-server-name)
 - [Test addition of TACACS+ global config](#test-addition-of-tacacs-global-config)
 - [Test addition of server with valid FQDN](#test-addition-of-server-with-valid-FQDN)
 - [Test deletion of TACACS+ server](#test-deletion-of-tacacs-server)
@@ -101,7 +100,7 @@ This server is absent from the `show tacacs-server detail` command output.
 [s1]
 ```
 ### Description
-Add a TACACS+ server using an IPv4 address and all options with valid values. 
+Add a TACACS+ server using an IPv4 address and all options with valid values.
 
 ### Test result criteria
 #### Test pass criteria
@@ -146,7 +145,7 @@ This server is present in the `show tacacs-server detail` command output.
 [s1]
 ```
 ### Description
-Add the TACACS+ server using the IPV4 address and invalid timeout value. 
+Add the TACACS+ server using the IPV4 address and invalid timeout value.
 
 ### Test result criteria
 #### Test pass criteria
@@ -161,7 +160,7 @@ This server is present in the `show tacacs-server detail` command output and dis
 [s1]
 ```
 ### Description
-Add the TACACS+ server using the IPV4 address and invalid key value. 
+Add the TACACS+ server using the IPV4 address and invalid key value.
 
 ### Test result criteria
 #### Test pass criteria
@@ -176,28 +175,13 @@ This server is present in the `show tacacs-server detail` command output and dis
 [s1]
 ```
 ### Description
-Add the TACACS+ server using the IPV4 address and invalid port value. 
+Add the TACACS+ server using the IPV4 address and invalid port value.
 
 ### Test result criteria
 #### Test pass criteria
 This server is absent from the `show tacacs-server detail` command output.
 #### Test Fail Criteria
 This server is present in the `show tacacs-server detail` command output and displays the specified port.
-
-## Test addition of TACACS+ server (with long server name)
-### Setup
-#### Topology diagram
-```ditaa
-[s1]
-```
-### Description
-Add a TACACS+ using a long server name (exceed maximum length 45).
-
-### Test result criteria
-#### Test pass criteria
-The server is present in the `show tacacs-server detail` command output.
-#### Test Fail Criteria
-The server is absent from the `show tacacs-server detail` command output.
 
 ## Test addition of TACACS+ global config
 ### Setup
@@ -206,11 +190,11 @@ The server is absent from the `show tacacs-server detail` command output.
 [s1]
 ```
 ### Description
-Add global key, port and timeout values 
+Add global key, port and timeout values
 
 ### Test result criteria
 #### Test pass criteria
-The global values are present in `show tacacs-server detail` command output. 
+The global values are present in `show tacacs-server detail` command output.
 #### Test Fail Criteria
 This global values are absent in the `show tacacs-server detail` command output.
 
@@ -236,7 +220,7 @@ The server is absent from the `show tacacs-server detail` command output.
 [s1]
 ```
 ### Description
-- Delete a TACACS+ server with IP/FQDN. 
+- Delete a TACACS+ server with IP/FQDN.
 
 ### Test result criteria
 #### Test pass criteria
@@ -255,9 +239,9 @@ This server is present in the `show tacacs-server detail` command output.
 
 ### Test result criteria
 #### Test pass criteria
-An error message telling user that maximum allowed TACACS+ servers have been configured. 
+An error message telling user that maximum allowed TACACS+ servers have been configured.
 #### Test Fail Criteria
-A 65th TACACS+ server is added, or the error message is not displayed. 
+A 65th TACACS+ server is added, or the error message is not displayed.
 
 ## Test modification of 64th TACACS+ server
 ### Setup

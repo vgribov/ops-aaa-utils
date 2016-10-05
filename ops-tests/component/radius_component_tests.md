@@ -12,7 +12,6 @@
 - [Test addition failure of RADIUS server (with invalid key option)](#test-addition-failure-of-radius-server-with-invalid-key-option)
 - [Test addition failure of RADIUS server (with invalid timeout option)](#test-addition-failure-of-radius-server-with-invalid-timeout-option)
 - [Test addition failure of RADIUS server (with invalid port option)](#test-addition-failure-of-radius-server-with-invalid-port-option)
-- [Test addition of RADIUS server (with long server name)](#test-addition-of-radius-server-with-long-server-name)
 - [Test addition of RADIUS server (with retries option)](#test-addition-of-radius-server-with-retries-option)
 - [Test addition failure of RADIUS server (with invalid retries option)](#test-addition-failure-of-radius-server-with-invalid-retries-option)
 - [Test addition of RADIUS global config](#test-addition-of-radius-global-config)
@@ -109,7 +108,7 @@ This server is absent from the `show radius-server detail` command output.
 [s1]
 ```
 ### Description
-Add a RADIUS server using an IPv4 address and all options with valid values. 
+Add a RADIUS server using an IPv4 address and all options with valid values.
 
 ### Test result criteria
 #### Test pass criteria
@@ -154,7 +153,7 @@ This server is present in the `show radius-server detail` command output.
 [s1]
 ```
 ### Description
-Add the RADIUS server using the IPV4 address and invalid key value. 
+Add the RADIUS server using the IPV4 address and invalid key value.
 
 ### Test result criteria
 #### Test pass criteria
@@ -169,7 +168,7 @@ This server is present in the `show radius-server detail` command output and dis
 [s1]
 ```
 ### Description
-Add the RADIUS server using the IPV4 address and invalid timeout value. 
+Add the RADIUS server using the IPV4 address and invalid timeout value.
 
 ### Test result criteria
 #### Test pass criteria
@@ -184,28 +183,13 @@ This server is present in the `show radius-server detail` command output and dis
 [s1]
 ```
 ### Description
-Add the RADIUS server using the IPV4 address and invalid port value. 
+Add the RADIUS server using the IPV4 address and invalid port value.
 
 ### Test result criteria
 #### Test pass criteria
 This server is absent from the `show radius-server detail` command output.
 #### Test Fail Criteria
 This server is present in the `show radius-server detail` command output and displays the specified port.
-
-## Test addition of RADIUS server (with long server name)
-### Setup
-#### Topology diagram
-```ditaa
-[s1]
-```
-### Description
-Add a RADIUS using a long server name (exceed maximum length 45).
-
-### Test result criteria
-#### Test pass criteria
-The server is absent from the `show radius-server detail` command output.
-#### Test Fail Criteria
-The server is present in the `show radius-server detail` command output.
 
 ## Test addition of RADIUS server (with retries option)
 ### Setup
@@ -229,7 +213,7 @@ This server is absent from the `show radius-server detail` command output.
 [s1]
 ```
 ### Description
-Add the RADIUS server using the IPV4 address and invalid retries value. 
+Add the RADIUS server using the IPV4 address and invalid retries value.
 
 ### Test result criteria
 #### Test pass criteria
@@ -244,11 +228,11 @@ This server is present in the `show radius-server detail` command output and dis
 [s1]
 ```
 ### Description
-Add global key, port, retries and timeout values 
+Add global key, port, retries and timeout values
 
 ### Test result criteria
 #### Test pass criteria
-The global values are present in `show radius-server detail` command output. 
+The global values are present in `show radius-server detail` command output.
 #### Test Fail Criteria
 This global values are absent in the `show radius-server detail` command output.
 
@@ -274,7 +258,7 @@ The server is absent from the `show radius-server detail` command output.
 [s1]
 ```
 ### Description
-- Delete a RADIUS server with IP/FQDN. 
+- Delete a RADIUS server with IP/FQDN.
 
 ### Test result criteria
 #### Test pass criteria
@@ -293,9 +277,9 @@ This server is present in the `show radius-server detail` command output.
 
 ### Test result criteria
 #### Test pass criteria
-An error message telling user that maximum allowed RADIUS servers have been configured. 
+An error message telling user that maximum allowed RADIUS servers have been configured.
 #### Test Fail Criteria
-A 65th RADIUS server is added, or the error message is not displayed. 
+A 65th RADIUS server is added, or the error message is not displayed.
 
 ## Test modification of 64th RADIUS server
 ### Setup

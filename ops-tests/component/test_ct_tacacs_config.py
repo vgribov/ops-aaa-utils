@@ -523,43 +523,6 @@ def tacacs_add_server_with_fqdn(dut, step):
     step('\n### === server (with fqdn) addition test end === ###\n')
 
 
-def tacacs_add_server_with_long_server_name(dut, step):
-    step('\n### === server (with long server name) addition test start === '
-         '###')
-    dut("configure terminal")
-    count = 0
-
-    ''' long server name '''
-    lines = dut("tacacs-server host vabcdefghijklmnopqrstuvwxyzeabcdefghijklmnopqr")
-    if "Server name should be less than 45 characters" in lines:
-        count += 1
-    assert count == 1,\
-            '\n###  server (with max chars with server name) addition test failed'\
-            ' ###'
-
-    dut("end")
-
-    dump = dut("show tacacs-server detail")
-    lines = dump.splitlines()
-    for line in lines:
-        if ("vabcdefghijklmnopqrstuvwxyzeabcdefghijklmnopqr" in line):
-            count = count + 1
-
-    dump = dut("show running-config")
-    lines = dump.splitlines()
-    for line in lines:
-        if ("vabcdefghijklmnopqrstuvwxyzeabcdefghijklmnopqr" in line):
-            count = count + 1
-
-    assert count == 1,\
-            '\n###  server (with long server name) addition test failed'\
-            ' ###'
-
-    step('\n### server (with long server name) addition test passed ###')
-    step('\n### === server (with long server name) addition test end === ###'
-         '\n')
-
-
 def tacacs_add_more_than_64_servers(dut, step):
     step('\n### === addition of more than 64 servers test start === ###')
 
@@ -956,8 +919,6 @@ def test_ct_tacacs_config(topology, step):
     tacacs_add_server_with_invalid_timeout(ops1, step)
 
     tacacs_add_server_with_invalid_auth_port(ops1, step)
-
-    tacacs_add_server_with_long_server_name(ops1, step)
 
     tacacs_set_global_tacacs_config(ops1, step)
 
