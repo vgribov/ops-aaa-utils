@@ -655,7 +655,7 @@ def tacacs_set_global_tacacs_config(dut, step):
 
 
 def tacacs_create_server_group(dut, step):
-    step('\n### === Create tacacs+ groups sg1 sg2 test start === ###')
+    step('\n### === Create tacacs_plus groups sg1 sg2 test start === ###')
     dut("configure terminal")
     dut("aaa group server tacacs_plus sg1")
     dut("aaa group server tacacs_plus sg2")
@@ -666,17 +666,17 @@ def tacacs_create_server_group(dut, step):
     dump = dut("show running-config")
     lines = dump.splitlines()
     for line in lines:
-        if ("aaa group server tacacs+ sg1" in line or
-            "aaa group server tacacs+ sg2" in line):
+        if ("aaa group server tacacs_plus sg1" in line or
+            "aaa group server tacacs_plus sg2" in line):
             count = count + 1
     assert count == 2,\
-            '\n### Create tacacs+ group sg1 test failed ###'
+            '\n### Create tacacs_plus group sg1 test failed ###'
 
-    step('\n### Create tacacs+ group sg1 sg2 test passed ###')
-    step('\n### === Create tacacs+ group sg1 sg2 test end === ###\n')
+    step('\n### Create tacacs_plus group sg1 sg2 test passed ###')
+    step('\n### === Create tacacs_plus group sg1 sg2 test end === ###\n')
 
 def tacacs_add_server_to_server_group(dut, step):
-    step('\n### === add 4 tacacs+ servers to sg1 test start === ###')
+    step('\n### === add 4 tacacs_plus servers to sg1 test start === ###')
     dut("configure terminal")
     dut("aaa group server tacacs_plus sg1")
     dut("server 1.1.1.1")
@@ -698,7 +698,7 @@ def tacacs_add_server_to_server_group(dut, step):
                      ('sg1', '1.1.1.4', '45', '4')]
 
     if server_params == get_tacacs_server_group_rows(lines, "sg1"):
-        step('\n### 4 tacacs+ server present in show command - '
+        step('\n### 4 tacacs_plus server present in show command - '
                  'passed ###')
         count = count + 1
 
@@ -706,22 +706,22 @@ def tacacs_add_server_to_server_group(dut, step):
     dump = dut("show running-config")
     lines = dump.splitlines()
     ''' collect all the TACACS+ server in server group sg1 '''
-    server_line_index = lines.index("aaa group server tacacs+ sg1") + 1
+    server_line_index = lines.index("aaa group server tacacs_plus sg1") + 1
     server_info = lines[server_line_index : server_line_index + COUNT_SG1_SERVER]
 
     if server_info == ["    server 1.1.1.1", "    server 1.1.1.2",
                        "    server 1.1.1.3", "    server 1.1.1.4 port 45"]:
-        step('\n### 4 tacacs+ server present in running config - '
+        step('\n### 4 tacacs_plus server present in running config - '
                  'passed ###')
         count = count + 1
     assert count == 2,\
-            '\n### add 4 tacacs+ servers to sg1 test failed ###'
+            '\n### add 4 tacacs_plus servers to sg1 test failed ###'
 
-    step('\n### add 4 tacacs+ servers to sg1 test passed ###')
-    step('\n### === add 4 tacacs+ servers to sg1 test end === ###\n')
+    step('\n### add 4 tacacs_plus servers to sg1 test passed ###')
+    step('\n### === add 4 tacacs_plus servers to sg1 test end === ###\n')
 
 def tacacs_add_assigned_server_to_server_group(dut, step):
-    step('\n### === add tacacs+ server from sg1 to sg2 test start === ###')
+    step('\n### === add tacacs_plus server from sg1 to sg2 test start === ###')
     dut("configure terminal")
     dut("aaa group server tacacs_plus sg2")
     lines = dut("server 1.1.1.3")
@@ -731,14 +731,14 @@ def tacacs_add_assigned_server_to_server_group(dut, step):
     if "TACACS+ server already assigned to a group!" in lines:
         count += 1
     assert count == 1,\
-            '\n### add tacacs+ server from sg1 to sg2 test failed'\
+            '\n### add tacacs_plus server from sg1 to sg2 test failed'\
             ' ###'
 
-    step('\n### add tacacs+ server from sg1 to sg2 test passed ###')
-    step('\n### === add tacacs+ server from sg1 to sg2 test end === ###\n')
+    step('\n### add tacacs_plus server from sg1 to sg2 test passed ###')
+    step('\n### === add tacacs_plus server from sg1 to sg2 test end === ###\n')
 
 def tacacs_remove_server_from_server_group(dut, step):
-    step('\n### === remove tacacs+ server from sg1 test start === ###')
+    step('\n### === remove tacacs_plus server from sg1 test start === ###')
     dut("configure terminal")
     dut("aaa group server tacacs_plus sg1")
     dut("no server 1.1.1.2")
@@ -767,7 +767,7 @@ def tacacs_remove_server_from_server_group(dut, step):
     dump = dut("show running-config")
     lines = dump.splitlines()
     ''' collect all the TACACS+ server in server group sg1 '''
-    server_line_index = lines.index("aaa group server tacacs+ sg1") + 1
+    server_line_index = lines.index("aaa group server tacacs_plus sg1") + 1
     server_info = lines[server_line_index : server_line_index + COUNT_SG1_SERVER - 1]
 
     if server_info == ["    server 1.1.1.1", "    server 1.1.1.3",
@@ -776,13 +776,13 @@ def tacacs_remove_server_from_server_group(dut, step):
                  'passed ###')
         count = count + 1
     assert count == 3,\
-            '\n### remove tacacs+ server from sg1 test failed ###'
+            '\n### remove tacacs_plus server from sg1 test failed ###'
 
-    step('\n### remove tacacs+ server from sg1 test passed ###')
-    step('\n### === remove tacacs+ server from sg1 test end === ###\n')
+    step('\n### remove tacacs_plus server from sg1 test passed ###')
+    step('\n### === remove tacacs_plus server from sg1 test end === ###\n')
 
 def tacacs_remove_server_group(dut, step):
-    step('\n### === remove tacacs+ server group sg1 test start === ###')
+    step('\n### === remove tacacs_plus server group sg1 test start === ###')
     dut("configure terminal")
     dut("no aaa group server tacacs_plus sg1")
     dut("end")
@@ -807,15 +807,15 @@ def tacacs_remove_server_group(dut, step):
     lines = dump.splitlines()
     ''' collect all the TACACS+ server in server group sg1 '''
     for line in lines:
-        if ("aaa group server tacacs+ sg1" in line):
-            '\n### tacacs+ server group sg1 present in '
+        if ("aaa group server tacacs_plus sg1" in line):
+            '\n### tacacs_plus server group sg1 present in '
             'running config - failed ###'
             count = count - 1
     assert count == 1,\
-            '\n### remove tacacs+ server group sg1 test failed ###'
+            '\n### remove tacacs_plus server group sg1 test failed ###'
 
-    step('\n### remove tacacs+ server group sg1 test passed ###')
-    step('\n### === remove tacacs+ server group sg1 test end === ###\n')
+    step('\n### remove tacacs_plus server group sg1 test passed ###')
+    step('\n### === remove tacacs_plus server group sg1 test end === ###\n')
 
 def set_aaa_authentication_groups(dut, step):
     step('\n### === set aaa authentication groups test start === ###')

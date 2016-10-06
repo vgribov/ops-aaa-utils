@@ -818,7 +818,7 @@ show_aaa_tacacs_server_groups(const char* group_type)
 
 DEFUN(cli_show_aaa_server_groups,
       show_aaa_server_groups_cmd,
-      "show aaa server-groups (radius | tacacs+)",
+      "show aaa server-groups (radius | tacacs_plus)",
       SHOW_STR
       AAA_STR
       AAA_GROUP_HELP_STR
@@ -841,13 +841,11 @@ DEFUN(cli_show_aaa_all_server_groups,
     int retVal = show_aaa_tacacs_server_groups(SYSTEM_AAA_TACACS_PLUS);
     if (retVal != CMD_SUCCESS) {
         return retVal;
-
     }
 
     retVal  = show_aaa_radius_server_groups(SYSTEM_AAA_RADIUS);
     if (retVal != CMD_SUCCESS) {
         return retVal;
-
     }
 
     return CMD_SUCCESS;

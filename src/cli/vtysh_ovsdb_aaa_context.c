@@ -604,7 +604,7 @@ vtysh_display_aaa_tacacs_server_group_table(vtysh_ovsdb_cbmsg *p_msg)
           continue;
       }
       vtysh_ovsdb_cli_print(p_msg, "!");
-      vtysh_ovsdb_cli_print(p_msg, "aaa group server tacacs+ %s", name);
+      vtysh_ovsdb_cli_print(p_msg, "aaa group server tacacs_plus %s", name);
 
       for(idx = 0; idx < count; idx++)
       {

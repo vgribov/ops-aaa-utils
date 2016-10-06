@@ -73,7 +73,7 @@ def tacacs_add_server(dut, step):
 
 
 def tacacs_create_server_group(dut, step):
-    step('\n### === Create tacacs+ group tac1, tac2 and add server === ###')
+    step('\n### === Create tacacs_plus group tac1, tac2 and add server === ###')
     dut("configure terminal")
     dut("aaa group server tacacs_plus tac1")
     dut("server 192.168.1.254")
@@ -87,19 +87,19 @@ def tacacs_create_server_group(dut, step):
     lines = dump.splitlines()
 
     for line in lines:
-        if "aaa group server tacacs+ tac1" in line:
+        if "aaa group server tacacs_plus tac1" in line:
             count = count + 1
         if "server 192.168.1.254" in line:
             count = count + 1
-        if "aaa group server tacacs+ tac2" in line:
+        if "aaa group server tacacs_plus tac2" in line:
             count = count + 1
         if "server 192.168.1.253" in line:
             count = count + 1
     assert count == 4,\
-            '\n### Create tacacs+ group tac1,tac2 and add server test failed ###'
+            '\n### Create tacacs_plus group tac1,tac2 and add server test failed ###'
 
-    step('\n### Create tacacs+ group tac1,tac2 and add server test passed ###')
-    step('\n### === Create tacacs+ group tac1,tac2 and add server test end === ###\n')
+    step('\n### Create tacacs_plus group tac1,tac2 and add server test passed ###')
+    step('\n### === Create tacacs_plus group tac1,tac2 and add server test end === ###\n')
 
 
 def set_aaa_authorization_none(dut, step):
