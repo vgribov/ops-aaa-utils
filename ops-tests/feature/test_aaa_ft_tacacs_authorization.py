@@ -13,6 +13,7 @@
 #    under the License.
 
 from time import sleep
+from pytest import mark
 
 TOPOLOGY = """
 # +--------+         +--------+
@@ -161,6 +162,7 @@ def unset_aaa_authentication_groups(dut, step):
     step('\n### === unset aaa authorization test end === ###\n')
 
 
+@mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
 def test_ct_tacacs_config(topology, step):
     ops1 = topology.get('ops1')
     hs1 = topology.get('hs1')

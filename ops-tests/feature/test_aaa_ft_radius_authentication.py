@@ -645,6 +645,7 @@ def login_ssh_fail_through(step):
     verify_login_success(step, USER_NETOP, USER_NETOP_PASSWD, LOCAL_AUTH, is_ipv6)
     step("####### Test SSH login with fail-through enable/disable succeed #######")
 
+@mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
 @mark.platform_incompatible(['ostl'])
 def test_aaa_ft_authentication(topology, step):
     global switches, hosts
