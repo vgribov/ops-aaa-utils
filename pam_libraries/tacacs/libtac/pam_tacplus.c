@@ -1,5 +1,6 @@
 /* pam_tacplus.c - PAM interface for TACACS+ protocol.
  *
+ * Copyright (C) 2016-2017 Hewlett Packard Enterprise Development LP.
  * Copyright (C) 2010, Pawel Krawczyk <pawel.krawczyk@hush.com> and
  * Jeroen Nijhof <jeroen@jeroennijhof.nl>
  *
@@ -154,8 +155,8 @@ int _pam_account(pam_handle_t *pamh, int argc, const char **argv, int type,
 		syslog(LOG_DEBUG, "%s: username [%s] obtained", __FUNCTION__, user);
 
 	tty = _pam_get_terminal(pamh);
-	if (!strncmp(tty, "/dev/", 5))
-		tty += 5;
+	if (!strncmp(tty, "/dev/", strlen("/dev/")))
+		tty += strlen("/dev/");
 	if (ctrl & PAM_TAC_DEBUG)
 		syslog(LOG_DEBUG, "%s: tty [%s] obtained", __FUNCTION__, tty);
 
@@ -281,8 +282,8 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		syslog(LOG_DEBUG, "%s: password obtained", __FUNCTION__);
 
 	tty = _pam_get_terminal(pamh);
-	if (!strncmp(tty, "/dev/", 5))
-		tty += 5;
+	if (!strncmp(tty, "/dev/", strlen("/dev/")))
+		tty += strlen("/dev/");
 	if (ctrl & PAM_TAC_DEBUG)
 		syslog(LOG_DEBUG, "%s: tty [%s] obtained", __FUNCTION__, tty);
 
@@ -649,8 +650,8 @@ int pam_sm_acct_mgmt(pam_handle_t * pamh, int flags, int argc,
 		syslog(LOG_DEBUG, "%s: username obtained [%s]", __FUNCTION__, user);
 
 	tty = _pam_get_terminal(pamh);
-	if (!strncmp(tty, "/dev/", 5))
-		tty += 5;
+	if (!strncmp(tty, "/dev/", strlen("/dev/")))
+		tty += strlen("/dev/");
 	if (ctrl & PAM_TAC_DEBUG)
 		syslog(LOG_DEBUG, "%s: tty obtained [%s]", __FUNCTION__, tty);
 
@@ -849,8 +850,8 @@ int pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc,
 		syslog(LOG_DEBUG, "%s: user [%s] obtained", __FUNCTION__, user);
 
 	tty = _pam_get_terminal(pamh);
-	if (!strncmp(tty, "/dev/", 5))
-		tty += 5;
+	if (!strncmp(tty, "/dev/", strlen("/dev/")))
+		tty += strlen("/dev/");
 	if (ctrl & PAM_TAC_DEBUG)
 		syslog(LOG_DEBUG, "%s: tty [%s] obtained", __FUNCTION__, tty);
 

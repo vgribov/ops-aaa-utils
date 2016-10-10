@@ -1,5 +1,6 @@
 /* cont_s.c - Send continue request to the server.
  *
+ * Copyright (C) 2016-2017 Hewlett Packard Enterprise Development LP.
  * Copyright (C) 2010, Jeroen Nijhof <jeroen@jeroennijhof.nl>
  *
  * This program is free software; you can redistribute it and/or modify

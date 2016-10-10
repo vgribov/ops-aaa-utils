@@ -1,5 +1,6 @@
 /* tacc.c  TACACS+ PAP authentication client
  *
+ * Copyright (C) 2016-2017 Hewlett Packard Enterprise Development LP.
  * Copyright 1997-98 by Pawel Krawczyk <kravietz@ceti.com.pl>
  * Portions copyright (c) 1989 Carnegie Mellon University.
  *

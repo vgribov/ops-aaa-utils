@@ -1,5 +1,6 @@
 /* header.c - Create pre-filled header for TACACS+ request.
  *
+ * Copyright (C) 2016-2017 Hewlett Packard Enterprise Development LP.
  * Copyright (C) 2010, Pawel Krawczyk <pawel.krawczyk@hush.com> and
  * Jeroen Nijhof <jeroen@jeroennijhof.nl>
  *

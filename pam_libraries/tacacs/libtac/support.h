@@ -1,5 +1,6 @@
 /* support.h - support functions for pam_tacplus.c
  *
+ * Copyright (C) 2016-2017 Hewlett Packard Enterprise Development LP.
  * Copyright (C) 2010, Pawel Krawczyk <pawel.krawczyk@hush.com> and
  * Jeroen Nijhof <jeroen@jeroennijhof.nl>
  *

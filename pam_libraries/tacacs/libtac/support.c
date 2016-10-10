@@ -1,5 +1,6 @@
 /* support.c - support functions for pam_tacplus.c
  *
+ * Copyright (C) 2016-2017 Hewlett Packard Enterprise Development LP.
  * Copyright (C) 2010, Pawel Krawczyk <pawel.krawczyk@hush.com> and
  * Jeroen Nijhof <jeroen@jeroennijhof.nl>
  *
@@ -207,12 +208,12 @@ int _pam_parse (int argc, const char **argv) {
             ctrl |= PAM_TAC_USE_FIRST_PASS;
         } else if (!strcmp (*argv, "try_first_pass")) {
             ctrl |= PAM_TAC_TRY_FIRST_PASS;
-        } else if (!strncmp (*argv, "service=", 8)) { /* author & acct */
-            strncpy (tac_service, *argv + 8, sizeof(tac_service));
-        } else if (!strncmp (*argv, "protocol=", 9)) { /* author & acct */
-            strncpy (tac_protocol, *argv + 9, sizeof(tac_protocol));
-        } else if (!strncmp (*argv, "prompt=", 7)) { /* authentication */
-            strncpy (tac_prompt, *argv + 7, sizeof(tac_prompt));
+        } else if (!strncmp (*argv, "service=", strlen("service="))) { /* author & acct */
+            strncpy (tac_service, *argv + strlen("service="), sizeof(tac_service));
+        } else if (!strncmp (*argv, "protocol=", strlen("protocol="))) { /* author & acct */
+            strncpy (tac_protocol, *argv + strlen("protocol="), sizeof(tac_protocol));
+        } else if (!strncmp (*argv, "prompt=", strlen("prompt="))) { /* authentication */
+            strncpy (tac_prompt, *argv + strlen("prompt="), sizeof(tac_prompt));
             /* Replace _ with space */
             int chr;
             for (chr = 0; chr < strlen(tac_prompt); chr++) {
@@ -220,15 +221,15 @@ int _pam_parse (int argc, const char **argv) {
                     tac_prompt[chr] = ' ';
                 }
             }
-        } else if (!strncmp (*argv, "login=", 6)) {
-            strncpy (tac_login, *argv + 6, sizeof(tac_login));
+        } else if (!strncmp (*argv, "login=", strlen("login="))) {
+            strncpy (tac_login, *argv + strlen("login="), sizeof(tac_login));
         } else if (!strcmp (*argv, "acct_all")) {
             ctrl |= PAM_TAC_ACCT;
         } else if (!strcmp (*argv, "bypass_acct")) {
             ctrl |= PAM_TAC_BYPASS_ACCT;
         } else if (!strcmp (*argv, "bypass_session")) {
             ctrl |= PAM_TAC_BYPASS_SESSION;
-        } else if (!strncmp (*argv, "server=", 7)) { /* authen & acct */
+        } else if (!strncmp (*argv, "server=", strlen("server="))) { /* authen & acct */
             if(tac_srv_no < TAC_PLUS_MAXSERVERS) {
                 struct addrinfo hints, *servers, *server;
                 int rv;
@@ -271,10 +272,10 @@ int _pam_parse (int argc, const char **argv) {
                 _pam_log(LOG_ERR, "maximum number of servers (%d) exceeded, skipping",
                     TAC_PLUS_MAXSERVERS);
             }
-        } else if (!strncmp (*argv, "secret=", 7)) {
+        } else if (!strncmp (*argv, "secret=", strlen("secret="))) {
             int i;
 
-            current_secret = *argv + 7;     /* points right into argv (which is const) */
+            current_secret = *argv + strlen("secret=");     /* points right into argv (which is const) */
 
             /* if 'secret=' was given after a 'server=' parameter, fill in the current secret */
             for(i = tac_srv_no-1; i >= 0; i--) {
@@ -283,21 +284,21 @@ int _pam_parse (int argc, const char **argv) {
 
                 tac_srv[i].key = current_secret;
             }
-        } else if (!strncmp (*argv, "timeout=", 8)) {
+        } else if (!strncmp (*argv, "timeout=", strlen("timeout="))) {
             /* FIXME atoi() doesn't handle invalid numeric strings well */
-            tac_timeout = atoi(*argv + 8);
+            tac_timeout = atoi(*argv + strlen("timeout="));
 
             if (tac_timeout < 0) {
                 tac_timeout = 0;
             } else {
                 tac_readtimeout_enable = 1;
             }
-        } else if (!strncmp (*argv, "dstn_namespace=", 15)) {
+        } else if (!strncmp (*argv, "dstn_namespace=", strlen("dstn_namespace="))) {
             /* destination namespace */
-            strncpy (tac_dstn_namespace, *argv + 15, sizeof(tac_dstn_namespace));
-        } else if (!strncmp (*argv, "source_ip=", 10)) {
+            strncpy (tac_dstn_namespace, *argv + strlen("dstn_namespace="), sizeof(tac_dstn_namespace));
+        } else if (!strncmp (*argv, "source_ip=", strlen("source_ip="))) {
             /* source ip for the packets */
-            strncpy (tac_source_ip, *argv + 10, sizeof(tac_source_ip));
+            strncpy (tac_source_ip, *argv + strlen("source_ip="), sizeof(tac_source_ip));
         } else {
             _pam_log (LOG_WARNING, "unrecognized option: %s", *argv);
         }

@@ -1,5 +1,6 @@
 /* read_wait.c - Wait for data to read on a fd.
  *
+ * Copyright (C) 2016-2017 Hewlett Packard Enterprise Development LP.
  * Copyright (C) 2011, Darren Besler (dbesler@beehive.mb.ca)
  *
  * This program is free software; you can redistribute it and/or modify
