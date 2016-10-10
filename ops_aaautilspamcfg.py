@@ -748,6 +748,8 @@ def modify_common_auth_access_file(server_list):
                   "auth    required                        pam_permit.so\n" \
                   "# and here are more per-package modules (the \"Additional\" block)\n"
 
+    file_body = ""
+
     common_auth_access_filename = PAM_ETC_CONFIG_DIR + "common-auth-access"
 
     pam_server_list_str = "server list -"
@@ -760,8 +762,8 @@ def modify_common_auth_access_file(server_list):
         # Now write the server list to the config file
         PAM_CONTROL_VALUE = "[success=done new_authtok_reqd=done default=ignore auth_err=die]"
         if AAA_FAIL_THROUGH_ENABLED:
-            PAM_CONTROL_VALUE = "sufficient"
-            # Note: "sufficient" is same as [success=done new_authtok_reqd=done default=ignore]
+            # The following is exactly same as saying: PAM_CONTROL_VALUE = "sufficient"
+            PAM_CONTROL_VALUE = "[success=done new_authtok_reqd=done default=ignore]"
 
         for server, server_type in server_list[:-1]:
             auth_line = ""
@@ -821,7 +823,7 @@ def modify_common_auth_access_file(server_list):
                         str(udp_port) + " secret=" + str(passkey) + " login=" + auth_type  + " retry=" + str(retries) + \
                         " timeout=" + str(timeout) + "\n"
 
-            f.write(auth_line)
+            file_body += auth_line
 
         # Print the last element
         server = server_list[-1][0]
@@ -885,7 +887,10 @@ def modify_common_auth_access_file(server_list):
                     ":" +  str(udp_port) + " secret=" + str(passkey) + " login=" + auth_type  + " retry=" + str(retries) + \
                     " timeout=" + str(timeout) + "\n"
 
-        f.write(auth_line)
+        file_body += auth_line
+
+        # Write the PAM configurations for authentication
+        f.write(file_body)
 
         # Write the file footer
         f.write(file_footer)
