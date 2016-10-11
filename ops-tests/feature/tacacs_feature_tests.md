@@ -33,7 +33,11 @@
 	- [OOBM address as the source interface](#oobm-address-as-the-source-interface)
 	- [No source interface configuration](#no-source-interface-configuration)
 - [Test TACACS+ command authorization](#test-tacacs-command-authorization)
-	- [Tacacs+ command authorization](#tacacs-command-authorization)
+	- [Set none as TACACS+ command authorization and test command authorization](#set-none-as-tacacs+-command-authorization-and-test-command-authorization)
+	- [Set TACACS+ groups and none as TACACS+ cmd authorization and test command authorization] (#set-tacacs+-groups-and-none-as-tacacs-cmd-authorization-and-test-command-authorization)
+	- [SSH to switch as a remote TACACS+ user and test command authorization](#ssh-to-switch-as-a-remote-tacacs+-user-and-test-command-authorization)
+        - [Set unreachable TACACS+ server for TACACS+ cmd authorization and test cmd authorization](#set-unreachable-tacacs+-server-for-tacacs+-cmd-authorization-and-test-cmd-authorization)
+
 
 ## Test local authentication
 
@@ -1168,7 +1172,7 @@ This test case validates if the tacacs server can be reached through interface 1
 
 ##### Topology diagram
 ```ditaa
-+----------+             +----------+             +----------+  
++----------+             +----------+             +----------+
 |  Host 1  +-------------+  Switch  +-------------+ Host 2   |
 +----------+       int 1 +----------+ OOBM        +----------+
 ```
@@ -1203,9 +1207,9 @@ This test case validates if the tacacs server can be reached through interface 1
 
 ##### Topology diagram
 ```ditaa
-+----------+             +----------+             +----------+  
++----------+             +----------+             +----------+
 |  Host 1  +-------------+  Switch  +-------------+ Host 2   |
-+----------+       int 1 +----------+ OOBM        +----------+ 
++----------+       int 1 +----------+ OOBM        +----------+
 ```
 
 ##### Test Setup
@@ -1239,9 +1243,9 @@ source interface
 
 ##### Topology diagram
 ```ditaa
-+----------+             +----------+             +----------+  
++----------+             +----------+             +----------+
 |  Host 1  +-------------+  Switch  +-------------+ Host 2   |
-+----------+       int 1 +----------+ OOBM        +----------+ 
++----------+       int 1 +----------+ OOBM        +----------+
 ```
 
 ##### Test Setup
@@ -1264,7 +1268,7 @@ Tacacs User failed to pass tacacs authentication and login to OpenSwitch
 ### Loopback name as the source interface
 
 #### Objective
-This test case validates if the tacacs server can be reached if loopback interface is used 
+This test case validates if the tacacs server can be reached if loopback interface is used
 for the source interface
 
 #### Requirements
@@ -1275,9 +1279,9 @@ for the source interface
 
 ##### Topology diagram
 ```ditaa
-+----------+             +----------+             +----------+  
++----------+             +----------+             +----------+
 |  Host 1  +-------------+  Switch  +-------------+ Host 2   |
-+----------+       int 1 +----------+ OOBM        +----------+ 
++----------+       int 1 +----------+ OOBM        +----------+
 ```
 
 ##### Test Setup
@@ -1300,7 +1304,7 @@ Tacacs User failed to pass tacacs authentication and login to OpenSwitch
 ### OOBM address as the source interface
 
 #### Objective
-This test case validates if the tacacs server can be reached if OOBM address is used for 
+This test case validates if the tacacs server can be reached if OOBM address is used for
 the source interface
 
 #### Requirements
@@ -1311,7 +1315,7 @@ the source interface
 
 ##### Topology diagram
 ```ditaa
-+----------+             +----------+             +----------+  
++----------+             +----------+             +----------+
 |  Host 1  +-------------+  Switch  +-------------+ Host 2   |
 +----------+       int 1 +----------+ OOBM        +----------+
 ```
@@ -1336,8 +1340,8 @@ Tacacs User failed to pass tacacs authentication and login to OpenSwitch
 ### No source interface configuration
 
 #### Objective
-This test case validates if the tacacs server can be reached if no source interface 
-configuration is present.  In this case, tacacs server should be reached through the 
+This test case validates if the tacacs server can be reached if no source interface
+configuration is present.  In this case, tacacs server should be reached through the
 default OOBM port
 
 #### Requirements
@@ -1348,7 +1352,7 @@ default OOBM port
 
 ##### Topology diagram
 ```ditaa
-+----------+             +----------+             +----------+  
++----------+             +----------+             +----------+
 |  Host 1  +-------------+  Switch  +-------------+ Host 2   |
 +----------+       int 1 +----------+ OOBM        +----------+
 ```
@@ -1373,7 +1377,46 @@ Tacacs User failed to pass tacacs authentication and login to OpenSwitch
 
 ## Test TACACS+ command authorization
 
-### Tacacs+ command authorization
+### Set none as TACACS+ command authorization and test command authorization
+
+#### Objective
+This test case validates if command authorization works after configuring none for
+authorizing a command for a perticular user.
+
+#### Requirements
+- Docker: Up-to-date OpenSwitch docker image and two pre-configured openswitch/tacacs_server image
+- Physical: AS5712 switch loaded with up-to-date OpenSwitch image, two TACACS+ servers loaded with pre-configured openswitch/tacacs_server image
+
+#### Setup
+
+##### Topology diagram
+```ditaa
++----------+   +----------+   +----------+
+|  Host 1  +---+  Switch  +---+  Host 1  |
++----------+   +----------+   +----------+
+```
+
+##### Test Setup
+
+##### **Authentication client (OpenSwitch) setup**
+1. Configure none for tacacs cmd authorization
+
+```
+configure terminal
+aaa authorization commands default none
+```
+
+#### Test result criteria
+
+##### Test pass criteria
+After authorization is configured, user should be able to run "show running-config" command
+
+##### Test fail Criteria
+After authorization is configured, user tries to run show running-config and receives
+"Cannot execute command. Command not allowed" error message.
+
+
+### Set TACACS+ groups and none as tacacs cmd authorization and test command authorization
 
 #### Objective
 This test case validates if command authorization works after configuring tacacs
@@ -1400,8 +1443,8 @@ server for the authorizing a command for a perticular user.
 3. enable aaa tacacs authorization
 ```
 configure terminal
-tacacs-server host 192.168.1.254
-tacacs-server host 192.168.1.253
+tacacs-server host 192.168.1.254 key tac_test
+tacacs-server host 192.168.1.253 key_tac_test
 aaa group server tacacs_plus tac1
 server 192.168.1.254
 exit
@@ -1410,7 +1453,6 @@ server 192.168.1.253
 exit
 aaa authorization commands default group tac1 tac2 none
 ```
-
 #### Test result criteria
 
 ##### Test pass criteria
@@ -1419,3 +1461,94 @@ After authorization is configured, user should be able to run "show running-conf
 ##### Test fail Criteria
 After authorization is configured, user tries to run show running-config and receives
 "Cannot execute command. Command not allowed" error message.
+
+
+### SSH to switch as a remote TACACS+ user and test command authorization
+
+#### Objective
+This test case validates if an authenticated user withour command authoirization
+privilege can execute commands
+
+#### Requirements
+- Docker: Up-to-date OpenSwitch docker image and two pre-configured openswitch/tacacs_server image
+- Physical: AS5712 switch loaded with up-to-date OpenSwitch image, two TACACS+ servers loaded with pre-configured openswitch/tacacs_server image
+
+#### Setup
+
+##### Topology diagram
+```ditaa
++----------+   +----------+   +----------+
+|  Host 1  +---+  Switch  +---+  Host 1  |
++----------+   +----------+   +----------+
+```
+
+##### Test Setup
+
+##### **Authentication client (OpenSwitch) setup**
+1. set tacacs servers and tacacs command authorization
+1. setup tacacs authentiation
+2. ssh from host to switch with tacacs authentication
+```
+configure terminal
+tacacs-server host 192.168.1.254 key tac_test
+tacacs-server host 192.168.1.253 key_tac_test
+aaa group server tacacs_plus tac1
+server 192.168.1.254
+exit
+aaa group server tacacs_plus tac2
+server 192.168.1.253
+exit
+aaa authorization commands default group tac1 tac2 none
+aaa authentication login default group tac2 local
+```
+
+#### Test result criteria
+
+##### Test pass criteria
+After user is authenticated and authorization is configured, user should not be able to run "show running-config" command
+User should expect "Cannot execute command. Command not allowed"
+
+##### Test fail Criteria
+User is able to execute commands without an issue.
+
+
+### Set unreachable TACACS+ server for TACACS+ cmd authorization and test cmd authorization
+
+#### Objective
+This test case validates if tacacs servers are unreachable, user should not be able to
+execute any command.
+
+#### Requirements
+- Docker: Up-to-date OpenSwitch docker image and two pre-configured openswitch/tacacs_server image
+- Physical: AS5712 switch loaded with up-to-date OpenSwitch image, two TACACS+ servers loaded with pre-configured openswitch/tacacs_server image
+
+#### Setup
+
+##### Topology diagram
+```ditaa
++----------+   +----------+   +----------+
+|  Host 1  +---+  Switch  +---+  Host 1  |
++----------+   +----------+   +----------+
+```
+
+##### Test Setup
+
+##### **Authentication client (OpenSwitch) setup**
+1. set tacacs servers and tacacs command authorization
+```
+configure terminal
+tacacs-server host 1.1.1.1
+aaa group server tacacs_plus tac3
+server 1.1.1.1
+exit
+aaa authorization commands default group tac3
+```
+
+#### Test result criteria
+
+##### Test pass criteria
+User should not be able to execute any command and receives,
+"Cannot execute command. Could not connect to any TACACS+ servers" as an error.
+
+##### Test fail Criteria
+User is able to execute commands without an issue.
