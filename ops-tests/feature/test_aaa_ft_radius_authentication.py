@@ -20,7 +20,8 @@
 OpenSwitch Test for RADIUS Authentication.
 """
 
-from time import sleep
+import time
+import datetime
 from pytest import mark
 import pexpect
 
@@ -41,8 +42,8 @@ TOPOLOGY = """
 
 # Nodes
 [type=openswitch name="OpenSwitch 1"] ops1
-[type=oobmhost image="host/freeradius-ubuntu:latest" name="Host 1"] hs1
-[type=oobmhost image="host/freeradius-ubuntu:latest" name="Host 2"] hs2
+[type=oobmhost image="openswitch/freeradius:latest" name="Host 1"] hs1
+[type=oobmhost image="openswitch/freeradius:latest" name="Host 2"] hs2
 
 # Ports
 [force_name=oobm] ops1:eth1
@@ -54,8 +55,7 @@ ops1:eth1 -- hs2:eth0
 """
 
 
-ssh_client = "/usr/bin/ssh -q -o UserKnownHostsFile=/dev/null" \
-    "  -o StrictHostKeyChecking=no"
+ssh_cmd = "ssh -F /dev/null -o StrictHostKeyChecking=no"
 
 switches = []
 hosts = []
@@ -73,10 +73,15 @@ SSH_NEWKEY_HELP_STR = "Are you sure you want to continue connecting"
 LOCAL_AUTH = "local"
 REMOTE_AUTH = "remote"
 RADIUS_TIMEOUT = "timeout"
-RADIUS_TIMEOUT_VAL = "6"
+RADIUS_TIMEOUT_VAL = "5"
+TIMEOUT_DEFAULT_VAL = 5
 RADIUS_RETRIES = "retries"
-RADIUS_RETRIES_VAL = "2"
-RADIUS_TIMEOUT_MIN = "1"
+RADIUS_RETRIES_TEST = "2"
+RETRIES_TEST_VAL = 2
+RADIUS_RETRIES_VAL = "1"
+RETRIES_DEFAULT_VAL = 1
+RADIUS_TIMEOUT_TEST = "10"
+TIMEOUT_TEST_SEC = 10
 RADIUS_PASSKEY = "key"
 RADIUS_PASSKEY_VALUE = "testing123-1"
 IPV6_OPS = "2013:cdba:1002:1304:4001:2005:3257:1000/64"
@@ -161,12 +166,8 @@ def setup_radius_server_ipv6(step):
     """ This function is to setup RADIUS server with IPv6 address
     """
     step("####### Configure RADIUS servers start #######")
-    stop_radius_service(step, 0)
-    stop_radius_service(step, 1)
     set_host_ipv6(step, 0, IPV6_HOST1)
     set_host_ipv6(step, 1, IPV6_HOST2)
-    start_radius_service(step, 0)
-    start_radius_service(step, 1)
     print_freeradius_conf(step, 1)
     step("####### Configure RADIUS servers succeed #######")
 
@@ -179,8 +180,6 @@ def setup_radius_client(step):
     host_2_ip_address = get_host_ip(step, 1)
     print("RADIUS Server:" + host_1_ip_address)
     print("RADIUS Server:" + host_2_ip_address)
-    s1("mkdir /etc/raddb/", shell="bash")
-    s1("touch /etc/raddb/server", shell="bash")
     setup_global_default(step, RADIUS_PASSKEY, RADIUS_PASSKEY_VALUE)
     out = s1("configure terminal")
     assert "Unknown command" not in out, \
@@ -258,153 +257,109 @@ def show_radius_log(step, host_idx):
     print(c)
 
 
-def verify_login_success(step, user, password, login_type, is_ipv6):
+def verify_login_success(step, user, passwd, login_type, is_ipv6):
     switch_ip = get_switch_ip(step)
     if is_ipv6:
         switch_ip = IPV6_OPS_SSH
     s1 = switches[0]
-    s1("echo $SHELL", shell="bash")
-    myssh = ssh_client + " " + user + "@" + switch_ip
-    p = pexpect.spawn(myssh)
-    index = p.expect([SSH_NEWKEY_HELP_STR, "password:", pexpect.EOF, pexpect.TIMEOUT])
+    hs = hosts[1]
+    my_ssh = ssh_cmd + " " + user + "@" + switch_ip
+    matches = ['password:']
+    bash_shell = hs.get_shell('bash')
+    assert bash_shell.send_command(my_ssh, matches) is 0, "Failed with" \
+        " SSH command."
+    matches = ['#']
+    assert bash_shell.send_command(passwd, matches) is 0, "Failed SSH" \
+        " login."
+    bash_shell.send_command("exit")
+    step("#### passed SSH login with " + login_type + " credenticals ####")
 
-    if index == 0:
-        p.sendline("yes")
-        idx = p.expect(["password:", pexpect.EOF, pexpect.TIMEOUT])
-        if idx == 0:
-            p.sendline(password)
-            p.expect("#")
-            p.sendline("exit")
-            p.kill(0)
-            step("#### passed SSH login with " + login_type + " credenticals ####")
-        assert idx == 0, "Failed with SSH command"
-    elif index == 1:
-        p.sendline(password)
-        p.expect("#")
-        p.sendline("exit")
-        p.kill(0)
-        step("#### passed SSH login with " + login_type + " credenticals ####")
-    assert index <= 1, "Failed with SSH command"
 
-def verify_login_failure(step, user, password, login_type):
+def verify_login_failure(step, user, passwd, login_type):
     switch_ip = get_switch_ip(step)
     s1 = switches[0]
-    s1("echo $SHELL", shell="bash")
-    myssh = ssh_client + " " + user + "@" + switch_ip
-    p = pexpect.spawn(myssh)
-    index = p.expect([SSH_NEWKEY_HELP_STR, "password:", pexpect.EOF, pexpect.TIMEOUT])
+    hs = hosts[1]
+    my_ssh = ssh_cmd + " " + user + "@" + switch_ip
+    matches = ['password:']
+    bash_shell = hs.get_shell('bash')
+    assert bash_shell.send_command(my_ssh, matches) is 0, "Failed with" \
+        " SSH command."
+    assert bash_shell.send_command(passwd, matches) is 0, "Failed to" \
+        " block unauthorized SSH login."
+    assert bash_shell.send_command(passwd, matches) is 0, "Failed to" \
+        " block unauthorized SSH login."
+    matches = ['Permission denied']
+    assert bash_shell.send_command(passwd, matches) is 0, "Failed to" \
+        " block unauthorized SSH login."
+    step("#### blocked SSH login with " + login_type + " credenticals ####")
 
-    if index == 0:
-        p.sendline("yes")
-        idx = p.expect(["password:", pexpect.EOF, pexpect.TIMEOUT])
-        if idx == 0:
-            p.sendline(password)
-            p.expect("password:")
-            p.sendline(password)
-            p.expect("password:")
-            p.sendline(password)
-            p.kill(0)
-            step("#### blocked SSH login with " + login_type + " credenticals ####")
-        assert idx == 0, "Failed with SSH command"
-    elif index == 1:
-        p.sendline(password)
-        p.expect("password:")
-        p.sendline(password)
-        p.expect("password:")
-        p.sendline(password)
-        p.kill(0)
-        step("#### blocked SSH login with " + login_type + " credenticals ####")
-    assert index <= 1, "Failed with SSH command"
 
-def verify_login_success_2nd_attempt(step, user, password, login_type):
+def verify_login_success_2nd_attempt(step, user, passwd, login_type):
     switch_ip = get_switch_ip(step)
     s1 = switches[0]
-    s1("echo $SHELL", shell="bash")
-    myssh = ssh_client + " " + user + "@" + switch_ip
-    p = pexpect.spawn(myssh)
-    index = p.expect([SSH_NEWKEY_HELP_STR, "password:", pexpect.EOF, pexpect.TIMEOUT])
+    hs = hosts[1]
+    my_ssh = ssh_cmd + " " + user + "@" + switch_ip
+    matches = ['password:']
+    bash_shell = hs.get_shell('bash')
+    assert bash_shell.send_command(my_ssh, matches) is 0, "Failed with" \
+        " SSH command."
+    assert bash_shell.send_command(DUMMY, matches) is 0, "Failed to" \
+        " block unauthorized SSH login."
+    matches = ['#']
+    assert bash_shell.send_command(passwd, matches) is 0, "Failed SSH" \
+        " login."
+    bash_shell.send_command("exit")
+    step("#### passed SSH login with " + login_type + " credenticals 2nd attempt ####")
 
-    if index == 0:
-        p.sendline("yes")
-        idx = p.expect(["password:", pexpect.EOF, pexpect.TIMEOUT])
-        if idx == 0:
-            p.sendline(DUMMY)
-            p.expect("password:")
-            p.sendline(password)
-            p.expect("#")
-            p.sendline("exit")
-            p.kill(0)
-            step("#### passed SSH login with " + login_type + " credenticals ####")
-        assert idx == 0, "Failed with SSH command"
 
-    elif index == 1:
-        p.sendline(DUMMY)
-        p.expect("password:")
-        p.sendline(password)
-        p.expect("#")
-        p.sendline("exit")
-        p.kill(0)
-        step("#### passed SSH login with " + login_type + " credenticals ####")
-    assert index <= 1, "Failed with SSH command"
-
-def verify_login_failure_timeout(step, user, password):
+def verify_login_failure_timeout_then_success_2nd_attempt(step, user, passwd):
     switch_ip = get_switch_ip(step)
     s1 = switches[0]
-    s1("echo $SHELL", shell="bash")
-    myssh = ssh_client + " " + user + "@" + switch_ip
-    p = pexpect.spawn(myssh)
-    index = p.expect([SSH_NEWKEY_HELP_STR, "password:", pexpect.EOF, pexpect.TIMEOUT])
+    hs = hosts[1]
+    my_ssh = ssh_cmd + " " + user + "@" + switch_ip
+    matches = ['password:']
+    bash_shell = hs.get_shell('bash')
+    stop_radius_service(step, 0)
+    assert bash_shell.send_command(my_ssh, matches) is 0, "Failed with" \
+        " SSH command."
+    t1 = time.time()
+    bash_shell.send_command(passwd, matches)
+    t2 = time.time()
+    diff=(datetime.datetime.fromtimestamp(t1) - datetime.datetime.fromtimestamp(t2))
+    seconds = abs(diff.total_seconds())
+    test_sec = TIMEOUT_TEST_SEC * (RETRIES_DEFAULT_VAL + 1)
+    assert seconds >= test_sec and seconds <= (test_sec + 1), "#### Failed timeout testcase! ####"
+    start_radius_service(step, 0)
+    matches = ['#']
+    assert bash_shell.send_command(passwd, matches) is 0, "Failed SSH" \
+        " login."
+    bash_shell.send_command("exit")
+    step("#### passed login success 2nd attempt with timeout = 10 and after server reboot  ####")
 
-    if index == 0:
-        p.sendline("yes")
-        idx = p.expect(["password:", pexpect.EOF, pexpect.TIMEOUT])
-        if idx == 2:
-            p.kill(0)
-            step("#### passed timeout failure (as expected) ####")
-        assert idx != 2, "Failed with SSH command"
 
-    elif index == 3:
-        p.kill(0)
-        step("#### passed timeout failure (as expected)  ####")
-    assert index != 3, "Failed with SSH command"
-
-
-def verify_login_success_2nd_attempt_retry(step, user, password, login_type):
+def verify_login_success_2nd_attempt_retry(step, user, passwd, login_type):
     switch_ip = get_switch_ip(step)
     s1 = switches[0]
-    s1("echo $SHELL", shell="bash")
-    myssh = ssh_client + " " + user + "@" + switch_ip
-    p = pexpect.spawn(myssh)
-    index = p.expect([SSH_NEWKEY_HELP_STR, "password:", pexpect.EOF, pexpect.TIMEOUT])
-
-    if index == 0:
-        p.sendline("yes")
-        idx = p.expect(["password:", pexpect.EOF, pexpect.TIMEOUT])
-        if idx == 0:
-            p.sendline(DUMMY)
-            stop_radius_service(step, 0)
-            sleep(2)
-            start_radius_service(step, 0)
-            p.expect("password:")
-            p.sendline(password)
-            p.expect("#")
-            p.sendline("exit")
-            p.kill(0)
-            step("#### passed SSH login with " + login_type + " credenticals ####")
-        assert idx == 0, "Failed with SSH command"
-
-    elif index == 1:
-        p.sendline(DUMMY)
-        stop_radius_service(step, 0)
-        sleep(2)
-        start_radius_service(step, 0)
-        p.expect("password:")
-        p.sendline(password)
-        p.expect("#")
-        p.sendline("exit")
-        p.kill(0)
-        step("#### passed SSH login with " + login_type + " credenticals ####")
-    assert index <= 1, "Failed with SSH command"
+    hs = hosts[1]
+    my_ssh = ssh_cmd + " " + user + "@" + switch_ip
+    matches = ['password:']
+    bash_shell = hs.get_shell('bash')
+    stop_radius_service(step, 0)
+    assert bash_shell.send_command(my_ssh, matches) is 0, "Failed with" \
+        " SSH command."
+    t1 = time.time()
+    bash_shell.send_command(passwd, matches)
+    t2 = time.time()
+    diff=(datetime.datetime.fromtimestamp(t1) - datetime.datetime.fromtimestamp(t2))
+    seconds = abs(diff.total_seconds())
+    test_sec = TIMEOUT_DEFAULT_VAL * (RETRIES_TEST_VAL + 1)
+    assert seconds >= test_sec and seconds <= (test_sec + 1), "#### Failed retries testcase! ####"
+    start_radius_service(step, 0)
+    matches = ['#']
+    assert bash_shell.send_command(passwd, matches) is 0, "Failed SSH" \
+        " login."
+    bash_shell.send_command("exit")
+    step("#### passed SSH login with " + login_type + " credenticals 2nd attempt ####")
 
 
 def get_switch_ip(step):
@@ -565,7 +520,7 @@ def login_ssh_local(step):
     verify_login_failure(step, USER_DUMMY, USER_DUMMY_PASSWD, LOCAL_AUTH)
     step("####### Test SSH login with local authenication succeed #######")
 
-def login_ssh_radius(step):
+def login_ssh_radius(step, is_user_group):
     """This function is to verify RADIUS authentication functionality
     """
     is_ipv6 = False
@@ -583,21 +538,20 @@ def login_ssh_radius(step):
     step("#### verify login success with second password attempt ####")
     verify_login_success_2nd_attempt(step, USER_1, USER_1_PASSWD, REMOTE_AUTH)
     show_radius_log(step, 0)
-    step("#### verify login failure with dummy global passkey ####")
-    setup_global_default(step, RADIUS_PASSKEY, DUMMY)
-    verify_login_failure(step, USER_1, USER_1_PASSWD, REMOTE_AUTH)
-    setup_global_default(step, RADIUS_PASSKEY, RADIUS_PASSKEY_VALUE)
-    step("#### verify login failed with timeout limit exceed ####")
-    setup_global_default(step, RADIUS_TIMEOUT, RADIUS_TIMEOUT_MIN)
-    verify_login_failure_timeout(step, USER_1, USER_1_PASSWD)
-    step("#### verify login success with retry > 1 and server reboot ####")
-    setup_global_default(step, RADIUS_RETRIES, '5')
-    setup_global_default(step, RADIUS_TIMEOUT, '15')
-    verify_login_success_2nd_attempt_retry(step, USER_1, USER_1_PASSWD, REMOTE_AUTH)
-
-    setup_global_default(step, RADIUS_RETRIES, RADIUS_RETRIES_VAL)
-    setup_global_default(step, RADIUS_TIMEOUT, RADIUS_TIMEOUT_VAL)
-    show_radius_log(step, 0)
+    if is_user_group:
+        step("#### verify login failure with dummy global passkey ####")
+        setup_global_default(step, RADIUS_PASSKEY, DUMMY)
+        verify_login_failure(step, USER_1, USER_1_PASSWD, REMOTE_AUTH)
+        setup_global_default(step, RADIUS_PASSKEY, RADIUS_PASSKEY_VALUE)
+        step("#### verify login success 2nd attempt with timeout = 10, retries = 1 and after server reboot ####")
+        setup_global_default(step, RADIUS_TIMEOUT, RADIUS_TIMEOUT_TEST)
+        verify_login_failure_timeout_then_success_2nd_attempt(step, USER_1, USER_1_PASSWD)
+        step("#### verify login success 2nd attempt with retries = 2 and after server reboot ####")
+        setup_global_default(step, RADIUS_RETRIES, RADIUS_RETRIES_TEST)
+        setup_global_default(step, RADIUS_TIMEOUT, RADIUS_TIMEOUT_VAL)
+        verify_login_success_2nd_attempt_retry(step, USER_1, USER_1_PASSWD, REMOTE_AUTH)
+        setup_global_default(step, RADIUS_RETRIES, RADIUS_RETRIES_VAL)
+        show_radius_log(step, 0)
     step("####### Test SSH login with RADIUS authentication succeed #######")
 
 def login_ssh_radius_ipv6(step):
@@ -645,7 +599,7 @@ def login_ssh_fail_through(step):
     verify_login_success(step, USER_NETOP, USER_NETOP_PASSWD, LOCAL_AUTH, is_ipv6)
     step("####### Test SSH login with fail-through enable/disable succeed #######")
 
-@mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
+@mark.skipif(True, reason="Disabling as framework issue present")
 @mark.platform_incompatible(['ostl'])
 def test_aaa_ft_authentication(topology, step):
     global switches, hosts
@@ -664,22 +618,20 @@ def test_aaa_ft_authentication(topology, step):
     hs1.name = "hs1"
     hs2.name = "hs2"
 
+    is_user_group = False
+
     init_radius_server(step)
     setup_radius_client(step)
 
-    enable_local_authentication(step)
-    login_ssh_local(step)
+    group_list = ['radius']
+    enable_radius_authentication_by_group(step, group_list)
+    login_ssh_radius(step, is_user_group)
 
+    is_user_group = True
     group_list = ['sg1']
     enable_radius_authentication_by_group(step, group_list)
-    login_ssh_radius(step)
+    login_ssh_radius(step, is_user_group)
 
     group_list = ['sg1', 'sg2']
     enable_radius_authentication_by_group(step, group_list)
     login_ssh_fail_through(step)
-
-    disable_authentication_by_group(step)
-    login_ssh_local(step)
-
-    setup_radius_server_ipv6(step)
-    update_radius_client(step)

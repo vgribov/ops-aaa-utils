@@ -20,7 +20,8 @@
 OpenSwitch Test for TACACS+ Authentication.
 """
 
-from time import sleep
+import time
+import datetime
 from pytest import mark
 import pexpect
 
@@ -54,8 +55,7 @@ ops1:eth1 -- hs2:eth0
 """
 
 
-ssh_client = "/usr/bin/ssh -q -o UserKnownHostsFile=/dev/null" \
-    "  -o StrictHostKeyChecking=no"
+ssh_cmd = "ssh -F /dev/null -o StrictHostKeyChecking=no"
 
 switches = []
 hosts = []
@@ -73,8 +73,9 @@ SSH_NEWKEY_HELP_STR = "Are you sure you want to continue connecting"
 LOCAL_AUTH = "local"
 REMOTE_AUTH = "remote"
 TACACS_TIMEOUT = "timeout"
-TACACS_TIMEOUT_VAL = "6"
-TACACS_TIMEOUT_MIN = "1"
+TACACS_TIMEOUT_VAL = "5"
+TACACS_TIMEOUT_TEST = "10"
+TIMEOUT_TEST_SEC = 10
 TACACS_PASSKEY = "key"
 TACACS_PASSKEY_VALUE = "tac_test"
 IPV6_OPS = "2013:cdba:1002:1304:4001:2005:3257:1000/64"
@@ -130,12 +131,8 @@ def setup_tacacs_server_ipv6(step):
     """ This function is to setup TACACS+ server with IPv6 address
     """
     step("####### Configure TACACS+ servers start #######")
-    stop_tacacs_service(step, 0)
-    stop_tacacs_service(step, 1)
     set_host_ipv6(step, 0, IPV6_HOST1)
     set_host_ipv6(step, 1, IPV6_HOST2)
-    start_tacacs_service(step, 0)
-    start_tacacs_service(step, 1)
     print_tac_plus_conf(step, 1)
     step("####### Configure TACACS+ servers succeed #######")
 
@@ -208,8 +205,8 @@ def setup_global_default(step, name, value):
     config = "tacacs-server " + name + " " + value
     s1(config)
     s1("exit")
-    out = s1("show running-config")
-    assert (config in out), "Failed to configure global value"
+    out = s1("show tacacs-server")
+    assert (value in out), "Failed to configure global value"
     step("###### Configure TACACS+ client global " + name + " succeed #######")
 
 def show_switch_config(step):
@@ -224,117 +221,85 @@ def show_tacacs_log(step, host_idx):
     c = h("tail -1 /var/log/tac_plus.log")
     print(c)
 
-
-def verify_login_success(step, user, password, login_type, is_ipv6):
+def verify_login_success(step, user, passwd, login_type, is_ipv6):
     switch_ip = get_switch_ip(step)
     if is_ipv6:
         switch_ip = IPV6_OPS_SSH
     s1 = switches[0]
-    s1("echo $SHELL", shell="bash")
-    myssh = ssh_client + " " + user + "@" + switch_ip
-    p = pexpect.spawn(myssh)
+    hs = hosts[1]
+    my_ssh = ssh_cmd + " " + user + "@" + switch_ip
+    matches = ['password:']
+    bash_shell = hs.get_shell('bash')
+    assert bash_shell.send_command(my_ssh, matches) is 0, "Failed with" \
+        " SSH command."
+    matches = ['#']
+    assert bash_shell.send_command(passwd, matches) is 0, "Failed SSH" \
+        " login."
+    bash_shell.send_command("exit")
+    step("#### passed SSH login with " + login_type + " credenticals ####")
 
-    index = p.expect([SSH_NEWKEY_HELP_STR, "password:", pexpect.EOF, pexpect.TIMEOUT])
 
-    if index == 0:
-        p.sendline("yes")
-        idx = p.expect(["password:", pexpect.EOF, pexpect.TIMEOUT])
-        if idx == 0:
-            p.sendline(password)
-            p.expect("#")
-            p.sendline("exit")
-            p.kill(0)
-            step("#### passed SSH login with " + login_type + " credenticals ####")
-        assert idx == 0, "Failed with SSH command"
-    elif index == 1:
-        p.sendline(password)
-        p.expect("#")
-        p.sendline("exit")
-        p.kill(0)
-        step("#### passed SSH login with " + login_type + " credenticals ####")
-    assert index <= 1, "Failed with SSH command"
-
-def verify_login_failure(step, user, password, login_type):
+def verify_login_failure(step, user, passwd, login_type):
     switch_ip = get_switch_ip(step)
     s1 = switches[0]
-    s1("echo $SHELL", shell="bash")
-    myssh = ssh_client + " " + user + "@" + switch_ip
-    p = pexpect.spawn(myssh)
-    index = p.expect([SSH_NEWKEY_HELP_STR, "password:", pexpect.EOF, pexpect.TIMEOUT])
+    hs = hosts[1]
+    my_ssh = ssh_cmd + " " + user + "@" + switch_ip
+    matches = ['password:']
+    bash_shell = hs.get_shell('bash')
+    assert bash_shell.send_command(my_ssh, matches) is 0, "Failed with" \
+        " SSH command."
+    assert bash_shell.send_command(passwd, matches) is 0, "Failed to" \
+        " block unauthorized SSH login."
+    assert bash_shell.send_command(passwd, matches) is 0, "Failed to" \
+        " block unauthorized SSH login."
+    matches = ['Permission denied']
+    assert bash_shell.send_command(passwd, matches) is 0, "Failed to" \
+        " block unauthorized SSH login."
+    step("#### blocked SSH login with " + login_type + " credenticals ####")
 
-    if index == 0:
-        p.sendline("yes")
-        idx = p.expect(["password:", pexpect.EOF, pexpect.TIMEOUT])
-        if idx == 0:
-            p.sendline(password)
-            p.expect("password:")
-            p.sendline(password)
-            p.expect("password:")
-            p.sendline(password)
-            p.kill(0)
-            step("#### blocked SSH login with " + login_type + " credenticals ####")
-        assert idx == 0, "Failed with SSH command"
-    elif index == 1:
-        p.sendline(password)
-        p.expect("password:")
-        p.sendline(password)
-        p.expect("password:")
-        p.sendline(password)
-        p.kill(0)
-        step("#### blocked SSH login with " + login_type + " credenticals ####")
-    assert index <= 1, "Failed with SSH command"
 
-def verify_login_success_2nd_attempt(step, user, password, login_type):
+def verify_login_success_2nd_attempt(step, user, passwd, login_type):
     switch_ip = get_switch_ip(step)
     s1 = switches[0]
-    s1("echo $SHELL", shell="bash")
-    myssh = ssh_client + " " + user + "@" + switch_ip
-    p = pexpect.spawn(myssh)
-    index = p.expect([SSH_NEWKEY_HELP_STR, "password:", pexpect.EOF, pexpect.TIMEOUT])
+    hs = hosts[1]
+    my_ssh = ssh_cmd + " " + user + "@" + switch_ip
+    matches = ['password:']
+    bash_shell = hs.get_shell('bash')
+    assert bash_shell.send_command(my_ssh, matches) is 0, "Failed with" \
+        " SSH command."
+    assert bash_shell.send_command(DUMMY, matches) is 0, "Failed to" \
+        " block unauthorized SSH login."
+    matches = ['#']
+    assert bash_shell.send_command(passwd, matches) is 0, "Failed SSH" \
+        " login."
+    bash_shell.send_command("exit")
+    step("#### passed SSH login with " + login_type + " credenticals 2nd attempt ####")
 
-    if index == 0:
-        p.sendline("yes")
-        idx = p.expect(["password:", pexpect.EOF, pexpect.TIMEOUT])
-        if idx == 0:
-            p.sendline(DUMMY)
-            p.expect("password:")
-            p.sendline(password)
-            p.expect("#")
-            p.sendline("exit")
-            p.kill(0)
-            step("#### passed SSH login with " + login_type + " credenticals ####")
-        assert idx == 0, "Failed with SSH command"
 
-    elif index == 1:
-        p.sendline(DUMMY)
-        p.expect("password:")
-        p.sendline(password)
-        p.expect("#")
-        p.sendline("exit")
-        p.kill(0)
-        step("#### passed SSH login with " + login_type + " credenticals ####")
-    assert index <= 1, "Failed with SSH command"
-
-def verify_login_failure_timeout(step, user, password):
+def verify_login_failure_timeout_then_success_2nd_attempt(step, user, passwd):
     switch_ip = get_switch_ip(step)
     s1 = switches[0]
-    s1("echo $SHELL", shell="bash")
-    myssh = ssh_client + " " + user + "@" + switch_ip
-    p = pexpect.spawn(myssh)
-    index = p.expect([SSH_NEWKEY_HELP_STR, "password:", pexpect.EOF, pexpect.TIMEOUT])
+    hs = hosts[1]
+    my_ssh = ssh_cmd + " " + user + "@" + switch_ip
+    matches = ['password:']
+    bash_shell = hs.get_shell('bash')
+    stop_tacacs_service(step, 0)
+    assert bash_shell.send_command(my_ssh, matches) is 0, "Failed with" \
+        " SSH command."
+    t1 = time.time()
+    bash_shell.send_command(DUMMY, matches)
+    t2 = time.time()
+    diff=(datetime.datetime.fromtimestamp(t1) - datetime.datetime.fromtimestamp(t2))
+    seconds = abs(diff.total_seconds())
+    test_sec = TIMEOUT_TEST_SEC
+    assert seconds >= test_sec and seconds <= (test_sec + 1), "#### Failed timeout testcase! ####"
+    start_tacacs_service(step, 0)
+    matches = ['#']
+    assert bash_shell.send_command(passwd, matches) is 0, "Failed SSH" \
+        " login."
+    bash_shell.send_command("exit")
+    step("#### passed login success 2nd attempt with timeout = 10 and after server reboot  ####")
 
-    if index == 0:
-        p.sendline("yes")
-        idx = p.expect(["password:", pexpect.EOF, pexpect.TIMEOUT])
-        if idx == 2:
-            p.kill(0)
-            step("#### passed timeout failure (as expected) ####")
-        assert idx != 2, "Failed with SSH command"
-
-    elif index == 3:
-        p.kill(0)
-        step("#### passed timeout failure (as expected)  ####")
-    assert index != 3, "Failed with SSH command"
 
 def get_switch_ip(step):
     """ This function is to get switch IP addess
@@ -516,9 +481,9 @@ def login_ssh_tacacs(step):
     setup_global_default(step, TACACS_PASSKEY, DUMMY)
     verify_login_failure(step, USER_1, USER_1_PASSWD, REMOTE_AUTH)
     setup_global_default(step, TACACS_PASSKEY, TACACS_PASSKEY_VALUE)
-    step("#### verify login failed with timeout limit exceed ####")
-    setup_global_default(step, TACACS_TIMEOUT, TACACS_TIMEOUT_MIN)
-    verify_login_failure_timeout(step, USER_1, USER_1_PASSWD)
+    step("#### verify success in 2nd attempt with timeout = 10 and after server reboot ####")
+    setup_global_default(step, TACACS_TIMEOUT, TACACS_TIMEOUT_TEST)
+    # verify_login_failure_timeout_then_success_2nd_attempt(step, USER_1, USER_1_PASSWD)
     setup_global_default(step, TACACS_TIMEOUT, TACACS_TIMEOUT_VAL)
     show_tacacs_log(step, 0)
     step("####### Test SSH login with TACACS+ authentication succeed #######")
@@ -568,7 +533,7 @@ def login_ssh_fail_through(step):
     verify_login_success(step, USER_NETOP, USER_NETOP_PASSWD, LOCAL_AUTH, is_ipv6)
     step("####### Test SSH login with fail-through enable/disable succeed #######")
 
-@mark.skipif(True, reason="Disabling as AAA feature revamp in progress")
+@mark.skipif(True, reason="Disabling as framework issue present")
 @mark.platform_incompatible(['ostl'])
 def test_aaa_ft_authentication(topology, step):
     global switches, hosts
@@ -593,6 +558,10 @@ def test_aaa_ft_authentication(topology, step):
     enable_local_authentication(step)
     login_ssh_local(step)
 
+    group_list = ['tacacs_plus']
+    enable_tacacs_authentication_by_group(step, group_list)
+    login_ssh_tacacs(step)
+
     group_list = ['sg1']
     enable_tacacs_authentication_by_group(step, group_list)
     login_ssh_tacacs(step)
@@ -603,6 +572,3 @@ def test_aaa_ft_authentication(topology, step):
 
     disable_authentication_by_group(step)
     login_ssh_local(step)
-
-    setup_tacacs_server_ipv6(step)
-    update_tacacs_client(step)
