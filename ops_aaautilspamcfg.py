@@ -174,7 +174,9 @@ global_radius_auth = RADIUS_PAP
 global_radius_retries = RADIUS_SERVER_RETRIES_DEFAULT
 
 local_group = None
+none_group = None
 authentication_group_list = "local"
+authorization_group_list = "none"
 
 tacacs_source_interface = None
 radius_source_interface = None
@@ -529,14 +531,17 @@ def get_server_list(session_type):
 
     global global_radius_passkey, global_radius_timeout, global_radius_auth, global_radius_retries
 
-    global local_group, authentication_group_list
+    global local_group, authentication_group_list, authorization_group_list, none_group
 
     group_list = ""
+    group_list_authorization = ""
 
-    if local_group is None:
+    if local_group is None or none_group is None:
         for group_rec in idl.tables[AAA_SERVER_GROUP_TABLE].rows.itervalues():
             if group_rec.group_name == AAA_LOCAL:
                 local_group = group_rec
+            elif group_rec.group_name == AAA_NONE:
+                none_group = group_rec
 
     for ovs_rec in idl.tables[SYSTEM_TABLE].rows.itervalues():
         if ovs_rec.aaa and ovs_rec.aaa is not None:
@@ -635,7 +640,7 @@ def get_server_list(session_type):
                     continue
 
                 group_list = group_list + group.group_name + " "
-                vlog.info("AAA: group_name = %s, group_type = %s\n" % (group.group_name, group.group_type))
+                vlog.info("AAA Authentication: group_name = %s, group_type = %s\n" % (group.group_name, group.group_type))
 
                 server_table = ""
                 if group.group_type == AAA_TACACS_PLUS:
@@ -665,6 +670,17 @@ def get_server_list(session_type):
                     for server_prio, server in sorted(group_server_dict.iteritems()):
                         server_list.append((server, group.group_type))
 
+        size_author = len(ovs_rec.authorization_group_prios)
+        if size_author == 1 and ovs_rec.authorization_group_prios.keys()[0] == none_group:
+            vlog.info("AAA: Default none authorization configured\n")
+        else:
+            for prio, group in sorted(ovs_rec.authorization_group_prios.iteritems()):
+                if group is None:
+                    continue
+
+                group_list_authorization = group_list_authorization + group.group_name + " "
+                vlog.info("AAA Authorization: group_name = %s, group_type = %s\n" % (group.group_name, group.group_type))
+
     group_list = group_list.strip()
     if group_list != authentication_group_list:
         event = authentication_group_list + " => " + group_list
@@ -672,6 +688,14 @@ def get_server_list(session_type):
                   ["type", "Authentication server group priority list"],
                   ["event", event])
         authentication_group_list = group_list
+
+    group_list_authorization = group_list_authorization.strip()
+    if group_list_authorization != authorization_group_list:
+        event = authorization_group_list + " => " + group_list_authorization
+        log_event("AAA_CONFIG",
+                  ["type", "Authorization server group priority list"],
+                  ["event", event])
+        authorization_group_list = group_list_authorization
 
     return server_list
 
