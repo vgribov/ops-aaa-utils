@@ -1135,9 +1135,11 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
 	radius_conf_t config;
         char priv_lvl_env[ENV_MAXLEN];
         char auth_mode_env[ENV_MAXLEN];
+        char remote_usr_env[MAXPWNAM + ENV_MAXLEN];
 
         memset(priv_lvl_env, 0,  ENV_MAXLEN);
         memset(auth_mode_env, 0, ENV_MAXLEN);
+        memset(remote_usr_env, 0,  MAXPWNAM + ENV_MAXLEN);
 	ctrl = _pam_parse(argc, argv, &config);
 
 	/* grab the user name */
@@ -1337,6 +1339,8 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh,int flags,int argc,CONST c
                     memcpy(&priv_lvl, a_service_type->data, sizeof(int));
                     priv_lvl = ntohl(priv_lvl);
                     DPRINT(LOG_DEBUG, "Service type AVP = %d\n", priv_lvl);
+                    snprintf(remote_usr_env, MAXPWNAM + ENV_MAXLEN , "%s=%s",
+                         REMOTE_USR_ENV, user);
 
                     switch (priv_lvl) {
                         /* Administrative user */
@@ -1400,6 +1404,14 @@ error:
             } else {
                 _pam_log(LOG_INFO, "AUTH_MODE set to %s",
                          pam_getenv(pamh, AUTH_MODE_ENV));
+            }
+            if ((pam_putenv(pamh, remote_usr_env)) != PAM_SUCCESS) {
+                _pam_log(LOG_ERR, "%s: error setting RUSER PAM ENV",
+                       __FUNCTION__);
+                return PAM_SERVICE_ERR;
+            } else {
+                _pam_log(LOG_INFO, "RUSER set to %s",
+                         pam_getenv(pamh, REMOTE_USR_ENV));
             }
         }
 	return retval;

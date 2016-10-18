@@ -243,23 +243,27 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	int srv_i;
 	int tac_fd, status, msg, communicating;
   int priv_lvl_status;
-#define MAX_ENV_VAR_LEN 20
+#define MAX_ENV_VAR_LEN  32
+#define MAX_USER_LEN 256
   char auth_mode_env[MAX_ENV_VAR_LEN];
 	user = pass = tty = r_addr = NULL;
   memset(auth_mode_env,0,MAX_ENV_VAR_LEN);
   char env_var_str[MAX_ENV_VAR_LEN];
+  char remote_usr_env[MAX_USER_LEN + MAX_ENV_VAR_LEN];
 	struct addrinfo *source_address = NULL;
 
 	user = pass = tty = r_addr = NULL;
-  memset(env_var_str,0,MAX_ENV_VAR_LEN);
+        memset(env_var_str,0,MAX_ENV_VAR_LEN);
+        memset(remote_usr_env, 0, MAX_USER_LEN + MAX_ENV_VAR_LEN);
 	ctrl = _pam_parse(argc, argv);
 
 	if (ctrl & PAM_TAC_DEBUG)
 		syslog(LOG_DEBUG, "%s: called (pam_tacplus v%u.%u.%u)", __FUNCTION__,
 				PAM_TAC_VMAJ, PAM_TAC_VMIN, PAM_TAC_VPAT);
 
-	if ((user = _pam_get_user(pamh)) == NULL)
+	if ((user = _pam_get_user(pamh)) == NULL) {
 		return PAM_USER_UNKNOWN;
+        }
 
 	if (ctrl & PAM_TAC_DEBUG)
 		syslog(LOG_DEBUG, "%s: user [%s] obtained", __FUNCTION__, user);
@@ -531,6 +535,7 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
                         syslog(LOG_DEBUG, "Privilege level set for %s : %s", user, getenv(PRIV_LVL_ENV));
                         snprintf(auth_mode_env,MAX_ENV_VAR_LEN,"%s=%s",AUTH_MODE_ENV,TACACS);
                         snprintf(env_var_str,MAX_ENV_VAR_LEN,"%s=%s",PRIV_LVL_ENV,getenv(PRIV_LVL_ENV));
+                        snprintf(remote_usr_env, MAX_USER_LEN + MAX_ENV_VAR_LEN, "%s=%s", REMOTE_USR_ENV, user);
                     } else {
                         syslog(LOG_ERR, "Failed to set Privilege Level for the user %s", user);
                         status = PAM_AUTH_ERR;
@@ -573,6 +578,13 @@ int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
                     return PAM_SERVICE_ERR;
                 } else {
                     syslog(LOG_INFO, "AUTH_MODE set to %s", pam_getenv(pamh, AUTH_MODE_ENV));
+                }
+                if ((pam_putenv(pamh, remote_usr_env)) != PAM_SUCCESS) {
+                    syslog(LOG_ERR, "%s: error setting RUSER PAM ENV",
+                                    __FUNCTION__);
+                    return PAM_SERVICE_ERR;
+                } else {
+                    syslog(LOG_INFO, "RUSER set to %s", pam_getenv(pamh, REMOTE_USR_ENV));
                 }
 	}
 

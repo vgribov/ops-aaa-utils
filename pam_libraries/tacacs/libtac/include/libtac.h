@@ -67,6 +67,7 @@ extern int logmsg __P((int, const char*, ...));
 #define TACACS        "TACACS"
 #define AUTH_MODE_ENV "AUTH_MODE"
 #define PRIV_LVL_ENV "PRIV_LVL"
+#define REMOTE_USR_ENV "RUSER"
 #define PRIV_RET_STR  "priv-lvl"
 #define PRV_LVL_LENGTH 3
 

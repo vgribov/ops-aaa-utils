@@ -29,10 +29,11 @@
 #define MAXPROMPT 33               /* max prompt length, including '\0' */
 #define DEFAULT_PROMPT "Password"  /* default prompt, without the ': '  */
 
-#define ENV_MAXLEN                20
+#define ENV_MAXLEN                32
 #define RADIUS                   "RADIUS"
 #define PRIV_LVL_ENV             "PRIV_LVL"
 #define AUTH_MODE_ENV            "AUTH_MODE"
+#define REMOTE_USR_ENV           "RUSER"
 
 #define DSTN_NAMESPACE_LEN        32
 #define SOURCE_IP_LEN             32
@@ -130,9 +131,7 @@ typedef struct radius_conf_t {
 #ifndef BUFFER_SIZE
 #define BUFFER_SIZE      1024
 #endif /* BUFFER_SIZE */
-#define MAXPWNAM 253    /* maximum user name length. Server dependent,
-                         * this is the default value
-                         */
+#define MAXPWNAM 256    /* maximum user name length. */
 #define MAXPASS 128     /* max password length. Again, depends on server
                          * compiled in. This is the default.
                          */
