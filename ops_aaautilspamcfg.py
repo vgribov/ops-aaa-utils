@@ -656,12 +656,11 @@ def get_server_list(session_type):
                     if group.group_name == AAA_RADIUS or group.group_name == AAA_TACACS_PLUS:
                         for server in idl.tables[server_table].rows.itervalues():
                             vlog.info("AAA: Server %s length = %s group = %s group_prio = %s default_prio = %s\n" % (server.address, len(server.group), server.group[0].group_name, server.user_group_priority[0], server.default_group_priority))
-                            if len(server.group) <= 1:
-                                group_server_dict[server.default_group_priority] = server
+                            group_server_dict[server.default_group_priority] = server
                     else:
                         for server in idl.tables[server_table].rows.itervalues():
                             vlog.info("AAA: Server %s length = %s group = %s group_prio = %s default_prio = %s\n" % (server.address, len(server.group), server.group[0].group_name, server.user_group_priority[0], server.default_group_priority))
-                            if len(server.group) > 1 and (server.group[0] == group  or server.group[1] == group):
+                            if server.group[0] == group or server.group[1] == group:
                                 group_server_dict[server.user_group_priority[0]] = server
 
 

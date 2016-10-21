@@ -445,7 +445,7 @@ show_aaa_authorization_priority_group()
 
     count = group_prio_list->n_authorization_group_prios;
 
-    if (count > 1)
+    if (count > 0)
     {
         int idx = 0;
         char row_separator[AAA_TABLE_WIDTH + 1] = {};
