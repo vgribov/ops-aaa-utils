@@ -188,8 +188,6 @@ static int _pam_parse(int argc, CONST char **argv, radius_conf_t *conf)
                         memset(conf->source_ip, 0, sizeof(conf->source_ip));
                         snprintf(conf->source_ip, sizeof(conf->source_ip), "%s",
 			     (char*)(*argv + strlen(SOURCE_IP)));
-                } else if (!strcmp(*argv, "force_prompt")) {
-                        conf->force_prompt= TRUE;
                 } else if (!strncmp(*argv, "max_challenge=", 14)) {
 			conf->max_challenge = atoi(*argv+14);
 		} else if (!strncmp(*argv, SERVER, strlen(SERVER))) {
