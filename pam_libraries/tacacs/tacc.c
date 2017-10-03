@@ -337,7 +337,7 @@ int main(int argc, char **argv) {
 		sprintf(buf, "%lu", time(0));
 		tac_add_attrib(&attr, "start_time", buf);
 		RAND_bytes((unsigned char *) &task_id, sizeof(task_id));
-		sprintf(buf, "%hu", task_id);
+		sprintf(buf, "%hi", task_id);
 		tac_add_attrib(&attr, "task_id", buf);
 		tac_add_attrib(&attr, "service", service);
 		tac_add_attrib(&attr, "protocol", protocol);
@@ -423,7 +423,7 @@ int main(int argc, char **argv) {
 		struct tac_attrib *attr = NULL;
 		sprintf(buf, "%lu", time(0));
 		tac_add_attrib(&attr, "stop_time", buf);
-		sprintf(buf, "%hu", task_id);
+		sprintf(buf, "%hi", task_id);
 		tac_add_attrib(&attr, "task_id", buf);
 
 		tac_fd = tac_connect_single(tac_server, tac_secret, NULL, 60);

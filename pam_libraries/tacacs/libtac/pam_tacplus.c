@@ -69,7 +69,7 @@ int _pam_send_account(int tac_fd, int type, const char *user, char *tty,
 	} else if (type == TAC_PLUS_ACCT_FLAG_STOP) {
 		tac_add_attrib(&attr, "stop_time", buf);
 	}
-	sprintf(buf, "%hu", task_id);
+	sprintf(buf, "%hi", task_id);
 	tac_add_attrib(&attr, "task_id", buf);
 	tac_add_attrib(&attr, "service", tac_service);
 	if (tac_protocol[0] != '\0')
