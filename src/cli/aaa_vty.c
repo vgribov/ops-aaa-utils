@@ -1033,13 +1033,13 @@ configure_aaa_server_group(aaa_server_group_params_t *server_group_params)
                 int iter = 0;
                 int skip = 0;
                 int list_count = group_prio_list->n_authentication_group_prios;
-                int64_t *key_list = malloc(sizeof(int64_t) * list_count);
+                int64_t *key_list = calloc((size_t) list_count, sizeof(int64_t));
                 struct ovsrec_aaa_server_group **value_list =
-                                      malloc(sizeof(*row) * list_count);
-                if (!key_list || !(*value_list))
+			calloc((size_t) list_count, sizeof(row));
+                if (!key_list || !(value_list))
                 {
-                    if (key_list) free(key_list);
-                    if (*value_list) free(*value_list);
+                    free(key_list);
+                    free(value_list);
                     ERRONEOUS_DB_TXN(server_group_txn, "Malloc failed.");
                 }
                 for (iter = 0; iter < list_count; iter++)
